@@ -61,17 +61,18 @@ industry_belt:
 TH:
   currency: "THB"
   price_band_usd: [5.0, 8.0]          # 与 pricing.yaml 一致；$4 以下全成本口径亏损
-  # 采购价区间：与净利率强相关，同一 150g 商品——
-  #   25% 净利下 $5.0 只能承 ¥5.7、$8.0 可承 ¥15.5
-  #   12% 净利（破零冲量）下 $5.0 可承 ¥10.0
-  # 因此严禁把"采购价上限"当固定常数用，必须带目标净利率一起看
-  cost_floor_cny: 5.0                 # 数学下限（$5.0/150g/25% = ¥5.7，留缓冲）
-  cost_ceil_cny: 15.5                 # $8.0/150g/25% 上限；>15.5 必然超价格带
-  bundle_unit_cost_ceil_cny: 6.0      # 2件套单件等效（$8/150g×2）；与 cost_floor 5.0 只差 1 元，组合装窗口极窄
-  chargeable_weight_max_g: 400        # 计费重量上限（按重量计费后从 150g 放宽；400g/$8 仅剩 ¥10.5 空间）
-  chargeable_weight_max_g_bundle: 250 # 2件套：400g 时上限只剩 ¥1.0，实际做不了，卡 250g
-  size_vol_gate: true                 # 尺寸门槛按**抛重**判，不按体积直觉判：抛重(g)=L×W×H/6000×1000
-  size_max_cm: [20, 15, 8]            # 抛重 400g 对应体积 ≤2400cm³；旧值 25×20×10=5000cm³ 会算出 833g 抛重
+  # cost_floor/ceil 是**运营窗口**，不是数学边界。数学边界用 `pricing_calc.py --limits` 现算：
+  #   shelf(1.62/12%净利) 150g：单件 $8 上限 22.4、$5 下限 10.0
+  #   shelf(1.62/12%净利) 400g：单件 $8 上限 17.4、$5 下限 5.1
+  # 窗口取 5.0–15.5 是主动把挂价压在中国带中部，留转化与调价余量；不是算不出更高
+  # ⚠ 严禁把上限当固定常数：净利率一变（12%↔25%），上限差一倍
+  cost_floor_cny: 5.0                 # 运营下限（再低则挂价顶到 $5 以下，破带）
+  cost_ceil_cny: 15.5                 # 运营上限（超此值挂价接近带上沿，转化率断崖）
+  bundle_unit_cost_ceil_cny: 9.4      # 2件套单件等效数学上限（150g/$8）；运营建议 ≤6
+  chargeable_weight_max_g: 400        # 计费重量上限（按重量计费后从 150g 放宽；400g/$8 上限 17.4）
+  chargeable_weight_max_g_bundle: 250 # 2件套：400g 时上限只剩 4.5，组合装别超 250g
+  size_vol_gate: true                 # 尺寸门槛按**抛重**判：抛重(g)=L×W×H/6000×1000
+  size_max_cm: [20, 15, 8]            # 抛重 400g 对应体积 ≤2400cm³；旧值 25×20×10=5000cm³ 会算出 833g
   note: "TH 家居主流价格带 $5-8；佛教文化，图案避开宗教元素。假花/收纳筐这类泡货必须按抛重算，实重轻不代表运费低"
 
 
@@ -143,12 +144,19 @@ competition:
 
 # ── 内容力（TikTok 特有维度，权重 25%）──
 content:
-  source_primary: fastmoss_or_echotik # 达人数 totalIflCnt / 视频数 totalVideoCnt / 直播数 totalLiveCnt
+  # 2026-11-11 实测打通：ERP 后端直连 FastMoss，无需订阅/无需 LinkFox
+  #   端点 /item/fastmoss/product/search（免 token），脚本 scripts/kdzs_fastmoss.py
+  source_primary: fastmoss_via_erp   # 字段 creatorCount / videoCount / creatorOrderRate
   creators_excellent: 100             # ≥100 达人带过 = 10 分（内容结构已被验证可复制）
   creators_good: 30                   # 30-99 = 8 分
   creators_mid: 10                    # 10-29 = 6 分
   creators_low: 3                     # <10 = 3 分
-  # 数据通道不可用（LinkFox 402 / 未订阅 FastMoss）时的降级口径
+  # 达人出单率（creatorOrderRate）——不开达人佣金时的生死线，见 strategy §4.7
+  creator_order_rate:
+    shelf_friendly_max: 0.30          # ≤30%：货架场/自然搜索为主，与达人不冲突 → 可做
+    shelf_only_ideal: 0.05            # ≤5%：几乎全靠自然搜索 → 最该抢（首单压缩袋实测 0%）
+    creator_driven_min: 0.80          # ≥80%：纯达人驱动，不开佣金拿不到量 → 剔除或降级
+  # 数据通道不可用（接口故障/字段缺失）时的降级口径
   proxy_mode: visual_demo             # 按"可拍性"判：前后对比可见/单件可手持演示/痛点动作明确/无长解释文字
   proxy_hits_for_6: 3                 # 满足≥3项给 6 分
   proxy_mode_cap: 6                   # 降级口径最高 6 分，禁止给满分（避免虚假精确度）

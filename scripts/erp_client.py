@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-erp_client.py — 跨境 ERP SaaS · TikTok Shop 铺货接口客户端
+erp_client.py — 快递助手ERP跨境版 TikTok Shop 铺货接口客户端
 
 链路：1688链接采集 → 公共采集箱 → 认领到TikTok站点店铺 → TikTok采集箱编辑（标题翻译/图片处理/定价）→ 发布。
 
-认证：
+认证（与 shopee-light-listing 相同）：
   - 请求头 qnquerystring: <JWT> + appType:3
   - token 获取：浏览器登录态内 bu.js 导出 sessionStorage.qnquerystring
 
@@ -42,7 +42,6 @@ _last_ts = 0.0
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "erp_token.txt")
 
 # TikTok 站点配置：sellerId / nick 从环境变量注入，勿硬编码进仓库
-#   export TH_SELLER_ID=...  VN_SELLER_ID=...  TH_SHOP_NICK=...  VN_SHOP_NICK=...
 TT_SHOPS = {
     "TH": {"sellerId": os.environ.get("TH_SELLER_ID", ""),
            "nick": os.environ.get("TH_SHOP_NICK", ""),
@@ -224,6 +223,11 @@ def cmd_ttl_save(args):
     正确body（2026-10-28破解）：顶层字段(id/itemModel=整个外层tikTokItemModel/platform/reqInfo/title/类目三件套/店铺/币种/来源/status)
     用法：python3 erp_client.py ttl-save --id <ttl_id> [--price 190] [--weight 0.5] [--category 853128 --cat-tree "600001,851976,853128" --cat-name "家居用品,家居收纳,挂钩"]
     注意：保存后 getDetail 不再返回 itemModel（异常清空=保存生效）。仅对"有异常标签"的商品用（发布需itemModel可读）。
+    ⚠⚠ 2026-11-11 实测：本命令的 body 结构是错的 —— itemModel 应传「整个 reqInfo 结构」
+       （含 shopeeItemModel/temuItemModel/tikTokItemModel），且不能传顶层 reqInfo；
+       否则会把商品数据清空成 MISSING_ITEM_DATA，发布必失败。
+       正确实现见 fix_sku.py；改价请用 set_price.py（batchOps opsType:2）。
+       保留本命令仅作历史记录，**不要直接使用**。
     """
     # 1) 拉详情（注意：reqInfo/tikTokItemModel 在响应顶层，不在 data 里，2026-10-28 实测）
     d = _post("/item/crossBorder/platformCollect/getDetail", {"id": args.id}, args)
@@ -342,6 +346,11 @@ def cmd_ttl_publish(args):
     ids = [i.strip() for i in args.ids.split(",") if i.strip()]
     if not ids:
         sys.exit("[erp] ttl-publish 需要 --ids（TikTok采集箱记录id清单）")
+    try:
+        args.dims = [float(x) for x in str(args.dims).lower().split("x")]
+        assert len(args.dims) == 3
+    except Exception:
+        sys.exit("[erp] --dims 格式应为 长x宽x高（cm），如 30x20x5")
     # 查列表拿 itemCenterNumIid / toSellerId / toSellerNick
     body = {"pageNo":1,"pageSize":100}
     d = _post("/item/crossBorder/platformCollect/queryListPage", body, args)
@@ -361,14 +370,16 @@ def cmd_ttl_publish(args):
             "sourceSellerId": str(it.get("sourceSellerId","") or os.environ.get("ERP_SOURCE_SELLER_ID", "")),
             "targetSellerId": str(it.get("toSellerId","")),
             "targetSellerNick": it.get("toSellerNick",""),
-            "categoryIds": "",
-            "categoryNames": "",
+            # 官方前端(chunk77)传的是类目树；旧版传空串，2026-11-11 修正
+            "categoryIds": it.get("toCategoryIdTree","") or "",
+            "categoryNames": it.get("toCategoryNameTree","") or "",
         })
     if not vos:
         sys.exit("[erp] 无可发布商品")
     publish_config = {
-        "weight": 1, "weightSet": 1,
-        "packageLength": 10, "packageWidth": 10, "packageHeight": 10, "packageSet": 1,
+        "weight": args.weight, "weightSet": 1,
+        "packageLength": args.dims[0], "packageWidth": args.dims[1],
+        "packageHeight": args.dims[2], "packageSet": 1,
         "filterAlreadyPublish": True, "forbiddenWordDetectMode": 0,
         "priceLimitEnable": False, "priceLimitMultiple": "1",
         "useTiktokMultiCountryConfig": False,
@@ -380,6 +391,10 @@ def cmd_ttl_publish(args):
         },
     }
     total = len(vos)
+    if args.dry_run:
+        print(f"[erp] dry-run 未提交。publishConfig={json.dumps(publish_config, ensure_ascii=False)}")
+        print(f"[erp] distribItemVos={json.dumps(vos, ensure_ascii=False)}")
+        return
     for x in range(0, total, 4):
         chunk = vos[x:x+4]
         body2 = {"publishConfig": publish_config, "distribItemVos": chunk}
@@ -446,7 +461,7 @@ def cmd_ttl_del(args):
 
 
 def main():
-    p = argparse.ArgumentParser(description="跨境ERP TikTok铺货客户端")
+    p = argparse.ArgumentParser(description="快递助手ERP TikTok铺货客户端")
     sub = p.add_subparsers(dest="cmd", required=True)
 
     pt = sub.add_parser("token"); pt.add_argument("action", choices=["set","check"]); pt.add_argument("--token", default="")
@@ -457,7 +472,11 @@ def main():
     psv = sub.add_parser("ttl-save"); psv.add_argument("--id", required=True); psv.add_argument("--price", type=float, default=0); psv.add_argument("--weight", type=float, default=0); psv.add_argument("--images", default=""); psv.add_argument("--category", default=""); psv.add_argument("--cat-tree", default=""); psv.add_argument("--cat-name", default=""); psv.add_argument("--out", default="")
     pcl = sub.add_parser("ttl-claim"); pcl.add_argument("--ids", required=True); pcl.add_argument("--region", default="TH"); pcl.add_argument("--seller", default=""); pcl.add_argument("--out", default="")
     ptr = sub.add_parser("ttl-translate"); ptr.add_argument("--id", required=True); ptr.add_argument("--lang", default="th")
-    pp = sub.add_parser("ttl-publish"); pp.add_argument("--ids", required=True); pp.add_argument("--out", default="")
+    pp = sub.add_parser("ttl-publish"); pp.add_argument("--ids", required=True)
+    pp.add_argument("--weight", type=float, default=1.0, help="包裹重量 KG（默认1，轻小件建议按实重填）")
+    pp.add_argument("--dims", default="10x10x10", help="包裹尺寸 cm，格式 长x宽x高")
+    pp.add_argument("--dry-run", action="store_true", help="只打印发布参数，不提交")
+    pp.add_argument("--out", default="")
     pdl = sub.add_parser("ttl-del"); pdl.add_argument("--ids", required=True); pdl.add_argument("--out", default="")
     plg = sub.add_parser("logs"); plg.add_argument("--months", type=int, default=1); plg.add_argument("--out", default="")
     ps = sub.add_parser("shops"); ps.add_argument("--platform", default="tiktok"); ps.add_argument("--out", default="")

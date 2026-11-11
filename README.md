@@ -53,6 +53,7 @@
 │                                                              │
 │  SKILL.md ── 动作分层与执行规程（判断层）                      │
 │    ├─ references/selection-strategy.md  选品评分与红线规则     │
+│    ├─ references/erp-pitfalls.md        接口坑与逆向方法备忘   │
 │    └─ config/*.yaml                     权重/阈值/费率（外置） │
 └───────────────────────────┬──────────────────────────────────┘
                             │ CLI 调用（唯一契约）
@@ -60,6 +61,8 @@
 │  scripts/erp_client.py（执行层，纯标准库，无三方依赖）          │
 │    collect · items · ttl-list · ttl-detail · ttl-save         │
 │    ttl-claim · ttl-del · ttl-publish · logs · shops · token   │
+│  scripts/set_price.py · fix_sku.py · prep_publish.py          │
+│    （批量公式改价 / 修 SKU 规格名与库存 / 发布前准备与校验）    │
 └───────────────────────────┬──────────────────────────────────┘
                             │ HTTP（qnquerystring: <JWT> + appType:3）
 ┌───────────────────────────▼──────────────────────────────────┐
@@ -190,6 +193,17 @@ python3 scripts/erp_client.py ttl-list --region TH --size 20
 
 所有读命令默认落盘 `erp_data/*.csv` + `*.json`（已在 `.gitignore` 中排除，不入库）。
 
+**配套脚本**（编辑/发布环节，均纯标准库）：
+
+| 脚本 | 读写 | 作用 |
+|---|---|---|
+| `set_price.py` | **W** | 官方「批量设置售价」接口（`batchOps opsType:2`，公式/固定价）改价，**不清空商品数据**——比 `ttl-save` 改价安全 |
+| `fix_sku.py` | **W** | 修 SKU 规格名与库存（过 TikTok 发布前置校验）；body 必须是**整个 reqInfo 结构**，不能传顶层 reqInfo，否则清空成 `MISSING_ITEM_DATA` |
+| `prep_publish.py` | **W** | 发布前置：按 SKU 梯度改价 + 补包裹重量/尺寸 + 回读验证 |
+| `pricing_calc.py` | R | 售价 / 采购价上限 / 配置自检（见 §9） |
+| `kdzs_fastmoss.py` | R | 免登录选品数据源：销量 / 达人数 / 视频数（后端 FastMoss） |
+| `erp_token_grab.py` | R | 从本机 Chrome LevelDB 提取登录态 JWT（可选，依赖 `pip install cramjam`） |
+
 ---
 
 ## 8. 工程笔记：四个反直觉的坑
@@ -275,9 +289,13 @@ tiktok-light-listing/
 │   └── pricing.yaml                  # 定价参数（费率/汇率/成本项/两档 markup/价格带）
 ├── references/
 │   ├── selection-strategy.md         # 选品方法论（九章）：履约链路、成本结构、数据源分层、红线与门槛、四维评分
+│   ├── erp-pitfalls.md               # 接口坑备忘：body 结构、错误码、逆向方法、浏览器边界
 │   └── tiktok-api.md                 # 接口契约（已实测 12 个 + 待补）
 ├── scripts/
 │   ├── erp_client.py                 # 主 CLI（采集/认领/编辑/发布/回查），纯标准库
+│   ├── set_price.py                  # 批量公式改价（batchOps opsType:2）
+│   ├── fix_sku.py                    # 修 SKU 规格名与库存（官方 edit body 结构）
+│   ├── prep_publish.py               # 发布前置：改价 + 补重量尺寸 + 回读验证
 │   ├── pricing_calc.py               # 定价与价格带校验（--cost / --limits / --check），纯标准库
 │   ├── kdzs_fastmoss.py              # 选品数据源（后端 FastMoss 榜：销量/达人/视频数），免登录只读
 │   ├── erp_token_grab.py             # 从本机 Chrome LevelDB 提取登录态 JWT（可选，依赖 cramjam）
@@ -317,6 +335,17 @@ tiktok-light-listing/
 ---
 
 ## 更新记录
+
+**2026-11-12（首单真实闭环跑通）**
+
+- 全链路接口化已用真实 case 验证：真空压缩袋经 采集 → 认领 → `set_price` 公式改价 → `fix_sku` 修规格名/库存 → `ttl-publish` 铺到 TH 店，TikTok 后台确认为「在售」
+- 新增「四路验证」：ERP 日志 / 采集箱状态 / 铺货配额 / 店铺后台在售数
+- 新增 `references/erp-pitfalls.md`：接口 body 结构、错误码、CDP 逆向方法、浏览器自动化边界的集中备忘
+- 新增 `scripts/set_price.py`（官方批量改价，不清空数据）、`fix_sku.py`、`prep_publish.py`
+- `ttl-publish` 支持真实重量/尺寸（`--weight` / `--dims`）与 `--dry-run`
+- `ttl-save` 的 itemModel 结构坑定案：必须传整个 reqInfo 结构且不带顶层 reqInfo，否则清空成 `MISSING_ITEM_DATA`——旧用法已标注废弃，改用 `fix_sku.py`
+- 发布的类目字段修正：传类目树（`toCategoryIdTree`），不再传空串
+- 选品数据源升级：FastMoss 单品数据经 ERP 后端免 token 直连（`kdzs_fastmoss.py`）
 
 **2026-11-11b（一件代发模式重构）**
 
