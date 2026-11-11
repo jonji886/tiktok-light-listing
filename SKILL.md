@@ -1,32 +1,38 @@
 ---
 name: tiktok-light-listing
-description: "TikTok Shop 跨境店铺货（目标跨境 ERP SaaS）：选品(官方商品机会中心/关键词榜单浏览器取候选→1688找同款→五维评分+红线剔除出清单)→1688链接采集→公共采集箱→认领到TikTok站点店铺(TH/VN)→TikTok采集箱二次编辑(标题翻译/图片擦除广告字+翻译功能字/首图白底/定价)→发布→记录统计。基于实测接口，复用同一 ERP 客户端的 token/collect/logs/distribute 约定。仅适用于单一 ERP 实例 + YOUR_SHOP_TH/VN 两个店铺，店铺主营类目为家居用品(选品仅限该类目)。不做其他ERP/其他平台。"
+description: "TikTok Shop 跨境店铺货（快递助手ERP跨境版，一件代发模式）：选品(先定货代省份→官方商品机会中心/关键词榜单取需求信号→1688找货→红线与供应链门槛→履约/内容力/实净利/站内竞争四维评分+价格带校验出清单)→1688链接采集→公共采集箱→认领到TikTok站点店铺(TH/VN)→TikTok采集箱二次编辑(标题翻译/图片擦除广告字+翻译功能字/首图白底/定价)→发布→记录统计→T+7/T+20数据回流。基于实测接口，复用 shopee-light-listing 的 token/collect/logs/distribute 基础。仅适用于 <your-erp-host> + YOUR_SHOP_TH/VN 两个店铺，店铺主营类目为家居用品(选品仅限该类目)。不做其他ERP/其他平台。"
 ---
 
 # TikTok Shop 跨境铺货（选品 → 1688采集 → 认领 → 编辑图片/翻译/定价 → 发布）
 
 ## Overview
 
-在目标跨境 ERP（下文简称 ERP）内，把1688货源铺到 TikTok Shop 东南亚店（先做 TH 泰国 + VN 越南），店铺主营类目为**家居用品**。
+在快递助手ERP跨境版内，把1688货源铺到 TikTok Shop 东南亚店（先做 TH 泰国 + VN 越南），店铺主营类目为**家居用品**。
 
 链路分6段：
-0. **选品**：官方后台工具（商品机会中心/关键词榜单）浏览器取候选 → 1688找同款offer → 五维评分+红线剔除 → 出候选清单
+0. **选品**：官方后台取需求信号 → 1688 找货 → 红线+供应链门槛 → 四维评分+价格带校验 → **按发货城市聚簇 + 查货代覆盖（TIKTOK 标签）** → 出候选清单
 1. **采集**：1688 offerId → ERP公共采集箱（复用旧接口）
 2. **认领**：公共采集箱 → 认领到指定TikTok站点店铺（TH/VN）
 3. **编辑**：TikTok采集箱里逐品二次编辑——标题已自动翻译，图片要处理（擦广告字/翻译功能字/首图白底），价格按定价模板算
 4. **发布**：提交到TikTok发布队列
-5. **统计**：发布记录回查
+5. **统计**：发布记录回查 + T+7/T+20 真实曝光/点击/履约数据回流
+
+**本版本的模型前提（2026-11-11 重构，与前版不同）**：新人 · 无自有货源 · 1688/拼多多单件下单 → 国内货代 → TikTok 中转仓。
+由此产生的三条硬结论，写在 `references/selection-strategy.md` 第一至三章，执行前必读：
+- 官方时效为 **48h 打包 + 3 个自然日到仓扫描**（不是 96 小时）→ **判据是「发货地到货代仓的快递天数」，不是「同省」**：≤1 天绿档、2 天卡死、≥3 天必超（见 Step 0.0）
+- 国内段成本是 **单件快递 5 元 + 货代 2 元**（不是批量均摊 1 元），采购价上限由价格带反推，用 `scripts/pricing_calc.py` 校验
+- **暂不开达人佣金**（2026-11-11 决定），只走货架场；`creator` 档在配置里 `enabled: false` 备查
 
 ## 适用范围
 
-- **适用**：your-erp-host.example.com + YOUR_SHOP_TH(<TH_SELLER_ID>) + YOUR_SHOP_VN(<VN_SELLER_ID>)
+- **适用**：<your-erp-host> + YOUR_SHOP_TH(<TH_SELLER_ID>) + YOUR_SHOP_VN(<VN_SELLER_ID>)
 - **不适用**：其他ERP、TikTok自运营店、其他站点(PH/SG/MY后续再加)、Shopee/Lazada
 
 ## 动作分层
 
-- **AI自动**：官方工具取候选、1688找同款、五维评分、红线自动剔除、采集、认领、列表对账、价格计算、图片OCR分类、擦除广告字、翻译功能字、首图白底、发布提交、记录统计
+- **AI自动**：官方工具取需求信号、1688找货、四维评分、价格带校验（`pricing_calc.py`）、红线与供应链门槛自动剔除、采集、认领、列表对账、价格计算、图片OCR分类、擦除广告字、翻译功能字、首图白底、发布提交、记录统计
 - **硬红线自动阻断**：品牌侵权/IP联名、液体化工、带电、食品保健医疗、宗教、易碎、活体、多规格价差超限、平台限售需认证、跨类目（复用shopee selection-rules + TikTok限售/类目约束）
-- **人工接管**：ERP登录/短信验证码、图片处理结果抽检（前10个人工过一眼）、候选清单最终确认（写操作前）
+- **人工接管**：ERP登录/短信验证码、**货代覆盖确认（ERP「货代管理」按城市查、筛 TIKTOK 标签，无接口）**、供应商 48h 发货的书面确认、图片处理结果抽检（前10个人工过一眼）、候选清单最终确认（写操作前）
 
 ## 执行前约定
 
@@ -36,21 +42,66 @@ description: "TikTok Shop 跨境店铺货（目标跨境 ERP SaaS）：选品(�
 
 ## 工作流
 
-### Step 0 选品（登录检查 → 取候选 → 1688匹配 → AI评分 → 产出offerId清单）
-先读 `references/selection-strategy.md` 与 `config/selection.yaml`，按其中规则执行：
+### Step 0 选品（取需求信号 → 1688找货 → 评分 → 按发货城市收敛货代 → 出offerId清单）
+先读 `references/selection-strategy.md`（九章，尤其第一至三、六章）与 `config/selection.yaml`，按其中规则执行。
 
-0. **登录检查（人工接管）**：导航ERP，若`blocked=auth`则请用户接管登录。登录后导出token：
-   ```js
-   sessionStorage.getItem('qnquerystring')
-   ```
-   存到 `scripts/erp_token.txt`。官方后台 `seller.tiktokshopglobalselling.com` 登录态同样由用户接管。
-1. **取候选（优先级：遨虾接口 > 官方后台浏览器）**：
-   - **遨虾接口（默认，免登录）**：调用外部的榜单/搜索客户端（可选依赖，脚本不在本仓库；也可用任意等价数据源替换），`--platform TikTok_XS --site TH/VN` 拉热销/飙升/新品榜（类目选 Home Supplies 等家居类），产出字段含下游价/同款数/同款中位价/三级类目，直接支撑评分。
-   - **官方后台（浏览器，补充验证）**：商品机会中心 `/product/opportunity?tab=product`（"无竞争对手"标签、销量）、关键词榜单 `/compass/search-analytics/keyword-rank`（稀缺/热门/飙升词，兼作标题词库）。
-2. **1688找同款（遨虾 `search --keyword` / `search-image`，免登录直接拿offerId）**：接口失效时浏览器进1688跨境专供搜索（需用户接管登录）。筛"跨境专供+一件代发+48小时发货"。
-3. **AI 自动筛选与评分（规则见 selection-strategy.md 第三/四节）**：红线剔除 → 五维打分 → 同款去重 → 按综合分排序。
-4. **出候选清单**：落盘 `erp_data/selection_candidates.csv`（字段：offer_id/offer_url/title_zh/category_dir/price_cny/region/score/score_detail/reason/redline_check）。
-5. **清单确认（人工接管）**：输出建议清单给用户确认（目标150款），确认后 offerId 进入 Step1。写操作仅对用户点名的清单执行。
+#### 0.0 地域收敛（选品先行、货代做约束）
+**顺序是「选品 → 按发货城市聚簇 → 查货代覆盖 → 定稿」，不是「先锁一个城市再选品」。**
+
+2026-11-11 实测 ERP「货代管理」：筛选器是**城市级**（服务平台 TIKTOK/SHOPEE/SHOPEES × 货代位置 东莞市/义乌市/广州市/泉州市/金华市/海外），**不是省级**。且货代明确支持「国内快递也可发」→ 货源不必同城同省，**判据是"快递到仓几天"，不是"地理远近"**。
+
+1. **先按产品力出不限地域的候选**（0.2–0.4 全流程不看地域）。
+2. **按 1688 发货城市聚簇**（不是省；省太粗会放过 2 天时效差）。
+3. **查货代覆盖（人工接管）**：进 ERP「货代管理」，筛 `服务平台=TIKTOK` + 逐个城市，看有哪家、报价、送仓时效，按 strategy 2.3 的卡片评分表打分（≥7 分才添加）。**ERP 无货代接口（`erp_client.py` 未收录），只能人工确认，不要假装能自动查。**
+4. **按时效分档决策**：
+   - **≤1 天（绿）** → 保留并加权重铺该产业带
+   - **2 天（黄）** → 需 24h 发货 + 次日达 + 书面确认；无缓冲，遇周末即超
+   - **≥3 天（红）** → **先换发货地不换品**（图搜/同款开发找同款其他发货地，同款多发货地极常见），找不到才剔除
+   - 多个货代城市可用 → **只挑 1–2 个集中铺**，不要一次开 5 个（拆包错发率随城市数上升）
+5. 候选清单必须带 `ship_city` / `forwarder_city` / `ship_transit_days`，**`ship_transit_days ≥3` 的不进 Step 1**。
+
+**两个待用户确认的前置问题**（会改铺货节奏，别猜）：① 我这类货会分配到哪个仓（实测义乌卡片写的是"东莞仓+义乌仓"多仓运营，选义乌可能实际从东莞发）？② 某单发货地与分配仓不同城时，ERP 默认走哪条线？
+
+#### 0.1 登录检查（人工接管）
+导航ERP，若`blocked=auth`则请用户接管登录。登录后导出token：
+```js
+sessionStorage.getItem('qnquerystring')
+```
+存到 `scripts/erp_token.txt`。官方后台 `seller.tiktokshopglobalselling.com` 登录态同样由用户接管。
+
+#### 0.2 取需求信号（L1 官方后台，第一手，免费）
+**优先级：官方后台 > 第三方单品数据(如可用) > 1688 供给侧**。三层分工见 strategy 第四章。
+- **官方后台（浏览器）**：商品机会中心 `/product/opportunity?tab=product`（"无竞争对手"标签、销量近似值）、`?tab=trending_keywords`（未满足需求/热搜商品）、`?tab=low_competition_category`（在售0-5款+有搜索量）；关键词榜单 `/compass/search-analytics/keyword-rank`（稀缺/热门词，兼作标题词库）。抄录当地语言词 → 翻回中文品类词。
+- **遨虾榜单（免登录，方向信号）**：复用 shopee-light-listing 的 `scripts/aibuy_rank_client.py`，`--platform TikTok_XS --site TH/VN` 拉热销/飙升/新品榜（类目选 Home Supplies 等）。
+  - ⚠️ **`opprank` 榜单只有 14 个字段（标题/下游价/1688同款数/同款中位价/类目/图/rankId），没有销量、没有评价数、没有达人数**。它只能给方向，不能支撑需求打分。
+- **L2 单品数据（FastMoss/EchoTik）**：仅用于"内容力"维度（`totalIflCnt`/`totalVideoCnt`/`totalLiveCnt`）。
+  - 现状：LinkFox 通道实测 402（账户额度问题）、FastMoss 连接器未绑定。**不可用时按 `content.proxy_mode` 降级打分，上限 6 分，并标注 `content_source: proxy`**。不得因缺数据给假高分。
+
+#### 0.3 1688 找货（按站点成本边界筛，不是无脑搜）
+- 用遨虾 `search --keyword <中文品类词>` 或 `search-image` 拿 offerId；接口失效时浏览器进 1688 跨境专供（需用户接管登录）。
+- **先算成本再挑品**：`python3 scripts/pricing_calc.py --cost <采购价> --scheme shelf --pieces <1|2> --site TH`，返回 `in_band`。
+- 采购价上限（150g / shelf，`--limits` 实算）：TH 单件 **22.4** / 2件套单件等效 **9.4**；VN 单件 **16.7** / 2件套 **6.6**。重量上去上限迅速下降（TH 400g 单件仅 17.4）。**超上限 = 换品，不要硬调 markup。**
+- 供应链门槛全部要过（见 strategy 5.2）：跨境专供 / 一件代发 / **无隐形起订量** / 库存≥200 / **承诺48h发货（要客服书面确认）** / 同省发货 / 非预售非定制 / **同店≥2个可搭配 SKU** / 主图可复用 / ≤150g 且 ≤25×20×10cm。
+- **1688 双轨定价**：同一件货有"包邮价（1件起）"和"批发价（2件起）"，把两个含邮总价并列取低者。买1件看包邮价，买2件看批发价。
+
+#### 0.4 AI 评分（四维，规则见 strategy 第六章）
+红线剔除 → 供应链门槛 → **需求过滤（不打分）** → 四维打分：
+
+| 维度 | 权重 | 数据来源 |
+|---|---|---|
+| 履约确定性 fulfillment | 0.30 | **发货城市→货代仓快递天数**/承诺时效/库存/起订量（<6 分剔除） |
+| 内容力 content | 0.25 | 达人/视频/直播数；无数据时按可拍性判，上限 6 |
+| 实净利 margin | 0.25 | `pricing_calc` 全成本净利率（<8% 剔除） |
+| 站内竞争 competition | 0.20 | TikTok 站内在售款数/官方标签（**不是 1688 同款数**） |
+
+1688 同款数只作"跟卖时间窗"修正（<10 款 +1；>300 款 −2），不作为竞争度打分。
+
+#### 0.5 出候选清单
+落盘 `erp_data/selection_candidates.csv`，字段见 strategy 第九章（必须含 `landed_cny`/`price_local`/`in_band`/`pieces`/`content_source`/`competition_source`/`fulfill_check`）。
+
+#### 0.6 清单确认（人工接管）
+输出建议清单给用户确认（目标150款），确认后 offerId 进入 Step1。写操作仅对用户点名的清单执行。
+**产能提醒**：历史落盘候选仅 14 条，而目标是 150 款。若清单产量不足，先检查是不是评分环节又退回到人工读后台——任何依赖人工转录的维度都不能进自动化流程。
 
 ### Step 1 采集1688链接（复用）
 ```bash
@@ -73,7 +124,7 @@ python3 scripts/erp_client.py items --size 50
 ```json
 {"numIids":["1500000000000000001"],
  "targetShops":[{"targetPlatform":"tiktok",
-   "sellerId":"<TH_SELLER_ID>","sellerNick":"YOUR_SHOP_TH"}]}
+   "sellerId":"","sellerNick":"YOUR_SHOP_TH"}]}
 ```
 - **字段要点**：`numIids` 是 **ERP内部ID（numIid）数组**（不是1688 offerId，不是扁平 itemIds）；`targetShops` 是**嵌套对象数组**（targetPlatform/sellerId/sellerNick 三件套）。此前 24 组扁平字段（itemIds/targetSellerIds）全失败正是因为缺这两点。
 
@@ -134,13 +185,39 @@ python3 scripts/erp_client.py ttl-detail --id <ttl_id>
 - **逐张验收标准**：①指定翻译文字完整、拼写正确；②无中文残留；③无杂散伪字/幻觉字；④无 URL/网址残留（网址必擦）；⑤首图为白底
 
 #### 4.4 定价
-按 `config/pricing.yaml` 算售价：
+**不要手算，用脚本**（参数唯一来源 `config/pricing.yaml`）：
+```bash
+python3 scripts/pricing_calc.py --cost <采购价> --scheme shelf --pieces 1 --site TH
+python3 scripts/pricing_calc.py --limits    # 反推采购价上限；改费率后必跑
+python3 scripts/pricing_calc.py --check     # 校验 markup 与费率是否吻合、有无"无解"组合
 ```
-售价(本币) = (采购价 + 国内运费1元 + 物流藏价10元) × 汇率 × 加价系数
+公式（2026-11-11b：跨境段物流改为按计费重量线性计费，不再是固定 10 元）：
 ```
-- TH加价系数≈1.76（扣点8%+3.21%+退款7%+利润25%）
-- VN加价系数≈2.08（扣点14%+6%+退款7%+利润25%）
-- 算完先输出建议售价表给用户确认，确认后批量填回skus[].price
+到岸成本 = 采购价×件数 + 国内快递(5，同城3.5/跨省6) + 货代(2) + 包材(0.6)
+          + 物流藏价( max(实重, 抛重) × ¥0.0198/g × 件数 )
+抛重(g)  = 长×宽×高(cm) ÷ 6000 × 1000
+售价(本币) = 到岸成本 × 汇率 × markup
+```
+两档 markup（差异只在是否开达人佣金；**当前只用 shelf**，`--limits` 默认只列启用档，加 `--all-schemes` 看全部）：
+
+| 站点 | 货架场 shelf（affiliate 0） | 达人场 creator（affiliate 20%，净利 15%） |
+|---|---|---|
+| TH | **1.62** ✅ 净利 12%（破零冲量；起量后回调 2.05 / 25%） | 2.58 ⏸ 停用 |
+| VN | **2.08** ✅ 净利 25% | 2.63 ⏸ 停用 |
+
+采购价上限（150g、shelf、`pricing_calc.py --limits` 实算，**不是手填**）：
+
+| 站点 | 单件 | 2 件套（单件等效） |
+|---|---|---|
+| TH | 22.4 元 | 9.4 元 |
+| VN | 16.7 元 | 6.6 元 |
+
+**三条硬规则**：
+- 售价折美元必须落在价格带内（TH $5–8 / VN $5–8.5），脚本会给 `✓ 带内 / ✗ 超带`。**超带就换品，不要调 markup。**
+- **开 20% 达人佣金必须同时把净利降到 15%**。若一边开邀请佣金一边要求 25% 净利，该组合无解。
+- **2 件套窗口很窄**：单件等效上限 TH ≤9.4 元、VN ≤6.6 元（150g）；重量到 400g 只剩 4.5 / 1.7 元 → 泡货别做组合装。
+
+算完先输出建议售价表给用户确认，确认后批量填回 `skus[].price`。
 
 #### 4.5 保存编辑（接口已破解 2026-10-28）
 接口：**`POST /item/crossBorder/edit`**（不是 platformCollect/save）。
@@ -187,7 +264,7 @@ python3 scripts/erp_client.py ttl-save --id <ttl_id> --images "<url1>,<url2>,...
     "titleTruncateType":"END","skuNameEnabled":true,"skuNameLimit":20,"skuNameTruncateType":"END",
     "skuValueEnabled":true,"skuValueLimit":50,"skuValueTruncateType":"END","skuTotalEnabled":false}},
  "distribItemVos":[{"itemId":"<itemCenterNumIid>","sourcePlatform":"kdzs_erp",
-   "targetPlatform":"tiktok","sourceSellerId":os.environ.get("ERP_SOURCE_SELLER_ID", ""),"targetSellerId":"<sellerId>",
+   "targetPlatform":"tiktok","sourceSellerId":"<ERP_SOURCE_SELLER_ID>","targetSellerId":"<sellerId>",
    "targetSellerNick":"YOUR_SHOP_TH","categoryIds":"","categoryNames":""}]}
 ```
 **要点**：`itemId`=**TikTok采集箱记录 id（ttl_id）**，不是 itemCenterNumIid（2026-10-29 实测：ttl_id→受理进队列，center ID→"未找到该平台采集记录"）；`sourceSellerId` 必填（实测=<ERP_SOURCE_SELLER_ID>）；`categoryIds/categoryNames` 是**字符串**（可空），不是数组；商品缺类目→"类目不能为空"、缺描述→"商品描述不能为空"（商品数据问题，需先在编辑侧完善）。
@@ -228,11 +305,22 @@ python3 scripts/erp_client.py ttl-publish --ids <ttl_id逗号分隔>
 - 公共采集箱"货源ID"输入框匹配的是 **ERP内部ID（numIid）**，不是 1688 offerId——用 `python3 scripts/erp_client.py items --ids <offerId>` 先查 numIid，再填浏览器
 - 已认领记录默认不进"未认领"列表，重新认领前需先在公共采集箱定位（按 numIid 搜索）
 
-### Step 6 发布记录统计
+### Step 6 发布记录统计 + 数据回流
 ```bash
 python3 scripts/erp_client.py logs --months 1
 ```
 status: success/fail/processing/examine。
+
+#### 6.1 T+7 / T+20 数据回流（必做，否则第二批无法"放大赢家"）
+TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
+
+| 时点 | 字段 | 用途 |
+|---|---|---|
+| T+7 | 曝光、点击、CTR、加购 | 有点击无加购 → 换主图/调价；零曝光 → 等 T+20 |
+| T+20 | 曝光、点击、成交单量、成交额、退款率、**履约率/延迟发货率** | 决定 kill / 培养 / 放大 |
+
+判定规则（`selection.yaml` → `cadence`）：T+20 仍无曝光无转化 → 下架换品；有成交 → 进第二批放大的方向池。
+**履约率是链路信号不是选品信号**：延迟发货率上升 → 先换货代或转小批量备货（>30 单/日），不要靠继续换品掩盖。
 
 ### Step 7 全链路可行性结论（2026-10-29 真实 case 验证）
 
@@ -283,7 +371,9 @@ status: success/fail/processing/examine。
 - 若抽屉保存同样清空 itemModel（待验证），则回到 Step5 路线B：**带异常直接发布**（发布配置自动补全重量），图片翻译放 TikTok 商家后台二次处理
 
 ## References
-- `references/selection-strategy.md`：选品模块核心——数据源(TikTok官方后台/1688产品开发工具)、硬红线、五维评分、TH/VN差异、破零节奏(150款/20天)、候选清单格式。Step 0 选品前必读。
+- `references/selection-strategy.md`：选品模块核心（九章）——一件代发三条铁律、履约链路与同省原则、成本结构与采购价上限矩阵、数据源分层与可信度分级、红线与供应链门槛、四维评分、TH/VN差异、破零节奏与数据回流、输出格式。Step 0 前必读。
 - `references/tiktok-api.md`：TikTok接口契约（已实测+待补）
-- `config/pricing.yaml`：站点定价参数
-- `config/selection.yaml`：选品参数（红线开关/五维权重/站点价格区间/竞争度阈值/破零节奏）
+- 图片处理流水线（OCR分类 → 擦营销词 → 功能词翻译 → 首图白底 → 逐张验收）见上方 Step 4.3，无独立文件
+- `config/pricing.yaml`：站点定价参数（一件代发全成本、两档 markup、价格带）
+- `config/selection.yaml`：选品参数（履约红线/门槛/四维权重/需求过滤/竞争与内容力口径/单量分层/铺货节奏）
+- `scripts/pricing_calc.py`：售价计算与价格带校验（`--cost` 算售价 / `--limits` 反推采购价上限 / `--check` 自检）。纯标准库，配置改完必跑 `--check`。

@@ -1,41 +1,136 @@
-# TikTok Shop 站点定价配置
-# 基于官方费率(2026-10) + 行业ERP最佳实践
-# 修改本文件后即时生效，无需改代码
+# TikTok Shop 站点定价参数
+# 版本：2026-11-11b（一件代发模式；物流改按重量计费）
+# 变更要点：
+#   1. 跨境段物流从固定 10 元改为**按重量线性计费**（官方头程公式，见下）
+#   2. 汇率改用 ERP 实时值（/item/exchangeRate/getList，2026-11-11 20:15）
+#   3. TH 补入「电商增长服务费」8.03%（此前漏算，导致采购价上限虚高 4.4 元）
+#   4. TH 价格带下限 2.0 → 5.0（$4 以下全成本口径结构性亏损）
+# 改完必须跑：python3 scripts/pricing_calc.py --check && python3 scripts/pricing_calc.py --limits
 #
-# ⚠️ shop_nick / seller_id 是占位符，换成自己店铺的值后再用。
-#    也可以完全不写死在这里：脚本优先读环境变量 TH_SHOP_NICK / TH_SELLER_ID（VN 同理）。
+# ⚠️ shop_nick / seller_id 是占位符，换成自己店铺的值后再用（不要提交回仓库）。
+#    脚本优先读环境变量 TH_SHOP_NICK / TH_SELLER_ID（VN 同理），见 .env.example。
+#    pricing_calc.py 只读费率与价格带，不读 shop_nick/seller_id。
 
+# 当前策略（2026-11-11 用户确认）：**暂不开达人佣金**，只走货架场 → 只用 shelf 档
+# creator 档保留在配置里，是为了将来开佣金时不用重新推公式；enabled:false 时不参与评分与上限计算
+#   切换方式：把对应站点 schemes.creator.enabled 改 true，并同步下调 target_margin 到 0.15
+
+# ── 全局成本参数（站点可覆盖同名键）──
+defaults:
+  cny_per_usd: 6.67111                # 2026-11-11 20:15 ERP /item/exchangeRate/getList（1 USD = 6.67111 CNY）
+
+  # 国内段（一件代发实况：单件快递，非批量均摊）
+  domestic_shipping: 5.0              # 一个包裹付一次；同城/省内改 3.5，跨省改 6.0
+  domestic_shipping_same_province: 3.5
+  domestic_shipping_cross_province: 6.0
+  domestic_shipping_per_extra_unit: 0.5   # 同包裹多一件只加续重
+  freight_forwarder_fee: 2.0          # 货代：拆包+验货+换新包装+打包+贴单（云仓标准价 ¥2）
+  # 实测（2026-11-11 义乌某云仓挂牌）：基础换包装/仓储/逐单拆包检验为免费项，纸箱气泡袋另计
+  # → 签货代前按实际报价回填本项，区间 0–3；不要因为"免费"就填 0，需书面报价确认
+  freight_forwarder_fee_range: [0.0, 3.0]
+  packaging_material: 0.6             # 耗材；硬物/易碎需小号纸箱，另加 0.5-2.0
+
+  # ── 跨境段物流（平台物流费，藏进售价；2026-11-11 起按重量）──
+  # 计费依据（TH，官方口径）：头程 THB = 1 + (取整10g(重量) - 10) / 10 × 1，重量向上取整到 10g
+  # 折算（1 CNY = 5.0438 THB）：10g=0.20 / 100g=1.98 / 150g=2.97 / 250g=4.96 / 400g=7.93 元
+  # → 本质是 ¥0.0198/g 的线性费率 + ¥0.2 起收
+  # ⚠ 该公式出自 2022-09-28 版价卡（妙手 help_center article_6294 引用）；
+  #   官方称以最新版物流价卡为准，若实际调价需同步改本项并重跑 --limits
+  shipping_cny_per_gram: 0.019827     # ¥/g，= 1 THB/10g ÷ 5.0438
+  shipping_min_cny: 0.20              # 起收（10g 内）
+  shipping_per_extra_unit_cny: 1.0    # 同包裹每增一件：多一件就多一份重量，已由重量计费覆盖，此值仅作兜底
+  volumetric_divisor: 6000            # 抛重(kg) = L×W×H(cm) ÷ 6000；与实重取大（假花/收纳筐这类泡货的关键）
+  default_weight_g: 150               # 未填重量时的兜底值（不要依赖，选品必须核实真实重量）
+
+  bundle_pieces: 2                    # 起步只做 2 件套；3 件套客单价破价格带上沿，不做
+
+# ── 泰国站 ──
 TH:
   shop_nick: "YOUR_SHOP_TH"
   seller_id: ""
   lang: "th"
   currency: "THB"
-  # 成本结构（第一性原理）
-  platform_commission: 0.08      # 平台佣金(家居类非Mall约6.42-11.77%，取保守8%)
-  transaction_fee: 0.0321        # 交易手续费3.21%
-  refund_reserve: 0.07            # 退款/退货损耗预留7%
-  target_margin: 0.25             # 目标净利润率25%
-  # 物流藏价（按重量阶梯，轻小件默认）
-  shipping_base_cny: 10.0         # 首重0.5kg以内藏价(元)
-  domestic_shipping: 1.0          # 1688到中转仓运费
-  # 汇率(RMB→当地货币，实时更新)
-  rate_to_local: 5.1
-  # 综合加价系数 = 1/(1-平台扣点-退款预留-目标利润率)
-  # TH: 1/(1-0.08-0.0321-0.07-0.25) ≈ 1/0.5679 ≈ 1.76
-  # 实际售价(本币) = (采购价+国内运费+物流藏价) * 汇率 * 加价系数
-  note: "新店前30天免佣金上限1000泰铢(杯水车薪)；新商激励见官方Q4活动页"
 
+  # 扣点结构（第一性原理：每一项都是售价的百分比）
+  platform_commission: 0.08           # 家居类非 Mall 约 6.42-11.77%，取保守 8%
+  transaction_fee: 0.0321             # 交易手续费 3.21%
+  ecommerce_growth_fee: 0.0803        # 电商增长服务费 8.03%（非电子类，单件上限 199 THB）
+  # ↑ 官方 seller university essay 6044226542520081：2026-05-06 起非电子品类 8.03%
+  #   这是一笔独立于 commission 的费用，此前配置漏算 → TH 采购价上限虚高 13.5→9.1 元
+  refund_reserve: 0.07                # 退款/退货损耗预留 7%
+
+  rate_to_local: 5.0438               # RMB → THB（ERP 实时汇率）
+
+  # 价格带（USD）：TH 家居主流价格带，超上限转化率断崖
+  # 下限从 2.0 抬到 5.0：$2 时全成本口径采购价上限为 -3.1 元，$3 为 0.2 元，$4 为 3.4 元 → 结构性亏损
+  price_band_usd:
+    min: 5.0
+    max: 8.0
+
+  # 两档打法，系数 = 1/(1-佣金-交易费-增长服务费-退款预留-达人佣金-目标净利)
+  # ⚠ 2026-11-11 用户确认：破零期（首批 150 款）接受 12% 净利冲量，起量后回调 25%
+  #   12% 把可承受采购价从 ¥5.7 抬到 ¥10.0（$5/150g），是打开货源池的唯一杠杆
+  #   回调方式：target_margin 改回 0.25，markup 改回 2.05
+  schemes:
+    shelf:                            # 货架场：纯搜索/商品卡出单，不开达人佣金（当前启用）
+      enabled: true
+      affiliate_commission: 0.0
+      target_margin: 0.12
+      markup: 1.62                    # 1/(1-0.08-0.0321-0.0803-0.07-0.12)
+      revert_target_margin: 0.25      # 起量后回调值
+      revert_markup: 2.05
+    creator:                          # 达人场：开 20% 佣金，净利必须降到 15%（当前停用）
+      enabled: false                  # 2026-11-11 决定：暂不开达人佣金，起量后再评估
+      affiliate_commission: 0.20
+      target_margin: 0.15
+      markup: 2.58                    # 1/(1-0.08-0.0321-0.0803-0.07-0.20-0.15)
+
+  note: "新店免电商增长服务费：5000 THB/30天（2026-05-03 后入驻为 3000 THB/21天），非旧版写的 1000THB。冲量期可把 ecommerce_growth_fee 置 0，markup 降到 1.79"
+
+# ── 越南站 ──
 VN:
   shop_nick: "YOUR_SHOP_VN"
   seller_id: ""
   lang: "vi"
   currency: "VND"
-  platform_commission: 0.14       # 非Mall默认14%
-  transaction_fee: 0.06           # 交易手续费6%
+
+  platform_commission: 0.14           # 非 Mall 默认 14%
+  transaction_fee: 0.06               # 交易手续费 6%（新店前90天免，上限3000万VND≈8700元）
+  ecommerce_growth_fee: 0.0           # VN 无此项（未核实到官方增长服务费）
   refund_reserve: 0.07
-  target_margin: 0.25
-  shipping_base_cny: 10.0
-  domestic_shipping: 1.0
-  rate_to_local: 3550.0           # RMB→VND
-  # VN综合扣点=20%+7%+25%=52%，加价系数≈1/0.48≈2.08
-  note: "新店前90天免交易手续费(上限3000万VND≈8700元)，期间可把transaction_fee改为0冲量"
+
+  rate_to_local: 3845.8               # RMB → VND（ERP 实时汇率）
+
+  # ⚠ VN 跨境头程费率**未核实**，暂沿用 TH 的单位费率。若 VN 价卡不同，需改本项
+  shipping_cny_per_gram: 0.019827
+  shipping_min_cny: 0.20
+
+  # 价格带：TikTok VN 客单价均值 ≈$8.5（Shopee VN ≈$12），取 8.5 为上限
+  # 下限同样从 1.0 抬到 5.0：VN 扣点更重（20% vs TH 19.24%），低客单更没空间
+  price_band_usd:
+    min: 5.0
+    max: 8.5
+
+  schemes:
+    shelf:                            # （当前启用）
+      enabled: true
+      affiliate_commission: 0.0
+      target_margin: 0.25
+      markup: 2.08                    # 1/(1-0.14-0.06-0.07-0.25)
+    creator:                          # （当前停用）
+      enabled: false
+      affiliate_commission: 0.20
+      target_margin: 0.15
+      markup: 2.63                    # 1/(1-0.14-0.06-0.07-0.20-0.15)
+
+  note: "前90天免交易手续费期间把 transaction_fee 置 0，系数降到 1.85/2.27；VN 扣点比 TH 重 0.8 个点"
+
+# ── 售价公式（唯一口径，勿自创）──
+# 到岸成本(CNY) = 采购价×件数 + 国内运费 + 货代操作费 + 包材 + 物流藏价
+#   物流藏价 = max(实重, 抛重) × shipping_cny_per_gram × 件数
+#              抛重(g) = 长×宽×高(cm) ÷ volumetric_divisor × 1000
+# 售价(本币)   = 到岸成本 × rate_to_local × markup
+# 校验：单件折美元 ≥ price_band_usd.min 且 订单总额 ≤ max，否则该品在该站不成立（换品，不要硬调 markup）
+# ⚠ 已知未建模项：泰国进口税（2026-01-01 取消 1500 THB 免税，关税10%+VAT7%≈17.7%），
+#   平台在结账代收。若价格带指"买家到手价"，则挂价需 ÷1.177，采购价上限再降约 30%。
+#   → 待确认口径；当前按"挂价"理解（保守度不足，选品时需额外留 1 元安全垫）

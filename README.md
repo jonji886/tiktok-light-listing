@@ -4,7 +4,7 @@
 
 ![format](https://img.shields.io/badge/format-Agent%20Skill-6E4AFF)
 ![python](https://img.shields.io/badge/python-3.8%2B-3776AB)
-![deps](https://img.shields.io/badge/dependencies-stdlib%20only-success)
+![deps](https://img.shields.io/badge/dependencies-stdlib%20%2B%20optional%20cramjam-success)
 ![license](https://img.shields.io/badge/license-MIT-blue)
 
 ---
@@ -81,7 +81,7 @@
 
 | 分层 | 判据 | 具体动作 |
 |---|---|---|
-| **AI 自动** | 错了没损失，或损失可回滚 | 取候选、搜同款、五维打分、采集、认领、对账、算价、图片 OCR 分类、擦广告字、翻译、白底、提交发布、查记录 |
+| **AI 自动** | 错了没损失，或损失可回滚 | 取需求信号、搜同款、四维打分、价格带校验、采集、认领、对账、算价、图片 OCR 分类、擦广告字、翻译、白底、提交发布、查记录 |
 | **硬红线自动阻断** | 错了有罚金/下架风险，但判定规则确定 | 品牌侵权、IP 联名、液体化工、带电、食品保健医疗、宗教、易碎、活体、多规格价差、限售需认证、跨类目 |
 | **人工接管** | 错了钱直接没了，且规则无法穷举 | ERP 登录/短信验证码、候选清单最终确认、图片处理结果抽检（前 10 个人工过一眼） |
 
@@ -92,12 +92,11 @@
 费率会变、汇率会变、什么样的同款数算红海会变。改一个数字不该改代码。`config/selection.yaml` 里改一行即时生效：
 
 ```yaml
-weights:            # 五维权重，合计 1.0
-  demand: 0.25      # 需求：关键词热度/榜单销量
-  competition: 0.25 # 竞争：同款数/「无竞争对手」/「稀缺」标签
-  margin: 0.20      # 利润：售价÷采购价倍数
-  logistics: 0.15   # 物流：重量/尺寸/易碎
-  breakzero: 0.15   # 破零：可搜性/需求稳定性/复购属性
+weights:              # 四维权重，合计 1.0
+  fulfillment: 0.30   # 履约确定性：发货地→货代仓的快递天数/库存/起订量
+  content: 0.25       # 内容力：达人/视频/直播数（TikTok 是内容场）
+  margin: 0.25        # 实净利：全成本口径（国内快递 5 + 货代 2 + 包材 0.6 + 跨境按重量 0.0198/g）
+  competition: 0.20   # 站内竞争：TikTok 在售款数/「无竞争对手」标签
 ```
 
 ### 原则三：写操作只对「用户点名过的清单」执行
@@ -118,7 +117,7 @@ Step 5  发布        → erp_client.py ttl-publish --ids <ttl_id,...>
 Step 6  回查        → erp_client.py logs --months 1
 ```
 
-**Step 0 选品**是整个链路的漏斗口，规则见 [`references/selection-strategy.md`](references/selection-strategy.md)：两条路径（榜单驱动 / 关键词驱动，新人优先后者抢空白供给）→ 硬红线剔除 → 五维评分 → 同款去重 → 按分排序。
+**Step 0 选品**是整个链路的漏斗口，规则见 [`references/selection-strategy.md`](references/selection-strategy.md)（九章）：官方后台取需求信号 → 1688 找货 → 硬红线与供应链门槛剔除 → 四维评分（履约/内容力/实净利/站内竞争）→ 价格带校验 → **按发货城市聚簇 + 人工查货代覆盖（TIKTOK 标签）** → 出清单。
 
 **Step 4 图片本地化**是本 Skill 真正的差异化部分，也是最难的：主图里塞满中文营销信息（源头工厂、日产 XX、包退、一件代发、1688），直发等于放弃本地化。处理流水线：
 
@@ -158,6 +157,10 @@ export ERP_TOKEN='<paste-jwt>'
 # 3) 验证连通
 python3 scripts/erp_client.py token --check
 # → [erp] token OK, tiktok shops total=N
+
+# 4) 校验定价配置自洽（改费率/汇率后必跑）
+python3 scripts/pricing_calc.py --check
+# → 配置自洽
 ```
 
 **第一条只读命令**（安全，不改任何东西）：
@@ -239,19 +242,24 @@ ERP 的 `getDetail` 只服务**待完善商品**。商品一旦被保存完善�
 
 | 文件 | 内容 |
 |---|---|
-| `config/selection.yaml` | 破零目标（150 款 / 20 天）、站点价格与成本区间、五维权重、一票否决红线、竞争度阈值、铺货节奏 |
-| `config/pricing.yaml` | 平台佣金、交易手续费、退款预留、目标利润率、汇率、物流藏价 → 综合加价系数 |
+| `config/selection.yaml` | 破零目标（150 款 / 20 天）、履约红线（48h 打包 / 3 自然日到仓）、地域收敛（城市级 + 货代 TIKTOK 标签）、站点价格带与采购价区间、四维权重、需求过滤、供应链门槛、红线、竞争与内容力口径、铺货节奏 |
+| `config/pricing.yaml` | 平台佣金、交易手续费、**电商增长服务费**、退款预留、目标净利率、汇率、国内段成本、跨境段按重量物流 → 两档加价系数（shelf / creator） |
 
-**定价公式**（第一性原理，不拍脑袋）：
+**定价公式**（2026-11-11b：跨境段物流由固定 10 元改为按计费重量线性计费）：
 
 ```
-售价(本币) = (采购价 + 国内运费 + 物流藏价) × 汇率 × 加价系数
-加价系数   = 1 / (1 - 平台佣金 - 交易手续费 - 退款预留 - 目标利润率)
+到岸成本(CNY) = 采购价×件数 + 国内快递(5，同城3.5/跨省6) + 货代(2) + 包材(0.6)
+              + max(实重, 抛重) × ¥0.0198/g × 件数
+售价(本币)    = 到岸成本 × 汇率 × markup
+markup        = 1 / (1 - 佣金 - 交易手续费 - 增长服务费 - 退款预留 - 达人佣金 - 目标净利)
 ```
 
-TH：`1/(1-0.08-0.0321-0.07-0.25) ≈ 1.76`　　VN：`1/(1-0.14-0.06-0.07-0.25) ≈ 2.08`
+| 站点 | 货架场 shelf（当前启用） | 达人场 creator（停用） |
+|---|---|---|
+| TH | `1.62`（净利 12%，破零冲量） | `2.58` |
+| VN | `2.08`（净利 25%） | `2.63` |
 
-算完先输出建议售价表给人确认，确认后才批量回填 `skus[].price`。
+**不要手算**，用 `scripts/pricing_calc.py`：`--cost` 出售价与带内判定、`--limits` 反推采购价上限矩阵、`--check` 校验配置自洽（改费率/汇率后必跑）。算完先输出建议售价表给人确认，确认后才批量回填 `skus[].price`。
 
 ---
 
@@ -263,13 +271,16 @@ tiktok-light-listing/
 ├── README.md
 ├── .env.example                      # 环境变量模板
 ├── config/
-│   ├── selection.yaml                # 选品规则（权重/红线/阈值/节奏）
-│   └── pricing.yaml                  # 定价参数（费率/汇率/加价系数）
+│   ├── selection.yaml                # 选品规则（履约红线/四维权重/门槛/节奏）
+│   └── pricing.yaml                  # 定价参数（费率/汇率/成本项/两档 markup/价格带）
 ├── references/
-│   ├── selection-strategy.md         # 选品方法论：两条路径、十类红线、五维评分细则
+│   ├── selection-strategy.md         # 选品方法论（九章）：履约链路、成本结构、数据源分层、红线与门槛、四维评分
 │   └── tiktok-api.md                 # 接口契约（已实测 12 个 + 待补）
 ├── scripts/
-│   ├── erp_client.py                 # CLI，纯标准库
+│   ├── erp_client.py                 # 主 CLI（采集/认领/编辑/发布/回查），纯标准库
+│   ├── pricing_calc.py               # 定价与价格带校验（--cost / --limits / --check），纯标准库
+│   ├── kdzs_fastmoss.py              # 选品数据源（后端 FastMoss 榜：销量/达人/视频数），免登录只读
+│   ├── erp_token_grab.py             # 从本机 Chrome LevelDB 提取登录态 JWT（可选，依赖 cramjam）
 │   └── erp_token.example.txt         # token 文件模板（真实 token 已被 .gitignore 排除）
 └── samples/
     ├── selection_candidates.sample.csv
@@ -302,6 +313,19 @@ tiktok-light-listing/
 - 所有接口行为来自**操作者自身浏览器内的正常业务操作**的观测，未做越权访问。
 - 面向未公开接口的自动化存在违反服务条款的风险，**使用前请自行确认目标平台条款**。作者不对使用者行为负责。
 - 仓库中的域名、店铺 ID、sellerId、token、商品与记录 ID 均为占位符或脱敏值。
+
+---
+
+## 更新记录
+
+**2026-11-11b（一件代发模式重构）**
+
+- 选品从五维改**四维**：需求降为过滤条件，新增「内容力」；竞争度口径从「1688 同款数」改为「TikTok 站内在售款数」，同款数降级为跟卖时间窗修正项
+- 履约判据改写：官方时效是 **48h 打包 + 3 个自然日到仓**（不是流传的 96 小时），判据是「发货地 → 货代仓的快递天数」（≤1 天绿 / 2 天黄 / ≥3 天红），不是「同省」
+- 地域收敛按**城市**聚簇（ERP 货代页实测是城市级，不是省级），货代覆盖需人工核对 TIKTOK 标签
+- 定价重算：国内段按单件快递 5 元 + 货代 2 元（非批量均摊 1 元）；跨境段由固定 10 元改为**按计费重量 ¥0.0198/g**；补入 TH「电商增长服务费 8.03%」；价格带下限抬到 $5
+- 新增 `scripts/pricing_calc.py`（售价 / 采购价上限 / 配置自检）与 `scripts/kdzs_fastmoss.py`（销量·达人·视频数数据源）、`scripts/erp_token_grab.py`（登录态提取）
+- 新增 T+7 / T+20 数据回流环节，替代事前预测
 
 ---
 

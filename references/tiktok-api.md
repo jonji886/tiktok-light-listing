@@ -1,6 +1,6 @@
 # TikTok Shop 铺货接口契约（实测 2026-10-28，2026-10-29 补充图片保存/发布闭环）
 
-认证：`qnquerystring` 头（登录态 JWT）+ `appType:3`。
+认证同 shopee-light-listing：`qnquerystring` 头 + `appType:3`。
 
 ## 已实测接口
 

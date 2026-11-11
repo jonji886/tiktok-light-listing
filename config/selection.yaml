@@ -1,40 +1,118 @@
 # TikTok Shop 铺货选品参数（TH/VN 家居类目）
-# 基于 TikTok Shop 官方新商方法论(2026-01) + 东南亚家居类目实测口径 + 竞品ERP(妙手货盘/1688产品开发工具)最佳实践
-# 修改本文件后即时生效，无需改代码
+# 版本：2026-11-11（一件代发模式重构）
+# 基线：TikTok Shop 官方新商方法论 + 东南亚家居实测 + 1688/妙手官方费率口径
+# 与本文件强耦合的：config/pricing.yaml（成本与加价系数）、scripts/pricing_calc.py（价格带校验）
+# 改完必须跑：python3 scripts/pricing_calc.py --check
 
 # ── 破零目标（官方口径，勿下调）──
 target_skus: 150            # 官方：绝大部分商家上传150款后出首单
 break_zero_days: 20         # 官方：上品到出单黄金期20天
-min_stock: 5                # 商品可售库存下限（缺货是平台大忌）
+min_stock: 5                # 平台侧"商品可售库存"下限（缺货是平台大忌）
 
-# ── 站点差异（官方费率 2026-10）──
+# ── 履约红线（一件代发第一权重，不满足即剔除）──
+# 官方口径（2026 东南亚跨境飞轮计划）：下单后48h 打包完成并更新"待发货-等待揽收"；
+# 下单后3个自然日 完成到仓扫描。注意是3个自然日，不是网上流传的96小时。
+fulfillment:
+  dts_pack_hours: 48
+  dts_warehouse_days: 3
+  buffer_days: 1                      # 链路总耗时必须 ≤ 3-1=2 天，留1天给周末/爆仓
+  # 判据不是"同省"，而是「发货地 → 货代仓 的国内快递时效」（2026-11-11 按 ERP 货代页实况修正）
+  # 货代明确支持"国内快递也可发"，所以货源不必与货代同城同省，只看快递要几天
+  max_transit_days: 1                 # 绿档：≤1 天（同城/省内/邻省次日达），D2 到仓送仓，有余量
+  transit_soft_days: 2                # 黄档：2 天。需 24h 发货 + 次日达 + 书面确认，无任何缓冲，周末/爆仓即超
+  transit_red_days: 3                 # 红档：≥3 天必超时，直接换发货地或剔除
+  hard_deadline: 3                    # 链路总耗时上限 = 3 自然日（含周末），见 strategy 2.2
+  seller_ships_48h_proof: required    # 1688 承诺 48h 发货，需客服书面确认（页面标注不算）
+  forwarder_same_day_delivery: required  # 货代当天送仓（16:00 前到仓当日送，之后顺延次日）
+
+# ── 地域收敛（选品先行、货代做约束）──
+# 2026-11-11 实测 ERP 跨境版「货代管理」：筛选器是**城市级**，不是省级。
+# 可选位置：全部 / 东莞市 / 义乌市 / 广州市 / 泉州市 / 海外 / 金华市
+# 所以收敛粒度是城市，且这 5 个城市是"货代的物理位置"，不是"货源的限制范围"。
+region:
+  granularity: city
+  clustering_source: ship_city          # 候选按 1688 实际发货地城市聚簇（省太粗，会放过 2 天时效差）
+  forwarder_check: manual               # ERP「货代管理」人工核对（erp_client.py 无货代接口）
+  erp_platform_filter: TIKTOK           # 服务平台必筛 TIKTOK 标签（还有 SHOPEE / SHOPEES，部分货代只做 Shopee）
+  erp_cities_available: [东莞市, 义乌市, 广州市, 泉州市, 金华市]   # 实测列表；海外=本土店，不适用
+  max_cities_active: 2                  # 同时运营的货代城市上限，超了拆包错发率线性上升
+  no_forwarder_action: relocate_supplier # 时效不达标 → 先找同款其他发货地（同款多发货地极常见），找不到才剔除
+  gate_field: ship_transit_days         # 候选清单字段：发货地到已选货代仓的国内快递天数
+  gate_field_2: forwarder_city          # 候选清单字段：走哪家/哪个城市的货代仓
+
+# 家居产业带 → 货代城市 映射（先验参考，一律以 1688 实际发货地 + 快递时效核实）
+# 判读方式：看候选的发货城市，套下面的"最近货代城市"，再算快递天数决定绿/黄/红
+industry_belt:
+  义乌市:   [义乌市, 东阳市, 浦江市, 诸暨市, 金华市]        # 家居百货/收纳/厨房小工具，SKU 密度最高
+  金华市:   [永康市, 武义县, 磐安县, 兰溪市, 金华市]        # 永康五金挂钩/置物架/锅具、浦江水晶
+  东莞市:   [东莞市, 深圳市, 惠州市, 中山市, 佛山市]        # 硅胶制品/五金小配件/家居塑料/电子
+  广州市:   [广州市, 佛山市, 揭阳市, 汕头市, 潮州市]        # 日用百货/布艺/皮具；潮州陶瓷走易碎红线直接剔
+  泉州市:   [泉州市, 厦门市, 福州市, 南安市]                # 日用百货/南安水暖卫浴
+
+# 无货代 tab 但家居强势的产地（必须靠"快递到最近货代城市"判绿黄红，不能直接剔）
+#   台州市（塑料收纳/垃圾桶/黄岩日用品）→ 最近 义乌市/金华市，省内次日达 → 通常绿档
+#   扬州市杭集（牙刷/洗漱）→ 最近 义乌市，约 1-2 天 → 需实测
+#   临沂市（清洁用品）→ 最近 义乌市，约 2 天 → 黄档，仅高毛利款考虑
+
+# ── 站点差异 ──
+# ⚠ 2026-11-11b 全部重算：物流从"固定 10 元"改为"按重量 ¥0.0198/g"，
+#   同时补入 TH 电商增长服务费 8.03%、汇率改用 ERP 实时值 → 采购价上限整体下移
+#   数据来源：python3 scripts/pricing_calc.py --limits（本文所有上下限均由此反推，勿手填）
 TH:
   currency: "THB"
-  price_floor: 1.0          # 建议售价下限(美元)
-  price_ceil: 8.0           # 建议售价上限(美元)
-  cost_floor_cny: 5.0       # 1688进货价下限(元)
-  cost_ceil_cny: 15.0       # 1688进货价上限(元) —— 轻小件默认区间
-  weight_max_g: 300         # 单件重量上限(g)，超500g运费占比激增
-  size_max_cm: 30           # 单边最大(cm)，超30cm按体积重计费
-  note: "TH新店前30天免佣金上限1000THB；佛教文化，图案避开宗教雷区"
+  price_band_usd: [5.0, 8.0]          # 与 pricing.yaml 一致；$4 以下全成本口径亏损
+  # 采购价区间：与净利率强相关，同一 150g 商品——
+  #   25% 净利下 $5.0 只能承 ¥5.7、$8.0 可承 ¥15.5
+  #   12% 净利（破零冲量）下 $5.0 可承 ¥10.0
+  # 因此严禁把"采购价上限"当固定常数用，必须带目标净利率一起看
+  cost_floor_cny: 5.0                 # 数学下限（$5.0/150g/25% = ¥5.7，留缓冲）
+  cost_ceil_cny: 15.5                 # $8.0/150g/25% 上限；>15.5 必然超价格带
+  bundle_unit_cost_ceil_cny: 6.0      # 2件套单件等效（$8/150g×2）；与 cost_floor 5.0 只差 1 元，组合装窗口极窄
+  chargeable_weight_max_g: 400        # 计费重量上限（按重量计费后从 150g 放宽；400g/$8 仅剩 ¥10.5 空间）
+  chargeable_weight_max_g_bundle: 250 # 2件套：400g 时上限只剩 ¥1.0，实际做不了，卡 250g
+  size_vol_gate: true                 # 尺寸门槛按**抛重**判，不按体积直觉判：抛重(g)=L×W×H/6000×1000
+  size_max_cm: [20, 15, 8]            # 抛重 400g 对应体积 ≤2400cm³；旧值 25×20×10=5000cm³ 会算出 833g 抛重
+  note: "TH 家居主流价格带 $5-8；佛教文化，图案避开宗教元素。假花/收纳筐这类泡货必须按抛重算，实重轻不代表运费低"
+
 
 VN:
   currency: "VND"
-  price_floor: 1.0
-  price_ceil: 6.0
-  cost_floor_cny: 3.0
-  cost_ceil_cny: 12.0       # VN价格敏感，进货价区间更保守
-  weight_max_g: 300
-  size_max_cm: 30
-  note: "VN新店前90天免交易手续费(上限3000万VND≈8700元)；SLS物流最便宜，60分素材也能爆"
+  price_band_usd: [5.0, 8.5]          # TikTok VN 客单价均值 ≈$8.5；下限同 TH 抬到 5.0
+  cost_floor_cny: 5.0                 # VN 价格敏感，但扣点 27% 比 TH 高，低客单没空间
+  cost_ceil_cny: 16.7                 # $8.5/150g/25%；免交易手续费期可到 18.5
+  bundle_unit_cost_ceil_cny: 6.6      # VN 2件套单件等效（$8.5/150g×2）
+  chargeable_weight_max_g: 400
+  chargeable_weight_max_g_bundle: 250
+  size_vol_gate: true
+  size_max_cm: [20, 15, 8]
+  note: "前90天免交易手续费（上限3000万VND≈8700元），期间可冲量；VN 扣点 27% 比 TH 26.24% 只高 0.76pt，价格带是主差异"
 
-# ── 五维评分权重（合计=1.0）──
+# ── 四维评分权重（合计=1.0）──
+# 需求规模不再打分，降为过滤条件（见 demand_filter）：一件代发下需求再高，发不出去也是负资产
 weights:
-  demand: 0.25              # 市场需求：关键词热度/榜单销量
-  competition: 0.25         # 竞争度：同款数/无竞争对手标签/稀缺标签
-  margin: 0.20              # 利润空间：售价/采购价倍数(用pricing.yaml加价系数反推)
-  logistics: 0.15           # 物流友好：重量/尺寸/是否易碎
-  breakzero: 0.15           # 破零速度：货架场可搜性/需求稳定性/复购属性
+  fulfillment: 0.30         # 履约确定性：发货时效/同省/库存/起订量/拆包友好度
+  content: 0.25             # 内容力：达人数/视频数/直播数（TikTok 是内容场，这是最大漏项）
+  margin: 0.25              # 实净利：用 pricing.yaml 全成本（国内5 + 货代2 + 包材0.6 + 跨境按重量0.0198/g）算
+  competition: 0.20         # 站内竞争：TikTok 在售款数/"无竞争对手"标签，不是 1688 同款数
+
+# ── 需求过滤（不打分，通过/不通过）──
+demand_filter:
+  official_opportunity_tag: true      # 官方"未满足需求/热搜商品/无竞争对手"标签直接通过
+  keyword_search_min: 3000            # 关键词月搜索量下限（官方后台口径）
+  opportunity_sales_min: 1000         # 商品机会中心销量下限（7k+/8k+ 这类近似值）
+  low_competition_category_ok: true   # 低竞争类目（在售0-5款 + 有搜索量）可豁免上述下限
+  note: "三者满足其一即通过。榜单排名（遨虾 opprank）只作方向信号，不作达标依据"
+
+# ── 供应链硬门槛（不满足=该品做不了，等同否决）──
+supplier_gates:
+  cross_border_supply: true           # 1688 跨境专供标识
+  dropship_supported: true            # 支持一件代发
+  min_order_qty: 1                    # 无隐形起订量（页面写"一件代发"实际"满3件才发"的要剔除）
+  stock_min: 200                      # 库存≥200，否则一周内必断货
+  no_presale: true                    # 非预售、非定制、非定做尺寸
+  main_image_reusable: true           # 主图可直接复用（新人不具备重拍能力）
+  bundle_partner_min_skus: 2          # 同店/同款有≥2个可搭配SKU（组合装是生存前提）
+  free_shipping_price_available: preferred  # 优先有"包邮价"SKU（1件起可用）
 
 # ── 一票否决红线（命中即跳过，不进入打分）──
 redlines:
@@ -46,32 +124,56 @@ redlines:
   fragile: true             # 易碎(玻璃陶瓷等，退货率高)
   live_goods: true          # 活物/种苗
   multi_spec_wide: true     # 多规格价差必超限(卷材/管材/按尺寸选)
-  restricted_category: true # 平台限售需认证(母婴/美妆个护等，家居店更不可跨类目)
+  restricted_category: true # 平台限售需认证(母婴/美妆个护等)
+  cross_category: true      # 家居类目外的品(跨类目发品会被下架甚至处罚)
 
-# ── 竞争度阈值（东南亚家居实测）──
+# ── 站内竞争（口径已修正：1688 同款数不是竞争度）──
 competition:
-  perfect_no_rival: true    # 商品机会中心标"无竞争对手"的优先
-  scarce_tag: true          # 关键词榜单标"稀缺"的优先
-  hot_tag: true             # 关键词榜单标"热门"的参考
-  same_offer_max: 3000      # 1688同款数≥3000判定为红海，剔除
-  same_offer_best_min: 100  # 同款数100-1500最佳区间下限
-  same_offer_best_max: 1500 # 同款数最佳区间上限
+  source_primary: tiktok_onsite       # 主口径 = TikTok 站内在售款数/官方标签
+  official_no_rival_score: 10         # 官方标"无竞争对手"= 满分
+  onsite_listings_excellent: 5        # 站内在售 ≤5 款 = 9 分
+  onsite_listings_good: 20            # 6-20 款 = 7 分
+  onsite_listings_mid: 50             # 21-50 款 = 5 分
+  onsite_listings_bad: 50             # >50 款 = 2 分
+  # 1688 同款数只用作"跟卖时间窗"，与竞争度是两个不同指标
+  same_offer_window_ideal_max: 10     # 聚簇 <10 = 源头新品窗口期，+1 分
+  same_offer_crowded_min: 300         # >300 = 中国卖家已涌入，2-4 周内到价格战，-2 分
+  proxy_mode_cap: 7                   # 无站内数据时（只能看1688同款数）最高给 7 分，不得给满分
+  note: "旧配置 same_offer_max=3000 判红海是错的：同款多说明供给充沛，不代表站内竞争大"
 
-# ── 利润空间阈值 ──
+# ── 内容力（TikTok 特有维度，权重 25%）──
+content:
+  source_primary: fastmoss_or_echotik # 达人数 totalIflCnt / 视频数 totalVideoCnt / 直播数 totalLiveCnt
+  creators_excellent: 100             # ≥100 达人带过 = 10 分（内容结构已被验证可复制）
+  creators_good: 30                   # 30-99 = 8 分
+  creators_mid: 10                    # 10-29 = 6 分
+  creators_low: 3                     # <10 = 3 分
+  # 数据通道不可用（LinkFox 402 / 未订阅 FastMoss）时的降级口径
+  proxy_mode: visual_demo             # 按"可拍性"判：前后对比可见/单件可手持演示/痛点动作明确/无长解释文字
+  proxy_hits_for_6: 3                 # 满足≥3项给 6 分
+  proxy_mode_cap: 6                   # 降级口径最高 6 分，禁止给满分（避免虚假精确度）
+
+# ── 利润（全成本口径，见 pricing.yaml）──
 margin:
-  min_sell_cost_ratio: 3.0  # 售价(人民币折算)/采购价 ≥3倍 才达标(覆盖佣金+物流+退款)
-  min_ratio_th: 3.5         # TH更宽松
-  min_ratio_vn: 3.0         # VN价格敏感，倍数要求略低
+  min_net_margin: 0.08                # 净利率低于 8% 剔除（含退款预留后的真实净利）
+  full_score_net_margin: 0.25         # ≥25% 满分
+  good_net_margin: 0.18               # 18-25% = 8 分
+  mid_net_margin: 0.12                # 12-18% = 6 分
+  low_net_margin: 0.08                # 8-12% = 4 分
+  scheme_default: shelf               # 当前只走货架场（不开达人佣金，pricing.yaml 里 creator 档 enabled:false）
+  scheme_alt: creator                 # 备查档；启用前必须先把净利目标降到 0.15，否则该组合无解
+  note: "旧配置 min_sell_cost_ratio 3.0/3.5 是基于'国内运费1元'的错误前提推导，已废弃"
 
-# ── 破零速度加分项 ──
-breakzero:
-  consumable: true          # 消耗品/复购品加分(粘毛器/洗衣袋/清洁耗材)
-  stable_demand: true       # 需求稳定(避开强季节+无复购，如圣诞装饰)
-  searchable: true          # 标题能堆关键词、货架场可搜到(货架场是新店首单主来源)
+# ── 单量分层（决定履约模式，不是选品指标）──
+volume_tiers:
+  dropship_pure_max: 10               # <10单/日：纯代发，接受5-6元运费，不折腾
+  negotiate_range: 30                 # 10-30单/日：谈包邮价SKU/固定运费3元，开始做2件套
+  stock_up_min: 30                    # >30单/日：转小批量备货到货代仓（快递可谈2.2甚至1.8）
 
 # ── 铺货节奏 ──
 cadence:
   first_batch: 150          # 第一批铺货目标(官方出单门槛)
   second_batch: 50          # 第二批补充(第一批有数据后)
-  optimize_day: 7           # 第一批上架后第7天看数据
+  optimize_day: 7           # 第7天看曝光/点击数据
   kill_day: 20              # 20天无出单/无流量即下架换品
+  data_backflow_day: [7, 20]  # T+7、T+20 必须回填后台真实曝光/点击/成交（替代事前预测）
