@@ -1,0 +1,4 @@
+﻿ttl_id,itemCenterNumIid,货源ID,标题,站点,店铺,类目,币种,售价区间,库存,状态,异常标签,图片
+1500000000000000002,1600000000000000002,780000000001,ที่หนีบจัดสายไฟแบบไม่ต้องเจาะ,TH,YOUR_SHOP_TH,"家居用品,家居收纳,理线器",THB,89.0~119.0,500,0,IS_REQUIRED_FIELDS,https://your-cdn.example.com/sample/1.jpg
+1500000000000000003,1600000000000000003,780000000002,Phễu gấp silicon đa năng,VN,YOUR_SHOP_VN,"家居用品,厨房用具,厨房小工具",VND,25000.0~32000.0,300,0,"IS_REQUIRED_FIELDS,CATEGORY_NOT_MATCH",https://your-cdn.example.com/sample/2.jpg
+1500000000000000004,1600000000000000004,780000000003,แปรงทำความสะอาดร่องบานหน้าต่าง,TH,YOUR_SHOP_TH,"家居用品,清洁工具,清洁刷",THB,59.0~79.0,800,1,,https://your-cdn.example.com/sample/3.jpg

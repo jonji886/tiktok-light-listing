@@ -1,0 +1,77 @@
+# TikTok Shop 铺货选品参数（TH/VN 家居类目）
+# 基于 TikTok Shop 官方新商方法论(2026-01) + 东南亚家居类目实测口径 + 竞品ERP(妙手货盘/1688产品开发工具)最佳实践
+# 修改本文件后即时生效，无需改代码
+
+# ── 破零目标（官方口径，勿下调）──
+target_skus: 150            # 官方：绝大部分商家上传150款后出首单
+break_zero_days: 20         # 官方：上品到出单黄金期20天
+min_stock: 5                # 商品可售库存下限（缺货是平台大忌）
+
+# ── 站点差异（官方费率 2026-10）──
+TH:
+  currency: "THB"
+  price_floor: 1.0          # 建议售价下限(美元)
+  price_ceil: 8.0           # 建议售价上限(美元)
+  cost_floor_cny: 5.0       # 1688进货价下限(元)
+  cost_ceil_cny: 15.0       # 1688进货价上限(元) —— 轻小件默认区间
+  weight_max_g: 300         # 单件重量上限(g)，超500g运费占比激增
+  size_max_cm: 30           # 单边最大(cm)，超30cm按体积重计费
+  note: "TH新店前30天免佣金上限1000THB；佛教文化，图案避开宗教雷区"
+
+VN:
+  currency: "VND"
+  price_floor: 1.0
+  price_ceil: 6.0
+  cost_floor_cny: 3.0
+  cost_ceil_cny: 12.0       # VN价格敏感，进货价区间更保守
+  weight_max_g: 300
+  size_max_cm: 30
+  note: "VN新店前90天免交易手续费(上限3000万VND≈8700元)；SLS物流最便宜，60分素材也能爆"
+
+# ── 五维评分权重（合计=1.0）──
+weights:
+  demand: 0.25              # 市场需求：关键词热度/榜单销量
+  competition: 0.25         # 竞争度：同款数/无竞争对手标签/稀缺标签
+  margin: 0.20              # 利润空间：售价/采购价倍数(用pricing.yaml加价系数反推)
+  logistics: 0.15           # 物流友好：重量/尺寸/是否易碎
+  breakzero: 0.15           # 破零速度：货架场可搜性/需求稳定性/复购属性
+
+# ── 一票否决红线（命中即跳过，不进入打分）──
+redlines:
+  brand_ip: true            # 品牌侵权/动漫影视IP联名(标题+主图双查)
+  liquid_chemical: true     # 液体/膏体/化工(物流与合规受限)
+  battery_powered: true     # 带电/电池(新人避开，物流贵+限制多)
+  food_health_medical: true # 食品/保健/医疗
+  religious: true           # 宗教/民俗敏感
+  fragile: true             # 易碎(玻璃陶瓷等，退货率高)
+  live_goods: true          # 活物/种苗
+  multi_spec_wide: true     # 多规格价差必超限(卷材/管材/按尺寸选)
+  restricted_category: true # 平台限售需认证(母婴/美妆个护等，家居店更不可跨类目)
+
+# ── 竞争度阈值（东南亚家居实测）──
+competition:
+  perfect_no_rival: true    # 商品机会中心标"无竞争对手"的优先
+  scarce_tag: true          # 关键词榜单标"稀缺"的优先
+  hot_tag: true             # 关键词榜单标"热门"的参考
+  same_offer_max: 3000      # 1688同款数≥3000判定为红海，剔除
+  same_offer_best_min: 100  # 同款数100-1500最佳区间下限
+  same_offer_best_max: 1500 # 同款数最佳区间上限
+
+# ── 利润空间阈值 ──
+margin:
+  min_sell_cost_ratio: 3.0  # 售价(人民币折算)/采购价 ≥3倍 才达标(覆盖佣金+物流+退款)
+  min_ratio_th: 3.5         # TH更宽松
+  min_ratio_vn: 3.0         # VN价格敏感，倍数要求略低
+
+# ── 破零速度加分项 ──
+breakzero:
+  consumable: true          # 消耗品/复购品加分(粘毛器/洗衣袋/清洁耗材)
+  stable_demand: true       # 需求稳定(避开强季节+无复购，如圣诞装饰)
+  searchable: true          # 标题能堆关键词、货架场可搜到(货架场是新店首单主来源)
+
+# ── 铺货节奏 ──
+cadence:
+  first_batch: 150          # 第一批铺货目标(官方出单门槛)
+  second_batch: 50          # 第二批补充(第一批有数据后)
+  optimize_day: 7           # 第一批上架后第7天看数据
+  kill_day: 20              # 20天无出单/无流量即下架换品

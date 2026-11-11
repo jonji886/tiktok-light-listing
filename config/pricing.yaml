@@ -1,0 +1,41 @@
+# TikTok Shop 站点定价配置
+# 基于官方费率(2026-10) + 行业ERP最佳实践
+# 修改本文件后即时生效，无需改代码
+#
+# ⚠️ shop_nick / seller_id 是占位符，换成自己店铺的值后再用。
+#    也可以完全不写死在这里：脚本优先读环境变量 TH_SHOP_NICK / TH_SELLER_ID（VN 同理）。
+
+TH:
+  shop_nick: "YOUR_SHOP_TH"
+  seller_id: ""
+  lang: "th"
+  currency: "THB"
+  # 成本结构（第一性原理）
+  platform_commission: 0.08      # 平台佣金(家居类非Mall约6.42-11.77%，取保守8%)
+  transaction_fee: 0.0321        # 交易手续费3.21%
+  refund_reserve: 0.07            # 退款/退货损耗预留7%
+  target_margin: 0.25             # 目标净利润率25%
+  # 物流藏价（按重量阶梯，轻小件默认）
+  shipping_base_cny: 10.0         # 首重0.5kg以内藏价(元)
+  domestic_shipping: 1.0          # 1688到中转仓运费
+  # 汇率(RMB→当地货币，实时更新)
+  rate_to_local: 5.1
+  # 综合加价系数 = 1/(1-平台扣点-退款预留-目标利润率)
+  # TH: 1/(1-0.08-0.0321-0.07-0.25) ≈ 1/0.5679 ≈ 1.76
+  # 实际售价(本币) = (采购价+国内运费+物流藏价) * 汇率 * 加价系数
+  note: "新店前30天免佣金上限1000泰铢(杯水车薪)；新商激励见官方Q4活动页"
+
+VN:
+  shop_nick: "YOUR_SHOP_VN"
+  seller_id: ""
+  lang: "vi"
+  currency: "VND"
+  platform_commission: 0.14       # 非Mall默认14%
+  transaction_fee: 0.06           # 交易手续费6%
+  refund_reserve: 0.07
+  target_margin: 0.25
+  shipping_base_cny: 10.0
+  domestic_shipping: 1.0
+  rate_to_local: 3550.0           # RMB→VND
+  # VN综合扣点=20%+7%+25%=52%，加价系数≈1/0.48≈2.08
+  note: "新店前90天免交易手续费(上限3000万VND≈8700元)，期间可把transaction_fee改为0冲量"
