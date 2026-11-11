@@ -143,7 +143,7 @@ Step 6  回查        → erp_client.py logs --months 1
 **前置**：Python 3.8+（无需 pip install，全标准库）、一个已开通 TikTok Shop 跨境店的 ERP 账号。
 
 ```bash
-git clone https://github.com/<your-account>/tiktok-light-listing.git
+git clone https://github.com/jonji886/tiktok-light-listing.git
 cd tiktok-light-listing
 
 # 1) 配置站点（不写死进仓库）
