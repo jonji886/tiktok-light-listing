@@ -153,4 +153,56 @@ CLI 用 `prep_publish.py --images "<url1>,<url2>,..."`（数量必须与主图�
 5. ~~删除接口~~：**已破解 2026-10-29**（batchOps + opsType:3）
 6. ~~批量改价接口~~：**已破解 2026-11-11**（batchOps + opsType:2，公式模式）
 7. ~~选品数据~~：**已打通 2026-11-11**（`/item/fastmoss/product/search`，免 token）
-8. **待补**：`opsType:1`（改类目）未实测；货代管理无接口（只能人工）；TikTok 后台商品分析数据无接口（T+7/T+20 回填需人工或浏览器读）
+8. **待补**：`opsType:1`（改类目）未实测；货代管理无接口（只能人工）；TikTok 后台商品分析数据无接口（T+7/T+20 回填需人工或浏览器读）；**站点商品上/下架 `ops` 取值未实测**
+9. ~~站点商品编辑/保存~~：**已破解 2026-11-12**（见下章）
+
+---
+
+## 站点商品（已发布 / 在售）编辑接口（2026-11-12 新增，✅ 实测）
+
+⚠️ **与前面「采集箱」是两套东西**：`/item/crossBorder/platformCollect/*` 管**发布前草稿**；
+本章管**平台侧已在售商品**（ERP 菜单「商品 → TikTok → 站点商品」`/cross/goods/tiktok-site`，
+列表 `numIid` = TikTok 商品 ID、`outerId` = 1688 offerId）。此前 Skill 只逆向了采集箱，
+据此得出的「ERP 没有下架 / 重新上架能力」**只对采集箱成立，对站点商品模块不成立**。
+站点商品页前端明确有批量项 `editGoods(编辑商品信息)` 与 `goodsUpDn(商品上/下架)`。
+
+| 用途 | 路径 | body | 备注 |
+|---|---|---|---|
+| 站点商品列表 | `/item/sysItem/queryPlatformItemListWithPage` | `{pageNo,pageSize}` | ✅ 实测。`data.list[]` 含 `numIid / outerId / sellerId / sellerNick / platform / platformItemSkuList`。**全平台混排**（实测 total=301，含 shopees），按 `platform=="tiktok"` 自行筛 |
+| 编辑详情 | `/item/item/queryPlatformItemDetail` | `{sellerId, platform:"tiktok", numIid}` | ✅ 实测。缺 `platform` →「平台不能为空」；缺 `sellerId` →「店铺id不能为空」。返回 `data.tiktokDetailInfo` |
+| 保存编辑 | `/item/item/updatePlatformItem` | `{sellerId, platform, numIid, tiktokDetailInfo:{...详情对象+改动字段}}` | ✅ 实测，两个坑见下 |
+| 操作日志 | `/item/getPlatItemOperateLog` | `{pageNo,pageSize,numIid,viewType:1,logOperateTypeList:[8]}` | ✅ 实测。`logOperateType:8` = 编辑商品信息，`enableStatus:1` |
+| 批量上/下架 | `/item/item/itemBatchUpDownShelf` | `{ops, list, ...}` | ⚠️ 路径由主包 API 定义确认，**body 未完整实测**：缺 `ops` →「ops is null」；缺/错 `list` →「list is empty」。`ops` 取值与 `list` 元素结构 = `UNKNOWN`，**禁止凭猜测调用** |
+
+### 保存 body 的两个硬坑
+
+1. **全量回传 `tiktokDetailInfo` 必须 `delete replicatedProducts`（及 `multiCountrySkuSalesConfig`）**。
+   否则平台报 `tiktok编辑商品失败：Missing SKU details in replicated_products. You must complete the SKU details.`
+   根因：多国家售卖副本的 `skus` 是空数组，全量提交触发 TikTok 校验。
+   前端「多国家同步」开关关闭时正是 `delete y.replicatedProducts` 再提交（`CrossPlatformGoods` 分包）。
+   ✅ 副作用核验（2026-11-12）：删除该字段提交后，原商品的 4 个 DRAFT 副本（MY/VN/SG/PH）
+   保存前后**数量与状态一致，未被删除** → 该字段是「本次不同步修改」，不是「删除副本」。
+2. **`success:true` ≠ 立刻回读得到新值**（2026-11-12 实测）。返回
+   `{"data":{"itemSuccess":true,"skuSuccess":true,"stockSuccess":true,"settlementPriceSuccess":true,"success":true},"success":true}`，
+   日志也记了 `logOperateType:8 / enableStatus:1`；但**保存后 2 秒回读 `description` 仍是旧值（153 字符 / 1 段）**，
+   **数分钟后再回读 = 1011 字符 / 4 段，确认已生效**。
+   → ERP 详情接口有**数分钟缓存/异步延迟**，禁止保存后立刻回读就判失败；
+   但也别把 ERP 回执直接当成平台已生效：**TikTok 后台是否同步、两条提示是否消失仍 `UNKNOWN`，须人工复核**。
+
+### `tiktokDetailInfo` 关键字段
+
+`id / numIid`、`title`、`description`(HTML)、`mainImages[]`、`skus[].price.salePrice`、
+`productStatus`(`ACTIVATE`=在售)、`productStatusName`("在售")、`categoryId` / `categoryChains`、
+`packageWeight`、`packageDimensions`、`productAttributes`、`replicatedProducts[]`(多国家售卖副本)、`video`。
+
+2026-11-12 实测本轮发布的 4 品：`productStatus` 全 `ACTIVATE/在售`；
+`description` 纯文本 134 / 144 / 153 / 160 字符、**全部仅 1 段** → 与后台「描述格式 / 描述质量」
+两条优化提示完全对应（`VERIFIED` 平台侧一手数据，比采集箱快照更硬）。
+
+### 前端包版本（逆向用，2026-11-12）
+
+前端已升到 **`erp/1.5.1`**（旧笔记 `erpg/0.0.66` 已过时）。
+chunk 文件名解析：主包 `app.<hash>.js` 的 `jsonpScriptSrc` 里有两张表——
+`({0:"SettlementSetting",...}[a]||a)` 给名字、`{0:"4ba86a77",...}[a]` 给 hash，拼成 `js/<name>.<hash>.js`。
+站点商品页相关分包：`CrossShopeeSiteGoods.*.js`（列表 / 批量操作）、
+`CrossPlatformGoods.*.js`（编辑弹窗 + 保存逻辑）。文件是 gzip，先 `gunzip -c`。

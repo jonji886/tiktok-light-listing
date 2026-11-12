@@ -3,7 +3,7 @@
 """
 快递助手ERP跨境版 · TikTok 选品数据源（免登录）
 
-数据来源：<your-erp-host> 内部接口，后端直连 FastMoss（见前端模块 2174）。
+数据来源：目标跨境 ERP 内部接口（<your-erp-host>），后端直连 FastMoss。
 关键结论（2026-11-11 实测）：
   - /item/fastmoss/category/list  和  /item/fastmoss/product/search  无需 token，可直接调用
   - 采集进采集箱 / 铺货 需要 qnquerystring（见 scripts/erp_client.py），本脚本不涉及
@@ -36,8 +36,8 @@ import time
 import urllib.request
 import urllib.error
 
-BASE = "https://<your-erp-host>"
-OTHER_BASE = "https://<your-erp-host>"  # 同一后端，可互换
+BASE = os.environ.get("ERP_BASE_URL", "").rstrip("/")        # 例：https://your-erp-host.example.com
+OTHER_BASE = os.environ.get("ERP_ALT_BASE_URL", "").rstrip("/")  # 同一后端的备用域名，可留空
 
 # 本地货币 -> USD 汇率（单位：1 USD = N 本地货币）
 # 数据源：快递助手跨境版 /item/exchangeRate/getList（2026-11-11 20:15 更新）
@@ -135,6 +135,29 @@ def search(region, usd_min=None, usd_max=None, order="day7_units_sold",
     return rows, total
 
 
+def pct_to_frac(v):
+    """'0%' / '75.5%' / 0.75 / '0.75' -> 0.0–1.0 的浮点；无法解析返回 None
+
+    接口原值是带百分号的字符串（如 '0%'），直接落盘会让下游闸门无法比较大小
+    （'0%' <= 0.05 在 Python 里会抛 TypeError），所以统一转成分数。
+    """
+    if v is None:
+        return None
+    if isinstance(v, (int, float)):
+        f = float(v)
+        return f if f <= 1 else f / 100.0
+    s = str(v).strip()
+    if not s:
+        return None
+    try:
+        if s.endswith("%"):
+            return float(s[:-1]) / 100.0
+        f = float(s)
+        return f if f <= 1 else f / 100.0
+    except ValueError:
+        return None
+
+
 def enrich(r):
     """派生指标：给新人判断'能不能做'用，规则简单可解释。"""
     videos = to_int(r.get("videoCount"))
@@ -167,7 +190,8 @@ def enrich(r):
         "total_units": to_int(r.get("totalUnitsSold")),
         "videos": videos,
         "creators": creators,
-        "creator_order_rate": r.get("creatorOrderRate"),
+        "creator_order_rate": pct_to_frac(r.get("creatorOrderRate")),
+        "creator_order_rate_raw": r.get("creatorOrderRate"),
         "rating": r.get("productRating"),
         "skus": to_int(r.get("skuCount")),
         "commission": r.get("commissionRate"),
@@ -234,8 +258,10 @@ def main():
         return
 
     hdr = ["productId", "title", "site", "price_local", "usd_equiv", "day7_units",
-           "day28_units", "videos", "creators", "creator_comp", "content_proof",
-           "rating", "commission", "cross_border", "listed_at", "category", "fm_url"]
+           "day28_units", "videos", "creators", "creator_order_rate",
+           "creator_order_rate_raw", "creator_comp",
+           "content_proof", "rating", "commission", "cross_border", "listed_at",
+           "category", "fm_url"]
     if args.out:
         os.makedirs(os.path.dirname(os.path.abspath(args.out)) or ".", exist_ok=True)
         with open(args.out, "w", newline="", encoding="utf-8-sig") as f:

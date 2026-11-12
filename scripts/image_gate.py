@@ -28,7 +28,8 @@
   python3 scripts/image_gate.py scan --detail erp_data/ttl_detail_<id>.json
   # 3)【模型/人工】逐张看 erp_data/image_gate/<id>/*.jpg，回填 review.json：
   #    images[].verdict / seen_text / confidence / note
-  #    另外可填 localized_text（当地语言纯文本段落）与 uri_map（擦字/翻译后的新图 URL）
+  #    另外可填 localized_text（当地语言纯文本，用空行分段 → 逐段包 <p>；
+  #    须 ≥500 字符 / ≥2 段，见 config/image_gate.yaml）与 uri_map（擦字/翻译后的新图 URL）
   # 4) 重建 + 验收（默认只出文件，不碰 ERP）
   python3 scripts/image_gate.py apply --detail erp_data/ttl_detail_<id>.json \
       --review erp_data/image_gate/<id>/review.json
@@ -75,6 +76,9 @@ DEFAULTS = {
     "max_cjk_chars_in_description": 0,
     "require_no_template_residue": True,
     "check_b2b_in_title": True,
+    # 2026-11-12 TikTok 后台回执：描述要 ≥500 字符且分段（软提示，发布前由 guard 兜底）
+    "description_min_plain_chars": 500,
+    "description_min_paragraphs": 2,
 }
 
 
@@ -413,8 +417,19 @@ def cmd_apply(args, cfg):
 
     text_block = ""
     if localized.strip():
-        text_block = (localized.strip() if localized.lstrip().startswith("<")
-                      else f"<p>{html.escape(localized.strip())}</p>")
+        s = localized.strip()
+        if s.startswith("<"):
+            # 已是 HTML：由作者自行分段（prepublish_guard 会查含文字段落数）
+            text_block = s
+        else:
+            # 空行 = 段落分隔。整段塞进一个 <p> 会被 TikTok 后台提示「描述格式」需优化
+            # （2026-11-12 回执，见 pitfalls 第十一章 / config/image_gate.yaml）。
+            parts = [p.strip() for p in re.split(r"\n\s*\n", s) if p.strip()]
+            text_block = "\n".join(f"<p>{html.escape(p)}</p>" for p in parts)
+            if len(parts) < int(cfg["description_min_paragraphs"]):
+                print(f"[gate] ⚠ localized_text 只有 {len(parts)} 段"
+                      f"（要求 ≥{cfg['description_min_paragraphs']}）→ 请用空行分隔多段，"
+                      "否则后台提示「描述格式」需优化")
     new_desc = (text_block + "\n" + "\n".join(kept_tags)).strip()
 
     if not new_desc:

@@ -59,12 +59,14 @@
                             │ CLI 调用（唯一契约）
 ┌───────────────────────────▼──────────────────────────────────┐
 │  scripts/erp_client.py（执行层，纯标准库，无三方依赖）          │
-│    collect · items · ttl-list · ttl-detail · shops · token    │
-│    ttl-claim · ttl-del · ttl-publish · logs · shops · token   │
+│    collect · items · ttl-list · ttl-detail · ttl-claim        │
+│    ttl-del · ttl-publish · logs · shops · token               │
 │  scripts/set_price.py · fix_sku.py · prep_publish.py          │
 │    （批量公式改价 / 修 SKU 规格名与库存 / 发布前准备与校验）    │
-│  scripts/image_gate.py                                       │
-│    （两通道扫描 / 按判定重建 description / 发布前硬闸 verify） │
+│  scripts/price_gate.py · image_gate.py · prepublish_guard.py   │
+│    （价格库存闸门 / 图片闸门 / 发布前总闸，三道互补）           │
+│  scripts/batch_prep.py · apply_listing_fix.py · site_goods.py  │
+│    （批量编排 / 一次性清单修复 / 平台侧在售商品客户端）         │
 └───────────────────────────┬──────────────────────────────────┘
                             │ HTTP（qnquerystring: <JWT> + appType:3）
 ┌───────────────────────────▼──────────────────────────────────┐
@@ -118,8 +120,9 @@ Step 1  采集        → erp_client.py collect --ids <offerId,...>
 Step 2  对账        → erp_client.py items --size 50
 Step 3  认领        → erp_client.py ttl-claim --ids <numIid> --region TH
 Step 4  编辑        → ttl-detail → image_gate 图片闸门（两通道判定/重建/写回）→ 定价 → 修 SKU·重量
-Step 5  发布        → image_gate verify（退出码 0）→ erp_client.py ttl-publish --ids <ttl_id,...>
-Step 6  回查        → erp_client.py logs --months 1
+Step 5  发布        → 三闸门全过（price_gate / image_gate verify / prepublish_guard）
+                     → erp_client.py ttl-publish --ids <ttl_id,...>
+Step 6  回查        → erp_client.py logs --months 1；平台侧在售状态用 site_goods.py detail
 ```
 
 **Step 0 选品**是整个链路的漏斗口，规则见 [`references/selection-strategy.md`](references/selection-strategy.md)（九章）：官方后台取需求信号 → 1688 找货 → 硬红线与供应链门槛剔除 → 四维评分（履约/内容力/实净利/站内竞争）→ 价格带校验 → **按发货城市聚簇 + 人工查货代覆盖（TIKTOK 标签）** → 出清单。
@@ -154,6 +157,21 @@ ttl-detail 落盘
 - **OCR 不可信**：内置 OCR 对泰文小字多次读出互相矛盾的结果。判定正确性的唯一办法是**裁剪单字符放大到原始 10 倍逐字目视**。
 - **验收五条**：① 指定译文完整拼写正确 ② 无中文残留 ③ 无杂散伪字 ④ 无网址残留 ⑤ 首图白底。
 
+**发布前是三道闸门，不是一道**（2026-11-12 第二批实测补）。文字规则拦不住批量操作，
+三个脚本各自读不同的数据、拦不同的失败：
+
+| 闸门 | 读什么 | 拦什么 | 退出码 1 |
+|---|---|---|---|
+| `price_gate.py` | `erp_data/tiktok_list.csv` | ERP 认领时自动铺的线性公式价破价格带、库存 >999999、类目缺失 | 禁止发布 |
+| `image_gate.py verify` | `ttl_detail_<id>.json` | description 与图片里的中文 / B2B 素材 / 模板残渣 / 描述质量 | 禁止发布 |
+| `prepublish_guard.py` | 全 `productCreateRequestV2` 递归 | **属性名残留汉字**、SKU 规格名汉字、weight/dims 缺失、重复认领、描述 ≥500 字符 + ≥2 段 | 禁止发布 |
+
+真实事故：某沥水篮 description 与主图全干净、前两道都过，仍被 TikTok 拒绝
+`[12052250] 不允许使用汉字。修改产品属性的属性值名称: 悬挂` —— 根因是
+`product_attributes` 里残留中文「悬挂 / 塑料」，只有第三道闸门扫这个字段。
+清空 `product_attributes=[]` 后重发 success。`prepublish_guard.py` 读的是本地快照，
+改完 ERP 必须加 `--refresh` 重新落盘，否则会拿旧值误报。
+
 ---
 
 ## 6. 快速开始
@@ -181,9 +199,11 @@ python3 scripts/erp_client.py token --check
 python3 scripts/pricing_calc.py --check
 # → 配置自洽
 
-# 5) 图片闸门自检（对已落盘的 ttl_detail_*.json，不联网）
+# 5) 发布前三闸门自检（对已落盘的快照，不联网）
+python3 scripts/price_gate.py
 python3 scripts/image_gate.py verify --detail erp_data/ttl_detail_<id>.json
-# → 退出码 1 = 有中文/B2B 素材残留，禁止发布
+python3 scripts/prepublish_guard.py --ids <ttl_id,...> --refresh
+# → 任一退出码 1 = 禁止发布（ttl-publish 前必须三道全过）
 ```
 
 **第一条只读命令**（安全，不改任何东西）：
@@ -224,6 +244,11 @@ python3 scripts/erp_client.py ttl-list --region TH --size 20
 | `pricing_calc.py` | R | 售价 / 采购价上限 / 配置自检（见 §9） |
 | `kdzs_fastmoss.py` | R | 免登录选品数据源：销量 / 达人数 / 视频数（后端 FastMoss） |
 | `erp_token_grab.py` | R | 从本机 Chrome LevelDB 提取登录态 JWT（可选，依赖 `pip install cramjam`） |
+| `price_gate.py` | R | 价格/库存/类目闸门（读 `tiktok_list.csv`）；`--hint` 反推售价与价格带；退出码 1 禁止发布 |
+| `prepublish_guard.py` | R | 发布前总闸：递归扫全 `productCreateRequestV2` 的汉字、属性名、SKU 规格名、重量/尺寸、重复认领与描述质量；`--refresh` 强制重新落盘 |
+| `batch_prep.py` | **W** | 批量编排：破带重定价 + 库存收敛 + 复检，默认 dry-run，`--save` 才写；售价区间为空或重量缺失的品不猜、转人工 |
+| `apply_listing_fix.py` | **W** | 一次性清单修复（单件 + 400g 保守计费重定价、精简多规格 SKU、类目修正），默认 dry-run；仓库版内的商品 ID 是占位示例 |
+| `site_goods.py` | R / **W** | **平台侧在售商品**客户端（与采集箱两套数据）：`list` / `detail` / `log` / `update-desc`（默认 dry-run）；站点地址与 sellerId 走环境变量 |
 
 `image_gate.py` 三条子命令（纯标准库，`scan` / `apply` 默认 dry-run / `verify` 全程离线）：
 
@@ -242,9 +267,28 @@ python3 scripts/image_gate.py apply --detail erp_data/ttl_detail_<id>.json \
 `L3_keep` 原样保留。有 `pending` 未判定时 `apply` **默认拒绝执行**（可显式
 `--assume-pending drop` 保守全删）。判定表还能交叉检查被删 URL 是否残留在两个通道。
 
+三道闸门一起跑（顺序无关，任一失败即停止发布）：
+
+```bash
+python3 scripts/erp_client.py ttl-list --region TH        # 先落盘 tiktok_list.csv
+python3 scripts/price_gate.py --site TH
+python3 scripts/image_gate.py verify --detail erp_data/ttl_detail_<id>.json
+python3 scripts/prepublish_guard.py --ids <ttl_id,...> --refresh
+# 三道全过 → erp_client.py ttl-publish --ids <ttl_id,...>
+```
+
+平台侧在售商品的后续维护（发布成功之后，不是发布前）：
+
+```bash
+python3 scripts/site_goods.py list --platform tiktok --limit 10
+python3 scripts/site_goods.py detail --num-iid <id>
+python3 scripts/site_goods.py update-desc --num-iid <id> --text-file desc_th.txt          # dry-run
+python3 scripts/site_goods.py update-desc --num-iid <id> --text-file desc_th.txt --save   # 写
+```
+
 ---
 
-## 8. 工程笔记：四个反直觉的坑
+## 8. 工程笔记：反直觉的坑
 
 这部分是这个仓库里最值得读的东西——都是真实链路跑出来的，不是文档抄的。
 
@@ -324,7 +368,7 @@ ERP 的 `getDetail` 只服务**待完善商品**。商品一旦被保存完善�
 |---|---|
 | `config/selection.yaml` | 破零目标（150 款 / 20 天）、履约红线（48h 打包 / 3 自然日到仓）、地域收敛（城市级 + 货代 TIKTOK 标签）、站点价格带与采购价区间、四维权重、需求过滤、供应链门槛（含 **`clean_consumer_images_min: 3` / `desc_rebuildable`**）、红线、竞争与内容力口径、铺货节奏 |
 | `config/pricing.yaml` | 平台佣金、交易手续费、**电商增长服务费**、退款预留、目标净利率、汇率、国内段成本、跨境段按重量物流 → 两档加价系数（shelf / creator） |
-| `config/image_gate.yaml` | **B2B 词表（仅文本残留兜底，不是判定规则）**与图片闸门阈值：`min_clean_main_images` / `max_cjk_chars_in_description` / `require_no_template_residue` / `check_b2b_in_title` |
+| `config/image_gate.yaml` | **B2B 词表（仅文本残留兜底，不是判定规则）**与图片闸门阈值：`min_clean_main_images` / `max_cjk_chars_in_description` / `require_no_template_residue` / `check_b2b_in_title`；另有描述质量线 `description_min_plain_chars: 500` / `description_min_paragraphs: 2`（TikTok 后台软提示，计数口径未证实，按纯文本保守实现） |
 
 **定价公式**（2026-11-11b：跨境段物流由固定 10 元改为按计费重量线性计费）：
 
@@ -368,6 +412,11 @@ tiktok-light-listing/
 │   ├── pricing_calc.py               # 定价与价格带校验（--cost / --limits / --check），纯标准库
 │   ├── kdzs_fastmoss.py              # 选品数据源（后端 FastMoss 榜：销量/达人/视频数），免登录只读
 │   ├── erp_token_grab.py             # 从本机 Chrome LevelDB 提取登录态 JWT（可选，依赖 cramjam）
+│   ├── price_gate.py                 # 价格/库存/类目闸门（读 tiktok_list.csv）
+│   ├── prepublish_guard.py           # 发布前总闸（全 reqInfo 递归扫汉字/属性/规格/描述质量）
+│   ├── batch_prep.py                 # 批量编排：破带重定价 + 库存收敛 + 复检（默认 dry-run）
+│   ├── apply_listing_fix.py          # 一次性清单修复（单件 + 400g 保守计费重定价）
+│   ├── site_goods.py                 # 平台侧在售商品客户端（list/detail/log/update-desc）
 │   └── erp_token.example.txt         # token 文件模板（真实 token 已被 .gitignore 排除）
 └── samples/
     ├── selection_candidates.sample.csv
@@ -392,6 +441,12 @@ cleaned_detail.json、report.json）不入库。
 - **类目自动匹配不可靠**：两次重认领后类目均为空，`CATEGORY_NOT_MATCH` 不会自愈，必须显式指定类目。
 - **发布成功率受店铺侧限制**：如「该地区没有设置开启的默认销售仓库」属于 TikTok 后台配置问题，脚本无法代解。
 - **`ttl-translate` 是骨架**：body 待确认，当前只打印 TODO（实际上认领时 ERP 已自动翻译标题，此命令优先级低）。
+- **三道闸门不等于平台会收**：它们只覆盖本地快照里能看到的字段。TikTok 后台「描述优化」软提示的字符计数口径
+  （HTML 源码 / 纯文本 / 富文本节点、泰文连写）`UNKNOWN`，是否影响曝光也未证实；本仓库按纯文本 ≥500 字符保守实现，偏严。
+- **采集箱与站点商品是两套数据**：`erp_client.py` 管发布前草稿（`ttl_id`），`site_goods.py` 管平台侧在售商品
+  （`numIid`）。发布成功不代表站点商品模块立刻可读，ERP 详情有数分钟缓存延迟，回读未更新时不要下结论。
+- **一次性脚本里的清单是示例**：`apply_listing_fix.py` / `batch_prep.py` 用法里的商品 ID 在仓库版已换成占位示例，
+  直接照抄不会命中任何真实商品；要复用先按自己的采集箱清单改。
 
 ---
 
@@ -403,11 +458,29 @@ cleaned_detail.json、report.json）不入库。
 - 不含、不要求、也不接受任何绕过平台风控的手段（验证码识别、指纹伪装、代理池等）。
 - 所有接口行为来自**操作者自身浏览器内的正常业务操作**的观测，未做越权访问。
 - 面向未公开接口的自动化存在违反服务条款的风险，**使用前请自行确认目标平台条款**。作者不对使用者行为负责。
-- 仓库中的域名、店铺 ID、sellerId、token、商品与记录 ID 均为占位符或脱敏值。
+- 仓库中的**私有 ERP 域名**、店铺 ID、sellerId、token、商品与记录 ID 均为占位符或脱敏值；
+  公开平台域名（1688、TikTok 卖家后台、公共 CDN）与平台公开类目/文档 ID 保留原值以便核查。
+- 脚本内的商品 ID、本地截图路径与用户名已替换为示例值；线上技能目录保留真实值，两者内容不同是刻意为之。
 
 ---
 
 ## 更新记录
+
+**2026-11-12c（第二批/第三批实测：三闸门体系 + 批量编排 + 站点商品模块）**
+
+- 新增三道发布前闸门，各自读不同数据、拦不同失败：`price_gate.py`（ERP 认领时自动铺价破价格带、
+  库存 >999999）、`image_gate.py verify`（图片与 description）、`prepublish_guard.py`
+  （全 `productCreateRequestV2` 递归扫汉字、`product_attributes`、SKU 规格名、重量尺寸、重复认领、
+  描述 ≥500 字符 + ≥2 段）。真实事故 `[12052250] 不允许使用汉字…属性值名称: 悬挂` 证明前两道不够。
+- 补上描述质量线：TikTok 后台编辑页「2 个问题可能需要优化」是**发布后软提示**，不是硬错误；
+  平台字符计数口径 `UNKNOWN`，`config/image_gate.yaml` 按纯文本保守实现并显式标注。
+- 新增 `batch_prep.py`（把逐条手工跑 4 个脚本压成一条命令，缺重量/售价区间时不猜、转人工）、
+  `apply_listing_fix.py`（单件 + 400g 保守计费重定价，纠正「按 2 件套定价却只发 1 件」的履约风险）、
+  `site_goods.py`（平台侧**在售**商品客户端，与采集箱两套数据；站点地址/sellerId 走环境变量）。
+- `SKILL.md` 新增第二/三/四批实测章节；`references/erp-pitfalls.md` 补第九～十二章
+  （10 品复盘、写操作时序、后台编辑回执、站点商品模块）；`references/tiktok-api.md` 补站点商品接口契约。
+- 脱敏规则扩充：本轮新增的真实 ttl_id / TikTok 商品 ID / 本地截图路径 / 厂商前端 OSS 域名全部占位符化；
+  同步脚本新增「未纳入同步清单的线上文件」自检，避免以后漏掉新增脚本。
 
 **2026-11-12b（详情页图片闸门：B2B 中文素材整图删）**
 

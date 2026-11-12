@@ -7,7 +7,7 @@ description: "TikTok Shop 跨境店铺货（快递助手ERP跨境版，一件代
 
 ## Overview
 
-在快递助手ERP跨境版内，把1688货源铺到 TikTok Shop 东南亚店（先做 TH 泰国 + VN 越南），店铺主营类目为**家居用品**。
+在快递助手ERP跨境版内，把1688货源铺到 TikTok Shop 东南亚店（店铺 TH + VN 均已开，**破零期主攻 VN**，理由见 strategy 第七章），店铺主营类目为**家居用品**。
 
 链路分6段：
 0. **选品**：FastMoss 单品数据（免token）+ 官方后台取需求信号 → 1688 找货 → 红线+供应链门槛 → 四维评分+价格带校验 → **按发货城市聚簇 + 查货代覆盖（TIKTOK 标签）** → 出候选清单
@@ -48,6 +48,91 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
 - **拿不到数据就写"拿不到"，不要用旧快照或推测值补位**
 - **发布前 `image_gate.py verify` 退出码必须为 0**（退出码 1 = 图片闸门拦截，禁止 `ttl-publish`；
   详见 Step 4.3 / 5.1）。脚本不会看图，整图判定由多模态模型回填 `review.json`，未判定即拒绝 apply
+
+## 第二批实测（2026-11-12，10 品 → 4 品发布）：下次先读这 10 条
+
+> 只留「改变动作」的结论，完整复盘见 `references/erp-pitfalls.md` 第十章。
+
+1. **既有的四道门槛必须在 Step 0 真正执行**：本轮 10 品白跑 6 个（5 品无干净主图、1 品跨类目）。
+   ⚠️ 门槛不是没有——`selection.yaml → supplier_gates.clean_consumer_images_min: 3` 和 strategy 5.2 早就写了，
+   是**选品时只用了遨虾搜索结果（只有 offerId/价格/月销，不返回图片），压根没拉主图目视**。
+   ① 类目 `AVAILABLE` 且属主营家居树（`case_category_tree.json`）② **先拉 1688 主图目视**，整图删后干净消费者向主图
+   ≥ `clean_consumer_images_min`（3 张）——注意它不是发布闸门的 `min_clean_main_images`（1 张），
+   本轮 4 个"过闸"品里 3 个只有 1 张，按选品门槛本就不该进清单
+   ③ 按产品尺寸估抛重后重算挂价 ④ 多规格货源核对**最高** SKU 采购价。不合格直接换货源，别走完整流程。
+2. **一件代发禁止 2 件套**：认领后 SKU 是单件规格、代发只下 1 件，按 2 件成本定价 = 收 2 件钱发 1 件（履约事故）。
+   $3.5 下限后单件 @250g/400g 就在带内，`bundle_pieces: 2` 仅是定价模型参数，见 4.4 / strategy 3.3。
+3. **FastMoss 不用销量总榜**：`day7_units_sold` 会把低达人出单率的货架场品埋掉（2000 条全量里家居 $5–8 仅 35 条、
+   出单率 ≤30% 只剩 1 条）；改用当地语言关键词长尾池（18 词 → 326 条家居、其中 279 条 0–5%）。
+   `creator_order_rate` 取 `--json`，别用旧 CSV 快照。
+4. **1688 授权字段不可信**：`tokenExpireTime` 显示过期但 `collect` 实测 8/8 成功 → 用 1 个真实 offerId 探测，
+   不按字段判死；浏览器 1688 网页登录 ≠ ERP 内 OAuth 授权。
+5. **写操作时序**：`ttl-claim` 每批 ≤3；超时后先等异步落库再回查，**绝不盲目重试**（本轮 10 品超时→重试→重复 20 条）；
+   `edit` 回执恒 `{}` 但改动生效，必须回读；`success:true` 只代表进队列，最终看日志 `status`；
+   `publishConfig` 整批统一，重量尺寸不同必须**拆单品提交**。
+6. **发布前必跑 `prepublish_guard.py --refresh --ids ...`**：`image_gate verify` 不扫 `product_attributes`，
+   本轮 #3 因残留中文「悬挂/塑料」被 `[12052250]` 拒发；清空为 `[]` 后重发 success。
+7. **SKU 规格名逐品对齐 1688 原始 `skus`**，禁止整批套同一套颜色名（真实规格可能是图案款/颜色/数量款/尺寸+颜色，
+   `seller_sku` 有时用 `outerId` 而非 `skuId`）。写错 = 买家选 A 收 B。
+8. **重量尺寸**：`itemWeight` 卖家全填 0；产品净重/尺寸藏在被判 `L0_drop` 的 1688 详情参数表里（整图删 ≠ 不能读数字）。
+   申报值走 `publishConfig`，`detail.package_weight` 只是定价参数。三套默认值打架（发布脚本 1kg/10×10×10、
+   `default_weight_g:150`、定价上界 400g）→ 一律显式按品传，推算值标 `INFERRED`。
+9. **闸门用本批子集**：全量 `price_gate` 会被店铺历史脏草稿拖成退出码 1，用 `--csv <本批子集>` 隔离；
+   铺货配额与 TikTok 后台在售数当前**无脚本能力**，如实标「未验证」，不要写成四路全过。
+10. **别承诺出单**：新店零权重、无投流无达人，官方口径 150 款才出首单，10 款差一个数量级。接单时先讲清边界。
+
+## 第三批实测（2026-11-12，TikTok 后台编辑回执）：描述要长、要分段
+
+> 来源：用户截图 `seller.tiktokshopglobalselling.com/product/edit/1700000000000000001`
+> （TH 店、商品「在售」）。平台页面原文 = `VERIFIED`；推论与边界见 `references/erp-pitfalls.md` 第十一章。
+
+后台弹窗「**2 个问题可能需要优化**」原文：
+
+| 发品详情 | 建议 |
+|---|---|
+| 描述格式 | 将你的描述分成段落，提高可读性从而影响购买决策。 |
+| 描述质量 | 撰写至少含 500 个字符的描述，以吸引更多客户。 |
+
+1. **这是发布后的软提示，不是发布阻断**：弹窗仍可点「提交」，商品已「在售」。别去 5.2 错误码表找它，
+   也别当接口 fail 重试。同屏「基本信息 2个问题」还有「商品图片少于 5 张 / 缺少品牌信息」，
+   **是否影响流量 UNKNOWN**，只记录、不改现有硬闸（品牌一律无品牌，不碰品牌货）。
+2. **根因在我们自己的流程**：4.2b 长尾档写「短 description」、4.3 只要求长度 >0、
+   `image_gate.py apply` 把整段文本包进**一个 `<p>`** → 必然触发这两条。按 `prepublish_guard.py`
+   口径统计本批 10 个 detail 快照：**9 个纯文本 <500 字符、8 个不足 2 段**（2026-11-12 本地实测）。
+3. **下次执行标准（模板化，不逐品手写）**：description 纯文本 **≥500 字符**且 **≥2 个含文字段落**
+   （`config/image_gate.yaml`：`description_min_plain_chars` / `description_min_paragraphs`）。
+   `review.json` 的 `localized_text` 用**空行分段**，`apply` 逐段包 `<p>`；长尾档复用
+   「材质尺寸 / 使用场景 / 规格与内含物 / 保养与发货」四段当地语言模板，仍可 ≤3 分钟。
+4. **发布前兜底**：`prepublish_guard.py --refresh --ids ...` 默认把描述质量不足列为阻断项
+   （`--allow-short-desc` 才降级为提醒，需用户明确同意）。历史快照多不达标属预期（10 品里 9 品 <500 字符），回填描述即可。
+5. **口径 UNKNOWN**：平台按 HTML 还是纯文本计字符、是否影响曝光、补齐后提示是否消失，均未证实。
+   本 Skill 按纯文本保守实现（偏严），补齐后须回后台复核，**不要宣称「已解决」**。
+
+## 第四批实测（2026-11-12）：ERP「站点商品」是另一套模块
+
+> 用户指出「商品 → TikTok → 站点商品」有编辑按钮。**此前「ERP 没有下架 / 重新上架能力」的结论作废**——
+> 那句话只对**采集箱（发布前草稿）**成立。完整接口契约见 `references/tiktok-api.md` 末章，
+> 逆向踩坑见 `references/erp-pitfalls.md` 第十二章。
+
+1. **两套模块别混**：`/item/crossBorder/platformCollect/*` = 发布前草稿（本 Skill 主体链路）；
+   `/item/sysItem/queryPlatformItemListWithPage` + `/item/item/queryPlatformItemDetail` +
+   `/item/item/updatePlatformItem` = **平台侧已在售商品**（`numIid` 是 TikTok 商品 ID，不是 `ttl_id`）。
+   站点商品页前端确有「编辑商品信息」和「商品上/下架」批量项，接口 `/item/item/itemBatchUpDownShelf`
+   **存在但 body 未实测**（只探明必填 `ops` / `list`），**禁止凭猜测调用**。
+2. **平台侧一手数据坐实了第三批那两条提示**：4 个在售品 `productStatus` 全 `ACTIVATE/在售`，
+   `description` 纯文本 134 / 144 / 153 / 160 字符、**全部仅 1 段**。比采集箱快照更硬。
+3. **保存 body 两个坑**：① 全量回传 `tiktokDetailInfo` 必须 `delete replicatedProducts`
+   （否则 `Missing SKU details in replicated_products`）；② **保存后立刻回读是旧值**——
+   本轮回执与日志都成功、+2 秒回读仍是 153 字符 / 1 段，**数分钟后回读变 1011 字符 / 4 段，确认生效**。
+   ERP 详情接口有数分钟缓存延迟：别过早判失败，也别把 ERP 回执当平台已生效；
+   TikTok 后台是否同步、提示是否消失仍 `UNKNOWN`，须人工复核。
+4. **工具**：`scripts/site_goods.py`（`list` / `detail` / `log` 只读；`update-desc` 默认 dry-run，
+   `--save` 才写）。执行任何站点商品写操作前，先用 `detail` 落盘备份。
+5. **本轮结果（✅ 对比备份逐项核对）**：4 个在售品只改 `description`，最终回读
+   1011 / 1002 / 992 / 1018 字符、均 4 段；价格、SKU、类目、`ACTIVATE/在售` 状态全未变；
+   删 `replicatedProducts` 未导致多国家副本丢失（#1 的 MY/VN/SG/PH 四个 DRAFT 副本前后一致）。
+   **没删采集箱记录、没重新认领、没重新发布、没执行上下架**。
+   泰文文案由 AI 生成、未经母语者复核；TikTok 后台两条提示是否消失仍 `UNKNOWN`，需人工复核。
 
 ## 工作流
 
@@ -108,9 +193,11 @@ python3 scripts/erp_token_grab.py --save --check    # 从 Chrome Session Storage
 #### 0.3 1688 找货（按站点成本边界筛，不是无脑搜）
 - 用遨虾 `search --keyword <中文品类词>` 或 `search-image` 拿 offerId；接口失效时浏览器进 1688 跨境专供（需用户接管登录）。
   - ⚠️ 原生 1688 搜索 URL 的关键词必须 **GBK percent-encoding**（UTF-8 会搜出完全无关的品）；带「深度思考」AI 模块的结果页滚动必超时，改用更长更具体的词（「衣物压缩袋」而非「压缩袋」）。详见 `references/erp-pitfalls.md` 第五章。
-- **先算成本再挑品**：`python3 scripts/pricing_calc.py --cost <采购价> --scheme shelf --pieces <1|2> --site TH`，返回 `in_band`。
+- **先算成本再挑品**：`python3 scripts/pricing_calc.py --cost <采购价> --scheme shelf --pieces 1 --site TH`，返回 `in_band`。
+  ⚠️ **`--pieces` 一律填 1**（2026-11-12 第二批纠正，见 4.4）：一件代发不做 2 件套，下方「2 件套」数字仅定价模型备查。
+  本节凡出现「组合装 / 2件套 / 同店可搭配 SKU」的条件均为 $5 下限时代残留，**不作选品依据**。
 - 采购价上限（150g / shelf，`--limits` 实算）：TH 单件 **22.4** / 2件套单件等效 **9.4**；VN 单件 **16.7** / 2件套 **6.6**。重量上去上限迅速下降（TH 400g 单件仅 17.4）。**超上限 = 换品，不要硬调 markup。**
-- 供应链门槛全部要过（见 strategy 5.2）：跨境专供 / 一件代发 / **无隐形起订量** / 库存≥200 / **承诺48h发货（要客服书面确认）** / **快递到货代仓 ≤1 天** / 非预售非定制 / **同店≥2个可搭配 SKU** / 主图可复用 / **无中文干净消费者向主图 ≥3 张 + 详情图可重建**（`selection.yaml` → `supplier_gates.clean_consumer_images_min`；
+- 供应链门槛全部要过（见 strategy 5.2）：跨境专供 / 一件代发 / **无隐形起订量** / 库存≥200 / **承诺48h发货（要客服书面确认）** / **快递到货代仓 ≤1 天** / 非预售非定制 / 主图可复用 / **无中文干净消费者向主图 ≥3 张 + 详情图可重建**（`selection.yaml` → `supplier_gates.clean_consumer_images_min`；
   全脏的货源在 1688 找货阶段就换掉，别等铺进采集箱才发现） / **实重 ≤400g（组合装 ≤250g）且抛重 ≤400g**
   （对应体积 ≤2400cm³，约 20×15×8cm）。
   - 尺寸一律按**抛重**判：`抛重(g) = 长×宽×高(cm) ÷ 6000 × 1000`。实重轻不代表运费低（假花/收纳筐这类必算）。
@@ -136,8 +223,14 @@ python3 scripts/erp_token_grab.py --save --check    # 从 Chrome Session Storage
 配套两条否决规则：① 标题含品牌名（大写英文词）= 已被品牌方运营，撞侵权红线；② 一批达人反复带同款、每达人周销 <2 件 = 铺达人打法，不是真实需求。
 
 #### 0.5 出候选清单
+**落盘前先执行「第二批实测」第 1 条的四道门槛**（这些门槛本来就在 `selection.yaml`/strategy 5.2 里，
+本轮是**没执行**而不是没有）：类目权限 / 拉 1688 主图目视后 ≥3 张干净图 / 抛重后挂价 / 最高 SKU 采购价。
+不合格的货源在 Step 0 就换掉。本轮跳过后，5 品跑完采集→认领→编辑→图片闸门才发现 0 张干净主图，
+1 品才发现只能落 `NON_MAIN_CATEGORY`，6 个品的全流程白跑。
+
 落盘 `erp_data/selection_candidates.csv`，字段见 strategy 第九章（必须含 `landed_cny`/`price_local`/`in_band`/`pieces`/`content_source`/`creator_order_rate`/`competition_source`/`fulfill_check`/
 `clean_main_images`/`desc_rebuildable`——后两项是图片闸门的源头门槛，缺了就等于把脏图判断推迟到发布前）。
+`pieces` 一律填 1（见 4.4）。
 
 #### 0.6 清单确认（人工接管）
 输出建议清单给用户确认（目标150款），确认后 offerId 进入 Step1。写操作仅对用户点名的清单执行。
@@ -212,6 +305,27 @@ python3 scripts/erp_client.py ttl-detail --id <ttl_id>
 - `skus[]`：SKU价格/库存
 - `category_id`：类目（ERP已自动填）
 
+#### 4.2b 产能分层（2026-11-12 新增：按每天 3 小时倒推，不定分层就等于放弃 150 款）
+
+官方口径是「上传约 150 款后多数商家出首单，上架到出单约 20 天」。以每天 3 小时、20 天 = 60 小时计，
+单款全部预算只有 **24 分钟**。而按旧流程（5 张主图 + 8–25 张详情图**逐张**多模态判定 + 逐条编辑），
+单款 30–60 分钟 → 150 款要 75–150 小时，直接超预算 2 倍以上；实测两周只铺了 3 款。
+
+| 档 | 数量 | 处理方式 | 单款预算 |
+|---|---|---|---|
+| **Hero** | 10–20 款 | 现状全流程（两通道扫描 + 逐张多模态判定 + 擦字/翻译 + 首图白底 + 重建 description） | 45 分钟 |
+| **长尾** | 100–130 款 | **只留 ≥1 张干净主图 + ≥500 字符/≥2 段的可复用当地语言模板 + 批量公式改价**；详情长图整段丢弃，**不做逐张判定** | **≤3 分钟** |
+
+**为什么长尾可以不做图片判定**：Step 4.3 的三条硬规则是「description 非空 / 主图 ≥1 / 无中文残留」，
+外加第三批实测的两条描述质量要求「纯文本 ≥500 字符 / ≥2 段」。
+用一个**分段、≥500 字符的可复用当地语言模板**替换整个 1688 详情，五条同时满足，且不需要看 20 张图。
+判定成本从"每款 20 次目视"降到"0 次"，这是唯一能把 150 款压进 60 小时的路径。
+⚠️ 模板必须分段且够长——旧版写「短 description」会直接触发后台「描述格式 / 描述质量」两条优化提示
+（见上方「第三批实测」）。
+
+**Hero 挑选规则**：只挑「已算出毛利 ≥20% + 站内搜索词明确 + 有已售数据」的前 10–20 个。其余全部走长尾档。
+**长尾档的底线不变**：主图少于 1 张干净图 → 换货源（`min_clean_main_images`），不要留脏图凑数。
+
 #### 4.3 图片闸门（本Skill核心，2026-11-12 重写）
 
 **先认清两条图片通道**（实测 9 个真实 `ttl_detail_*.json`）：
@@ -260,9 +374,11 @@ python3 scripts/image_gate.py apply --detail erp_data/ttl_detail_<id>.json \\
 ```
 
 **三条硬规则**：
-1. **description 要重建，不能删空**。`apply` 丢掉整个 1688 模板（`<img>` / `usemap` /
+1. **description 要重建，不能删空、不能只写一小段**。`apply` 丢掉整个 1688 模板（`<img>` / `usemap` /
    `styleType` / 中文文本节点），只回填保留的干净图 + `localized_text`。发布自检要求
-   description 长度 > 0（错误码见 5.2），没给当地语言文本时脚本直接中止，**不会替你编一段**。
+   description 长度 > 0（错误码见 5.2），且按第三批实测要求**纯文本 ≥500 字符、≥2 段**
+   （`localized_text` 用空行分段，`apply` 逐段包 `<p>`；`prepublish_guard.py` 发布前拦截）。
+   没给当地语言文本时脚本直接中止，**不会替你编一段**。
 2. **主图删完必须 ≥1 张**（`config/image_gate.yaml` → `min_clean_main_images`）。
    一张不剩 = 换货源，**不要留一张脏图凑数**。
 3. **发布前必须 `verify` 且退出码 0**。检查：描述非空 / 主图 ≥1 / 文本与 `img alt` 无汉字 /
@@ -300,19 +416,29 @@ python3 scripts/pricing_calc.py --check     # 校验 markup 与费率是否吻�
 | 站点 | 货架场 shelf（affiliate 0） | 达人场 creator（affiliate 20%，净利 15%） |
 |---|---|---|
 | TH | **1.62** ✅ 净利 12%（破零冲量；起量后回调 2.05 / 25%） | 2.58 ⏸ 停用 |
-| VN | **2.08** ✅ 净利 25% | 2.63 ⏸ 停用 |
+| VN | **1.515** ✅ 净利 12% + **免交易手续费窗口**（扣点 22%，非 28%） | 2.326 ⏸ 停用 |
 
-采购价上限（150g、shelf、`pricing_calc.py --limits` 实算，**不是手填**）：
+> ⚠ VN 的 1.515 只在「入驻后 90 天免交易手续费」期内成立（本店约剩 60 天）。
+> 窗口一结束扣点回到 28%，markup 必须改 1.75（仍 12% 净利）；到期前一天就要改，否则每单少算 6%。
+> 到期日回填到 `pricing.yaml → VN.schemes.shelf.waiver_expires`。
+
+采购价上限（150g、shelf、`pricing_calc.py --limits` 实算，**不是手填**；2026-11-12 重算）：
 
 | 站点 | 单件 | 2 件套（单件等效） |
 |---|---|---|
 | TH | 22.4 元 | 9.4 元 |
-| VN | 16.7 元 | 6.6 元 |
+| VN | **26.1 元** | **11.3 元** |
 
-**三条硬规则**：
-- 售价折美元必须落在价格带内（TH $5–8 / VN $5–8.5），脚本会给 `✓ 带内 / ✗ 超带`。**超带就换品，不要调 markup。**
+**四条硬规则**：
+- **价格带按「客单价（订单总额）」判，不按单件价判**（2026-11-12 修正，`pricing_calc.py` 已改）。
+  旧口径 `单件价 ≥ 下限` 会让所有多件装永远判超带。但判带口径 ≠ 履约能力，见下条。现价带 TH $3.5–8 / VN $3.5–8.5。
+- 下限从 $5 降到 **$3.5**：实测跨境家居头部价格中位 $3.37(TH)/$3.85(VN)，81%/78% 在 $5 以下。卡 $5 = 放弃八成货盘，这才是"只筛出 14 条候选"的真因。**也正因下限是 $3.5，单件 @250g/400g 就已落带内，根本不需要靠多件装抬客单价。**
 - **开 20% 达人佣金必须同时把净利降到 15%**。若一边开邀请佣金一边要求 25% 净利，该组合无解。
-- **2 件套窗口很窄**：单件等效上限 TH ≤9.4 元、VN ≤6.6 元（150g）；重量到 400g 只剩 4.5 / 1.7 元 → 泡货别做组合装。
+- ⛔ **一件代发链路禁止做 2 件套 / 禁止按 2 件成本定价或宣称「2 件装」**（2026-11-12 第二批实测纠正，
+  本条覆盖下方 `bundle_pieces` 与 strategy 3.3 的旧结论）：认领后 SKU 是 1688 单件规格、
+  代发只向供应商下 1 件，按 2 件收钱发 1 件属**履约欺诈**。ERP 是否支持「1 SKU 对应多件采购」
+  **未验证（UNKNOWN）**，在验证出捆绑发货能力前一律按 `pieces=1` 定价。
+  上表「2 件套」列与 `bundle_pieces: 2` / `bundle_allow_same_offer` 只保留作定价模型备查，**不得据此铺货**。
 
 算完先输出建议售价表给用户确认。**确认后不要用 `edit` 逐 SKU 填 `skus[].price`**——改用官方「批量设置售价」接口：
 
@@ -411,10 +537,20 @@ python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --weight 0.3 --dims 30x
 ```
 
 #### 5.1 发布前自检（勾完再提交，能省掉 90% 的 fail）
-0. **`python3 scripts/image_gate.py verify --detail <cleaned_detail.json>` 退出码 0**（2026-11-12 新增，最高优先级）：
+0. **`python3 scripts/price_gate.py` 退出码 0**（2026-11-12 新增，最高优先级，**先跑这个**）：
+   逐条校验售价是否落在价格带、库存是否超 999999、类目/SKU 数据是否坏。
+   退出码 1 = 禁止 `ttl-publish`。实测首次全量跑：20 条里 **19 条阻断**（价格破带 / 库存 9 位数 / 类目未匹配），
+   其中含一个**已在售**的 29.13 THB（$0.87）牙刷架——每单净亏 ¥10+，旧版没有任何机制拦它。
+0b. **`python3 scripts/image_gate.py verify --detail <cleaned_detail.json>` 退出码 0**（2026-11-12）：
    两通道无中文/B2B 素材、description 已重建、被判删的图未残留。退出码 1 时**禁止发布**
+0c. **`python3 scripts/prepublish_guard.py --refresh --ids <ttl_id,...>` 退出码 0**（2026-11-12 第二批新增）：
+   递归扫整个 `productCreateRequestV2` 的汉字（`image_gate` 只扫 description/图片，**扫不到 `product_attributes`**）、
+   规格名/库存/类目/重复认领，**并查描述质量（纯文本 ≥500 字符 / ≥2 段，第三批新增；
+   不达标可用 `--allow-short-desc` 降级为提醒）**。`--refresh` 必加，否则读到 edit 之前的旧快照会误判。
+   **本轮 #3 就是两个闸门全过、仍被 `[12052250] 不允许使用汉字` 拒发**（属性残留「悬挂/塑料」）。
 1. `ttl-detail` 能读到 `reqInfo.tikTokItemModel.productCreateRequestV2`（读不到 = 数据被写坏）
-2. `description` 长度 > 0，且**无中文文本节点 / 无 B2B 字样 / 无 1688 模板残渣**（由第 0 项保证）
+2. `description` 长度 > 0，且**无中文文本节点 / 无 B2B 字样 / 无 1688 模板残渣**（由第 0 项保证）；
+   **纯文本 ≥500 字符、≥2 段**（第三批实测的后台优化项，由第 0c 项拦截）
 3. 类目三件套齐全且在**家居用品**树下
 4. 每个 SKU：`price` 在价格带内、`inventory` ≤ **999999**（建议统一 1000）
 5. 每个 SKU 规格名：**纯尺寸 + 当地语言**，不含「自/最/第一/包退/工厂/包邮」这类词
@@ -425,6 +561,7 @@ python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --weight 0.3 --dims 30x
 
 | 错误码/原文 | 含义 | 修法 |
 |---|---|---|
+| `[12052250] 不允许使用汉字。修改产品属性的属性值名称: 悬挂` | **`product_attributes` 里残留中文**（2026-11-12 #3 沥水篮实测）。图片闸门不扫这个字段，前两个闸门全过也会 fail | 清空 `product_attributes=[]` 后重发即 success；发布前用 `prepublish_guard.py --refresh` 递归扫 v2 全部汉字 |
 | `[12052153] 产品可变选项…内容词 (自)` | SKU 规格名含平台敏感词（「立体打印**自**透气」的「自」被判违规） | 规格名改纯尺寸当地语言 `ขนาด 50x70x30 ซม.`，去掉一切功能描述 |
 | `[12052055] SKU inventory quantity … between 0 and 999999` | 库存沿用 1688 原值（9,981,384）超上限 | `fix_sku.py --stock 1000` 统一收敛 |
 | `商品描述不能为空` | `description` HTML 长度 = 0 | 编辑侧补描述 |
@@ -443,6 +580,11 @@ python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --weight 0.3 --dims 30x
 | **TikTok 后台在售数** | 商品管理页 `在售 N` | N +1（最权威） |
 
 `processing` 可能持续数分钟，**不要在 processing 阶段宣布成功**。
+
+⚠️ **能力边界（2026-11-12 第二批实测）**：铺货配额与后台在售数在 `erp_client.py` 及现有脚本里
+**都没有对应实现**（`quotaQuery` 只在 pitfalls 记录过路径，未封装），只能人工确认。
+发布成功时如实写「ERP 日志 success + 采集箱状态 1，配额/后台在售数未验证」，
+**不要把这两路写成已验证**。同理 `success:true` 只代表进队列，#10 曾先 `processing` 后转 `success`。
 
 #### 5.4 商品编辑与发布的顺序（2026-11-11 实测后的推荐顺序）
 ```
@@ -477,8 +619,15 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
 
 | 时点 | 字段 | 用途 |
 |---|---|---|
+| **T+2（48h）** | **推荐/商城曝光** | **入池检查（新增，破零最关键）**：曝光 <100 = 未入池 → 换主图强制重收录；≥100 才算发布成功 |
 | T+7 | 曝光、点击、CTR、加购 | 有点击无加购 → 换主图/调价；零曝光 → 等 T+20 |
 | T+20 | 曝光、点击、成交单量、成交额、退款率、**履约率/延迟发货率** | 决定 kill / 培养 / 放大 |
+
+**T+0～T+2 两条纪律（旧版完全没有，是"铺了没曝光"的常见原因）**：
+1. **上架后 48 小时内不要改标题/主图**——改动会触发重新收录，等于把刚拿到的初始曝光清零。
+2. **每 3 天回后台「商品 → 商品机会」提报关联**：把「热门搜索」和「精选搜索」里与你的品相关的词全部关联提报，
+   平台推这些词时会顺带推你的商品。这是不开达人佣金时**唯一能主动拿到的免费推流**，
+   而旧版只把商品机会中心当"选品信号源"读，从来没把它当"流量入口"用。
 
 判定规则（`selection.yaml` → `cadence`）：T+20 仍无曝光无转化 → 下架换品；有成交 → 进第二批放大的方向池。
 **履约率是链路信号不是选品信号**：延迟发货率上升 → 先换货代或转小批量备货（>30 单/日），不要靠继续换品掩盖。
@@ -500,7 +649,7 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
    功能词翻译取决于具体图 → 流水线先 OCR 分类（营销词擦 / 功能词译 / 无字跳过），再处理，不要一刀切
 
 #### 7.3 Case C｜真空压缩袋（2026-11-11 ✅ 全链路成功，可作为标准剧本）
-商品 `1738505558347981911`，YOUR_SHOP_TH，**TikTok 后台确认在售**，฿129–199，3 SKU。
+商品 `1700000000000000002`，YOUR_SHOP_TH，**TikTok 后台确认在售**，฿129–199，3 SKU。
 
 | 环节 | 结果 | 关键点 |
 |---|---|---|
@@ -535,13 +684,16 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
 ## References
 
 - `references/erp-pitfalls.md`：**接口逆向与踩坑实录（出问题先查这个）**——完整成功时序、前端 chunk 逆向方法、
-  `edit` 正误 body 对照、`batchOps` 四类 opsType、发布错误码表、1688 采集/授权坑、token 抓取原理、浏览器通道边界、发布前自检清单。
+  `edit` 正误 body 对照、`batchOps` 四类 opsType、发布错误码表、1688 采集/授权坑、token 抓取原理、浏览器通道边界、发布前自检清单；
+  **第十章 = 2026-11-12 第二批 10 品复盘（写操作时序、参数表读重量、三套默认重量、限流、能力边界）**。
 - `references/selection-strategy.md`：选品模块核心（九章）——一件代发三条铁律、履约链路与城市判据、成本结构与采购价上限矩阵、数据源分层与可信度分级、红线与供应链门槛、四维评分、TH/VN差异、破零节奏与数据回流、输出格式。Step 0 前必读。
 - `references/tiktok-api.md`：TikTok接口契约（已实测+待补）
 - 图片闸门（两通道扫描 → 多模态整图判定 → description 重建 → 发布前硬闸）见上方 Step 4.3；
   执行脚本 `scripts/image_gate.py`、参数 `config/image_gate.yaml`
 - `config/image_gate.yaml`：B2B 词表（**仅文本残留兜底，不是判定规则**）与发布前硬闸阈值
-  （`min_clean_main_images` / `max_cjk_chars_in_description` / `require_no_template_residue`）
+  （`min_clean_main_images` / `max_cjk_chars_in_description` / `require_no_template_residue`）；
+  **描述质量阈值 `description_min_plain_chars: 500` / `description_min_paragraphs: 2`**
+  （2026-11-12 后台回执，软提示；纯文本口径为保守实现，见 pitfalls 第十一章）
 - `config/pricing.yaml`：站点定价参数（一件代发全成本、两档 markup、价格带）
 - `config/selection.yaml`：选品参数（履约红线/门槛/四维权重/需求过滤/竞争与内容力口径/单量分层/铺货节奏）
 - `scripts/pricing_calc.py`：售价计算与价格带校验（`--cost` 算售价 / `--limits` 反推采购价上限 / `--check` 自检）。纯标准库，配置改完必跑 `--check`。
@@ -553,6 +705,26 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
   ⚠️ 脚本输出是**相对路径**：在根目录跑落 `erp_data/`，在 `scripts/` 下跑落 `scripts/erp_data/`（11-11 成功发布的数据在后者），读之前先确认在哪。
 - `scripts/set_price.py`：**批量公式改价**（`batchOps opsType:2`），自带改前/改后完整性校验
 - `scripts/fix_sku.py`：**修 SKU 规格名/库存**（官方 `edit` 正确 body 实现，发布前置校验修复主力）
+- `scripts/batch_prep.py`：**批量预处理编排**（破带重定价 + 库存收敛 + 复检，默认 dry-run）。
+  `--site VN [--ids ...] --save`。只动破带商品、已在带内的一律不碰；售价为空/缺重量/类目未匹配的一律转人工不猜。
+  按每天 3 小时可投入，不批量化就铺不完 150 款
+- `scripts/price_gate.py`：**发布前价格/库存硬闸**（读 `ttl-list` 落盘 CSV，逐条判价格带/库存上限/类目异常，
+  退出码 1 = 禁止发布）。另有 `--hint --cost <采购价> --pieces <1|2>` 反推建议挂价与本币价格带。
+  **任何 `ttl-publish` 之前必须先跑它**——ERP 认领自动价（≈采购价×7.574+25.24）不区分重量与类目费率，
+  低价品必然破带，这是实测 19/20 条不合格的根因。
+  **全量跑会被店铺历史脏草稿拖成退出码 1** → 用 `--csv` 传本批子集隔离验证（本轮 9 品子集退出码 0、全量 1）
+- `scripts/prepublish_guard.py`：**发布前最后一道自检（2026-11-12 新增，纯本地只读）**——
+  递归扫 `productCreateRequestV2` 全字段汉字（补 `image_gate` 扫不到 `product_attributes` 的洞）、
+  SKU 规格/库存/类目/重复认领，**以及描述质量（纯文本 ≥500 字符 / ≥2 段）**。
+  `--refresh --ids ...` 强制重新落盘再查，退出码 1 = 禁止发布；
+  `--allow-short-desc` 把描述质量降级为提醒（需用户明确同意）。
+  实测（加描述检查前）：4 品刷新后全 PASS；注入中文 `product_attributes` 立即 FAIL。
+  ⚠️ 第三批起新增描述检查，本批 10 个本地快照有 9 个纯文本 <500 字符、8 个不足 2 段，
+  历史品跑 guard 会 FAIL 属预期
+- `scripts/site_goods.py`：**站点商品（平台侧在售）客户端（2026-11-12 新增）**——
+  `list` / `detail` / `log` 只读；`update-desc` 默认 dry-run、`--save` 才写，自动删
+  `replicatedProducts` 并回读对比。⚠️ 回读有数分钟缓存延迟，别立刻判失败。
+  上/下架 `ops` 未实测，**脚本刻意不实现**。接口契约见 `tiktok-api.md` 末章
 - `scripts/prep_publish.py`：铺货前置一体化（按 SKU 梯度改价 + 补重量 + 回读验证 + 图片替换）
 - `scripts/image_gate.py`：**详情页图片闸门**（`scan` 两通道扫描出待判定清单 / `apply` 按 L0–L3 重建并可选 `--save` 写回 /
   `verify` 发布前硬闸，退出码 1 = 拦截）。纯标准库，scan/apply(dry-run)/verify 全程离线；**脚本不判图**，判定由多模态模型回填 review.json

@@ -35,7 +35,7 @@ SESSION_DIRS = [
 TOKEN_KEY = "qnquerystring"
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOKEN_FILE = os.path.join(HERE, "erp_token.txt")
-BASE_URL = "https://<your-erp-host>"
+BASE_URL = os.environ.get("ERP_BASE_URL", "").rstrip("/")   # 仅 --check 用；例：https://your-erp-host.example.com
 
 try:
     import cramjam

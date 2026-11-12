@@ -60,14 +60,18 @@ industry_belt:
 #   数据来源：python3 scripts/pricing_calc.py --limits（本文所有上下限均由此反推，勿手填）
 TH:
   currency: "THB"
-  price_band_usd: [5.0, 8.0]          # 与 pricing.yaml 一致；$4 以下全成本口径亏损
+  # 2026-11-12 修正：下限 5.0 → 3.5。实测 TH 跨境家居 TOP300（n=48）价格中位 $3.37、81% <$5
+  # 卡 $5 等于放弃八成货盘 —— 这是"只筛出 14 条候选"的直接原因。
+  # 判定口径按**客单价（订单总额）**，不按单件价（旧口径让 2 件套永远判超带）
+  price_band_usd: [3.5, 8.0]
   # cost_floor/ceil 是**运营窗口**，不是数学边界。数学边界用 `pricing_calc.py --limits` 现算：
-  #   shelf(1.62/12%净利) 150g：单件 $8 上限 22.4、$5 下限 10.0
-  #   shelf(1.62/12%净利) 400g：单件 $8 上限 17.4、$5 下限 5.1
-  # 窗口取 5.0–15.5 是主动把挂价压在中国带中部，留转化与调价余量；不是算不出更高
+  #   shelf(1.62/12%净利) 150g：$8 上限 22.4、$3.5 下限 3.8
+  #   shelf(1.62/12%净利) 400g：$8 上限 17.4、$3.5 下限 0.9
   # ⚠ 严禁把上限当固定常数：净利率一变（12%↔25%），上限差一倍
-  cost_floor_cny: 5.0                 # 运营下限（再低则挂价顶到 $5 以下，破带）
+  cost_floor_cny: 3.5                 # 运营下限（$3.5 价位下 12% 净利能承受的采购价）
   cost_ceil_cny: 15.5                 # 运营上限（超此值挂价接近带上沿，转化率断崖）
+  # ⚠ 买家实付 = 挂价 ×1.177（2026-01 起进口税）。比价与选价一律用买家实付口径，
+  #   否则会高估自己的价格竞争力（挂 $5 的品，买家实际付 $5.89）
   bundle_unit_cost_ceil_cny: 9.4      # 2件套单件等效数学上限（150g/$8）；运营建议 ≤6
   chargeable_weight_max_g: 400        # 计费重量上限（按重量计费后从 150g 放宽；400g/$8 上限 17.4）
   chargeable_weight_max_g_bundle: 250 # 2件套：400g 时上限只剩 4.5，组合装别超 250g
@@ -78,10 +82,14 @@ TH:
 
 VN:
   currency: "VND"
-  price_band_usd: [5.0, 8.5]          # TikTok VN 客单价均值 ≈$8.5；下限同 TH 抬到 5.0
-  cost_floor_cny: 5.0                 # VN 价格敏感，但扣点 27% 比 TH 高，低客单没空间
-  cost_ceil_cny: 16.7                 # $8.5/150g/25%；免交易手续费期可到 18.5
-  bundle_unit_cost_ceil_cny: 6.6      # VN 2件套单件等效（$8.5/150g×2）
+  # 2026-11-12 修正：下限 5.0 → 3.5。实测 VN 跨境家居 TOP300（n=37）价格中位 $3.85、78% <$5
+  # 且 7 日销中位 3223 > TH 2364、达人出单率中位 67.8% < TH 75.5% → 货架场空间更大
+  price_band_usd: [3.5, 8.5]
+  # 破零期净利 25%→12%（与 TH 对齐）。25% 时 $3.5 只承受 ¥1.8 采购（等于没货可做）；
+  # 12% + 免交易费窗口 → $3.5 承受 ¥4.1、$5.0 承受 ¥7.1
+  cost_floor_cny: 3.5
+  cost_ceil_cny: 21.0                 # $8.5/150g/12% 免交易费期实算 21.1；交易费恢复后降到 17.5
+  bundle_unit_cost_ceil_cny: 7.6      # VN 2件套单件等效（$8.5/150g×2，12% 净利免交易费）
   chargeable_weight_max_g: 400
   chargeable_weight_max_g_bundle: 250
   size_vol_gate: true
@@ -116,10 +124,24 @@ supplier_gates:
   # 1688 详情长图常整版是「跨境电商专用/工厂直供/一件代发」B2B 招商素材，只能整图删不能擦。
   # 删完若连 3 张干净消费者向主图都不剩，这个货源就不该进采集箱——铺进去再发现，
   # 重认领会丢图片/类目/价格（Step 4.5），代价远大于换一家供应商。
+  # ⚠️ 2026-11-12 第二批实测：本门槛**写了但没执行**，导致 5/10 品跑完全流程才发现 0 张干净主图。
+  # 根因：选品用的遨虾 aibuy_rank_client.py search 返回 26 字段，**不含任何图片**。
+  # → 取到 offerId 后必须先拉 1688 主图目视过闸，才能进 Step 1 采集。
+  # 注意别和发布闸门 image_gate.yaml 的 min_clean_main_images:1 混用，这里要求 3 张。
   clean_consumer_images_min: 3        # 无中文/无B2B字样的消费者向主图 ≥3 张（按整图删后的余量估）
   desc_rebuildable: true              # 详情长图允许整图删后用当地语言文本+干净图重建；全脏且无可重建图 = 换货源
-  bundle_partner_min_skus: 2          # 同店/同款有≥2个可搭配SKU（组合装是生存前提）
+  # ⛔ 以下 3 行是 $5 下限时代的残留，仅定价模型备查，**不得据此铺货**（2026-11-12 第二批纠正）：
+  # 一件代发认领后 SKU 是单件规格、代发只下 1 件，按 2 件成本定价 = 收 2 件钱发 1 件（履约事故）。
+  # 且下限降到 $3.5 后单件 @250g/400g 已落带内，不需要组合装抬客单价。ERP 捆绑发货能力 UNKNOWN。
+  # 选品时 `--pieces` 一律 1；见 SKILL 4.4 / strategy 3.3 / pitfalls 9.5。
+  bundle_partner_min_skus: 2          # 同店/同款可组装的 SKU 数（仅备查）
+  bundle_allow_same_offer: true       # 允许"同款买 2 件"自组 2 件套（仅备查，不执行）
   free_shipping_price_available: preferred  # 优先有"包邮价"SKU（1件起可用）
+  # 2026-11-12 升级为**强门槛**：真包邮（供应商承担运费到货代仓，非"满3件才免邮"）
+  # 到岸成本直降 5 元 → 同价位可承受采购价 +¥5，是零风险、不需要货代配合的唯一降本手段。
+  # 备货方案（提前入仓摊薄运费）经用户确认"货代可能不接受"，故包邮成为首选替代路径。
+  true_free_shipping: required
+  free_shipping_proof: "商品页邮费显示 ¥0 且起批 1 件；或客服书面确认发浙江/广东地址包邮"
 
 # ── 一票否决红线（命中即跳过，不进入打分）──
 redlines:
@@ -141,7 +163,7 @@ competition:
   onsite_listings_excellent: 5        # 站内在售 ≤5 款 = 9 分
   onsite_listings_good: 20            # 6-20 款 = 7 分
   onsite_listings_mid: 50             # 21-50 款 = 5 分
-  onsite_listings_bad: 50             # >50 款 = 2 分
+  onsite_listings_bad: 51             # >50 款 = 2 分（原值写 50，与 mid 撞了，边界不可判）
   # 1688 同款数只用作"跟卖时间窗"，与竞争度是两个不同指标
   same_offer_window_ideal_max: 10     # 聚簇 <10 = 源头新品窗口期，+1 分
   same_offer_crowded_min: 300         # >300 = 中国卖家已涌入，2-4 周内到价格战，-2 分
@@ -180,14 +202,30 @@ margin:
 
 # ── 单量分层（决定履约模式，不是选品指标）──
 volume_tiers:
-  dropship_pure_max: 10               # <10单/日：纯代发，接受5-6元运费，不折腾
-  negotiate_range: 30                 # 10-30单/日：谈包邮价SKU/固定运费3元，开始做2件套
-  stock_up_min: 30                    # >30单/日：转小批量备货到货代仓（快递可谈2.2甚至1.8）
+  # ⚠ 2026-11-12：原规则"<10单/日纯代发、>30单/日才备货"方向反了 —— 破零期才最需要摊薄运费，
+  #   起量后反而可以靠单量谈运费。真正的前置条件是**货代是否接受提前入仓**。
+  #   经用户确认：所用货代"可能不接受提前入仓备货" → 当前按 dropship_only 运行，
+  #   备货降本由"真包邮货源"替代（见 supplier_gates.true_free_shipping）。
+  stock_up_supported: false           # 货代是否支持提前入仓备货（人工确认后改 true）
+  dropship_pure_max: 10               # <10单/日：纯代发，接受 5 元运费
+  negotiate_range: 30                 # 10-30单/日：谈包邮价SKU/固定运费3元，主推 2 件套
+  stock_up_min: 30                    # >30单/日：转小批量备货到货代仓（需 stock_up_supported=true）
 
 # ── 铺货节奏 ──
 cadence:
   first_batch: 150          # 第一批铺货目标(官方出单门槛)
   second_batch: 50          # 第二批补充(第一批有数据后)
+  # ⚠ 2026-11-12：官方"150 款 / 20 天出首单"是统计规律，不是承诺。
+  #   以每天 3 小时可投入计：150 款必须走"长尾快车道"，否则按现流程（单款 30–60 分钟）要 2 年。
+  daily_hours_available: 3
+  per_item_budget_min_hero: 45      # hero 款（10–20 个）单款预算
+  per_item_budget_min_longtail: 3   # 长尾款单款预算（只发干净主图 + 模板化描述）
+  # ── T+0 发布后 48h 入池检查（新增，破零最关键的窗口，旧版完全没有）──
+  # 上架后静置 48h 不要改标题/主图（会触发重收录）；之后看
+  # 后台「数据 → 商城与搜索 → 推荐板块」
+  listing_index_check_hours: 48
+  exposure_not_indexed_threshold: 100   # 曝光 <100 判为"未入池" → 换主图强制重收录
+  opportunity_apply_every_days: 3       # 商品机会「热门搜索/精选搜索」提报关联，每 3 天回看一次
   optimize_day: 7           # 第7天看曝光/点击数据
   kill_day: 20              # 20天无出单/无流量即下架换品
-  data_backflow_day: [7, 20]  # T+7、T+20 必须回填后台真实曝光/点击/成交（替代事前预测）
+  data_backflow_day: [2, 7, 20]  # T+2 入池、T+7 曝光点击、T+20 成交判定

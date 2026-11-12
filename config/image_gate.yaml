@@ -40,3 +40,14 @@ min_desc_images_after_gate: 0     # 详情图允许全删（只留当地语言�
 max_cjk_chars_in_description: 0   # description 文本节点允许的最大汉字数（0 = 一个不留）
 require_no_template_residue: true # 禁止 usemap / styleType / offer-template / <map> / <script> 残渣
 check_b2b_in_title: true          # 标题也扫一遍 B2B 词（ERP 自动翻译不彻底时会漏）
+
+# ── 商品描述质量（2026-11-12 TikTok 后台编辑回执；两个脚本共用）──
+# 来源：seller.tiktokshopglobalselling.com 商品编辑页弹窗「2 个问题可能需要优化」
+#   描述格式 | 将你的描述分成段落，提高可读性从而影响购买决策。
+#   描述质量 | 撰写至少含 500 个字符的描述，以吸引更多客户。
+# 性质：发布后的**软提示**（弹窗仍可点「提交」、商品已在售），不是 12052xxx 硬错误。
+# ⚠️ 计数口径 UNKNOWN：平台按 HTML 源码 / 纯文本 / 富文本节点计字符、泰文连写怎么算，
+#    是否影响曝光，均未证实。这里按「去标签 + 压缩空白后的纯文本」保守实现（偏严）。
+# 由 scripts/image_gate.py apply（空行分段）与 scripts/prepublish_guard.py（发布前拦截）读取。
+description_min_plain_chars: 500   # 描述纯文本 ≥500 字符
+description_min_paragraphs: 2      # ≥2 个含文字的段落（<p>/<div>/<li>/<h*> 或 <br> 分隔）

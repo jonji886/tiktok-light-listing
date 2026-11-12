@@ -132,8 +132,12 @@ def hidden_shipping(cfg, pieces, weight_g):
 
 
 def fixed_cost(cfg, pieces, weight_g):
-    return (domestic_cost(cfg, pieces) + cfg["freight_forwarder_fee"]
-            + cfg["packaging_material"] + hidden_shipping(cfg, pieces, weight_g))
+    """订单级固定成本：国内快递 + 货代 + 包材 + 物流藏价 + 平台按单固定费"""
+    return (domestic_cost(cfg, pieces)
+            + cfg["freight_forwarder_fee"]
+            + cfg["packaging_material"]
+            + hidden_shipping(cfg, pieces, weight_g)
+            + (cfg.get("order_fixed_fee_cny") or 0.0))
 
 
 def landed_cost(cfg, cost, pieces, weight_g):
@@ -141,13 +145,22 @@ def landed_cost(cfg, cost, pieces, weight_g):
 
 
 def fee_rate(cfg, scheme="shelf"):
-    """总扣点率：佣金 + 交易手续费 + 增长服务费 + 退款预留 + 达人佣金"""
+    """总扣点率：佣金 + 交易手续费 + 增长服务费 + 退款预留 + 代扣税 + 达人佣金
+
+    2026-11-12 起支持两个豁免开关（新商扶持窗口，窗口一过必须关掉，否则定价失准）：
+      transaction_fee_waived  → VN 前 90 天免 6% 交易手续费
+      growth_fee_waived       → TH 前 21 天免 8.03% 电商增长服务费
+    """
     sc = cfg["schemes"][scheme]
+    tx = 0.0 if cfg.get("transaction_fee_waived") else (cfg.get("transaction_fee") or 0)
+    eg = 0.0 if cfg.get("growth_fee_waived") else (cfg.get("ecommerce_growth_fee") or 0)
     return (cfg.get("platform_commission", 0)
-            + cfg.get("transaction_fee", 0)
-            + (cfg.get("ecommerce_growth_fee") or 0)
+            + tx
+            + eg
             + cfg.get("refund_reserve", 0)
+            + (cfg.get("tax_withhold") or 0)
             + (sc.get("affiliate_commission") or 0))
+
 
 
 def markup_for(cfg, scheme, margin):
@@ -166,6 +179,7 @@ def compute(cfg, cost, scheme="shelf", pieces=1, weight_g=None, dims=None, margi
     usa = landed * markup / cfg["cny_per_usd"]
     band = cfg["price_band_usd"]
     unit_usd = usa / pieces
+    buyer_mult = 1 + (cfg.get("buyer_tax_rate") or 0.0)
     return {
         "site": cfg["site"], "scheme": scheme, "pieces": pieces,
         "cost_cny": cost, "weight_g": round(w, 0),
@@ -176,9 +190,18 @@ def compute(cfg, cost, scheme="shelf", pieces=1, weight_g=None, dims=None, margi
         "price_local": round(landed * cfg["rate_to_local"] * markup, 2),
         "currency": cfg["currency"],
         "order_usd": round(usa, 2), "unit_usd": round(unit_usd, 2),
+        # 买家实付（含进口税/VAT）——价格带与竞品比价必须用这个口径，
+        # 因为买家看到的是它，不是你的挂价（TH 17.7% / VN 10%）
+        "buyer_paid_usd": round(usa * buyer_mult, 2),
+        "fee_rate": round(fee_rate(cfg, scheme), 4),
+        # 价格带判定用「客单价（订单总额）」，不是「单件价」：
+        # 组合装的订单额 $7.02 完全在带内，但单件等效 $3.51 会被旧口径判"超带"而误杀
+        # （这是 2026-11-12 修掉的逻辑 bug：旧版 unit_usd >= band.min 让所有 2 件套永远 False）
         "band": [band["min"], band["max"]],
-        "in_band": unit_usd >= band["min"] and usa <= band["max"],
+        "in_band": usa >= band["min"] and usa <= band["max"],
+        "single_unit_ok": unit_usd >= band["min"],   # 单件价是否也过下限（仅单品有意义）
     }
+
 
 
 def max_cost(cfg, scheme, pieces=1, weight_g=None, margin=None):
@@ -223,7 +246,8 @@ def main():
     ap.add_argument("--cost", type=float, help="采购价(元/件)")
     ap.add_argument("--site", choices=["TH", "VN"])
     ap.add_argument("--scheme", default="shelf", choices=["shelf", "creator"])
-    ap.add_argument("--pieces", type=int, default=1, help="1=单件，2=2件套")
+    ap.add_argument("--pieces", type=int, default=1,
+                    help="1=单件（一件代发只准填 1）；2=2件套，仅定价模型测算，禁止据此铺货（见 SKILL 4.4）")
     ap.add_argument("--weight", type=float, help="单件实重(g)")
     ap.add_argument("--dims", help="包装长宽高 cm，如 25x20x10；抛重与实重取大")
     ap.add_argument("--margin", type=float, help="覆盖目标净利率，如 0.12（冲量期测算）")
@@ -284,6 +308,9 @@ def main():
             print(json.dumps(rows, ensure_ascii=False, indent=2))
             return 0
 
+        print("⚠️  「2件」列仅为定价模型测算：一件代发认领后 SKU 是单件规格、代发只下 1 件，\n"
+              "    按 2 件成本定价 = 收 2 件钱发 1 件（2026-11-12 第二批实测纠正，见 SKILL 4.4）。\n"
+              "    --pieces 一律填 1。\n")
         for c in targets:
             for name, sc in c["schemes"].items():
                 if not a.all_schemes and not sc.get("enabled", True):
@@ -332,8 +359,15 @@ def main():
                   f" · 计费重 {r['weight_g']:.0f}g")
             print(f"  到岸 {r['landed_cny']:.1f} 元（固定 {r['fixed_cny']:.1f}，其中物流藏价 {r['hidden_cny']:.1f}）"
                   f" × {r['markup']:.2f} = {r['price_local']:.0f} {r['currency']}")
-            print(f"  单件折 ${r['unit_usd']:.2f}｜订单 ${r['order_usd']:.2f}"
+            # 买家实付 = 挂价 ×（1+进口税/VAT），比价必须用这个数，否则高估自己的价格竞争力
+            buyer_note = (f"（买家实付 ${r['buyer_paid_usd']:.2f}，含税）"
+                          if r["buyer_paid_usd"] > r["order_usd"] + 0.005 else "")
+            print(f"  单件折 ${r['unit_usd']:.2f}｜客单价 ${r['order_usd']:.2f}{buyer_note}"
                   f"｜价格带 ${r['band'][0]}-{r['band'][1]}  {tag}")
+            if r["pieces"] > 1 and not r["single_unit_ok"]:
+                print(f"  注：单件等效 ${r['unit_usd']:.2f} 低于带下限，但按客单价判定为带内"
+                      f"（组合装按订单总额比价，不按单件）")
+
     return 0 if all(r["in_band"] for r in out) else 2
 
 
