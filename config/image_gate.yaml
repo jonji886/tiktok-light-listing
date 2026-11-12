@@ -1,0 +1,42 @@
+# 详情页图片闸门参数（scripts/image_gate.py 唯一配置来源）
+# 2026-11-12 新增。背景：1688 详情长图整版是「跨境电商专用 / 工厂直供 / 一件代发 /
+# 支持OEM」这类面向中国卖家的 B2B 素材，擦字没用，必须整张删。
+# 真正漏进 TikTok 详情页的是 description 里的 8–25 张长图，不是 5 张主图。
+#
+# ⚠️ b2b_markers 不是「判定规则」。判定单位是整张图，由多模态模型逐张目视后
+#    回填 review.json 的 verdict。本表只用于 verify 阶段的文本残留兜底扫描
+#    （艺术字/竖排字/印章字不会被文本匹配到，所以文本扫描只能兜底，不能当判定）。
+
+b2b_markers:
+  - 跨境电商专用
+  - 跨境专供
+  - 跨境专用
+  - 一件代发
+  - 源头工厂
+  - 工厂直供
+  - 厂家直销
+  - 支持OEM
+  - 可贴牌
+  - 中性包装
+  - 代发
+  - 批发
+  - 1688
+  - 素材包
+  - 包邮
+  - 日产
+  - 月销
+  - 起订量
+  - 扫码
+  - 微信
+  - 拿样
+  - 招商
+  - 代理加盟
+  - 5000平
+  - 仓库实拍
+
+# ── 发布前硬闸阈值 ──
+min_clean_main_images: 1          # 删完主图至少要剩 1 张（TikTok 首图硬要求）
+min_desc_images_after_gate: 0     # 详情图允许全删（只留当地语言文本也是合法描述）
+max_cjk_chars_in_description: 0   # description 文本节点允许的最大汉字数（0 = 一个不留）
+require_no_template_residue: true # 禁止 usemap / styleType / offer-template / <map> / <script> 残渣
+check_b2b_in_title: true          # 标题也扫一遍 B2B 词（ERP 自动翻译不彻底时会漏）

@@ -61,6 +61,20 @@ def summary(d, tag):
     print(f"  类目={field(d,'toCategoryNameTree')} (id={field(d,'toCategoryId')})")
     desc = v2.get("description") or ""
     print(f"  描述 HTML={len(desc)} 字符 / 图 {desc.count('<img')} 张 | 主图 {len(v2.get('main_images') or [])} 张")
+    # 只打印数量看不出「跨境电商专用」这类 B2B 详情长图；接图片闸门给结论。
+    try:
+        from image_gate import inspect_detail
+        issues, stats = inspect_detail(d)
+        fails = [x for x in issues if x[0] == "FAIL"]
+        if not stats.get("readable"):
+            print("  图片闸门: ⚠ 读不到 itemModel，无法验收")
+        elif fails:
+            print(f"  图片闸门: ✗ 未通过 {len(fails)} 项 "
+                  f"({', '.join(x[1] for x in fails[:3])}) → 发布前跑 image_gate.py apply / verify")
+        else:
+            print("  图片闸门: ✓ 通过")
+    except ImportError:
+        print("  图片闸门: ⚠ 缺 image_gate.py，跳过")
     print(f"  包裹重量 = {v2.get('package_weight')}")
     for i, s in enumerate(v2.get("skus") or []):
         p = s.get("price") or {}

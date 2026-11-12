@@ -112,6 +112,12 @@ supplier_gates:
   stock_min: 200                      # 库存≥200，否则一周内必断货
   no_presale: true                    # 非预售、非定制、非定做尺寸
   main_image_reusable: true           # 主图可直接复用（新人不具备重拍能力）
+  # 图片闸门源头门槛（2026-11-12 新增，见 SKILL.md Step 4.3）：
+  # 1688 详情长图常整版是「跨境电商专用/工厂直供/一件代发」B2B 招商素材，只能整图删不能擦。
+  # 删完若连 3 张干净消费者向主图都不剩，这个货源就不该进采集箱——铺进去再发现，
+  # 重认领会丢图片/类目/价格（Step 4.5），代价远大于换一家供应商。
+  clean_consumer_images_min: 3        # 无中文/无B2B字样的消费者向主图 ≥3 张（按整图删后的余量估）
+  desc_rebuildable: true              # 详情长图允许整图删后用当地语言文本+干净图重建；全脏且无可重建图 = 换货源
   bundle_partner_min_skus: 2          # 同店/同款有≥2个可搭配SKU（组合装是生存前提）
   free_shipping_price_available: preferred  # 优先有"包邮价"SKU（1件起可用）
 

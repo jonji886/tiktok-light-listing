@@ -114,13 +114,36 @@ def main():
 
     r = _post(EDIT, body, args)
     print(f"[fix_sku] 保存结果: {json.dumps(r, ensure_ascii=False)[:250]}")
-    _, _, _, _, after = snapshot(args)
+    d2, _, _, _, after = snapshot(args)
     print("[fix_sku] 修改后:", json.dumps(after, ensure_ascii=False))
-    ok = (after["skus"] == before["skus"] and
-          after["description_len"] == before["description_len"] and
-          after["images"] == before["images"] and
-          after["prices"] == before["prices"])
-    print(f"[fix_sku] 数据完整性: {'OK' if ok else '⚠ 被清空，需删重建'}")
+
+    # 回读校验用「语义完整」而不是「长度相等」：图片闸门重建 description / 整图删后，
+    # 描述长度与主图数本来就会变。旧断言把「不变」当正确，会把正常的重建误报为「被清空」，
+    # 且长度相等既证明不了语言正确，也证明不了没被清空。见 SKILL.md Step 4.3 / 4.5。
+    readable = bool(d2.get("reqInfo") or (d2.get("data") or {}).get("reqInfo"))
+    ok = (after["skus"] == before["skus"] and after["prices"] == before["prices"])
+    if not readable:
+        print("[fix_sku] ⚠ 回读无 reqInfo（getDetail 只服务草稿态，保存后通道会关闭）——"
+              "不能据此判定「被清空」，以发布日志 + 店铺后台为准")
+    elif after["description_len"] == 0 or after["images"] == 0:
+        ok = False
+        print("[fix_sku] ⚠ 描述或主图为空，数据可能被写坏，需删除重认领")
+    print(f"[fix_sku] 数据完整性: {'OK' if ok else '⚠ 有异常'}"
+          "（判据：SKU 数/价格未缩水 + 描述与主图非空）")
+
+    try:
+        from image_gate import inspect_detail
+        issues, stats = inspect_detail(d2)
+        if not stats.get("readable"):
+            print("[fix_sku] 图片闸门: ⚠ 回读不到 itemModel，无法据此宣称图片已验收")
+        else:
+            fails = [x for x in issues if x[0] == "FAIL"]
+            for _, code, msg in fails:
+                print(f"[fix_sku] 图片闸门 ✗ {code}: {msg}")
+            print(f"[fix_sku] 图片闸门: {'✓ 通过' if not fails else '✗ 未通过 → 发布前先跑 image_gate.py apply / verify'}")
+    except ImportError:
+        print("[fix_sku] 图片闸门: ⚠ 缺 image_gate.py，跳过语义校验")
+
     changed = (after["stocks"] != before["stocks"] or
                after["spec_names"] != before["spec_names"])
     print(f"[fix_sku] SKU 修改生效: {'✓' if changed else '⚠ 未变化'}")
