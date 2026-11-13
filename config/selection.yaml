@@ -22,7 +22,7 @@ fulfillment:
   transit_soft_days: 2                # 黄档：2 天。需 24h 发货 + 次日达 + 书面确认，无任何缓冲，周末/爆仓即超
   transit_red_days: 3                 # 红档：≥3 天必超时，直接换发货地或剔除
   hard_deadline: 3                    # 链路总耗时上限 = 3 自然日（含周末），见 strategy 2.2
-  seller_ships_48h_proof: required    # 1688 承诺 48h 发货，需客服书面确认（页面标注不算）
+  seller_ships_48h_proof: platform_compensation_or_chat  # 本批接受 1688「晚发必赔」书面服务条款或客服书面确认；普通标签不算
   forwarder_same_day_delivery: required  # 货代当天送仓（16:00 前到仓当日送，之后顺延次日）
 
 # ── 地域收敛（选品先行、货代做约束）──
@@ -137,11 +137,11 @@ supplier_gates:
   bundle_partner_min_skus: 2          # 同店/同款可组装的 SKU 数（仅备查）
   bundle_allow_same_offer: true       # 允许"同款买 2 件"自组 2 件套（仅备查，不执行）
   free_shipping_price_available: preferred  # 优先有"包邮价"SKU（1件起可用）
-  # 2026-11-12 升级为**强门槛**：真包邮（供应商承担运费到货代仓，非"满3件才免邮"）
-  # 到岸成本直降 5 元 → 同价位可承受采购价 +¥5，是零风险、不需要货代配合的唯一降本手段。
-  # 备货方案（提前入仓摊薄运费）经用户确认"货代可能不接受"，故包邮成为首选替代路径。
-  true_free_shipping: required
-  free_shipping_proof: "商品页邮费显示 ¥0 且起批 1 件；或客服书面确认发浙江/广东地址包邮"
+  # 2026-11-13 用户确认：找不到真包邮时可把 1688 页面国内运费计入成本。
+  # cost_in_price 模式下，非包邮候选必须逐品填写 domestic_shipping_cny，定价与硬闸均使用该值；
+  # 该值是所选地址页面报价，不冒称实际货代仓最终快递报价。
+  true_free_shipping: cost_in_price
+  free_shipping_proof: "包邮品记录 ¥0 证据；非包邮品在 domestic_shipping_cny 填页面运费并注明所选地址"
 
 # ── 一票否决红线（命中即跳过，不进入打分）──
 redlines:
@@ -208,8 +208,10 @@ volume_tiers:
   #   备货降本由"真包邮货源"替代（见 supplier_gates.true_free_shipping）。
   stock_up_supported: false           # 货代是否支持提前入仓备货（人工确认后改 true）
   dropship_pure_max: 10               # <10单/日：纯代发，接受 5 元运费
-  negotiate_range: 30                 # 10-30单/日：谈包邮价SKU/固定运费3元，主推 2 件套
+  negotiate_range: 30                 # 10-30单/日：谈包邮价SKU/固定运费3元
   stock_up_min: 30                    # >30单/日：转小批量备货到货代仓（需 stock_up_supported=true）
+  # ⚠ 2026-11-12：原注释写「主推 2 件套」，随 §3.3 组合装废止一起删除；
+  #   一件代发永远是 pieces=1，单量上来后靠"谈包邮价/固定运费"降本，不靠多件装。
 
 # ── 铺货节奏 ──
 cadence:
@@ -229,3 +231,21 @@ cadence:
   optimize_day: 7           # 第7天看曝光/点击数据
   kill_day: 20              # 20天无出单/无流量即下架换品
   data_backflow_day: [2, 7, 20]  # T+2 入池、T+7 曝光点击、T+20 成交判定
+  # 延迟发货率告警线：超过即视为链路信号（换货代/转备货），不是选品问题。
+  # 本 skill 的经验阈值，**非官方口径**；官方按订单履约报表给数，发现更严口径时以官方为准。
+  late_ship_rate_warn: 0.10
+
+# ── 渠道取舍（2026-11-12 显式记录机会成本，理由见 strategy §8.4）──
+# 当前决定：不开达人佣金、只走货架场（pricing.yaml 的 creator 档 enabled:false）。
+# 代价是放弃 SKPP（销售加速器）资格 —— 「开通联盟」是它的硬性要求之一，
+# 达标奖励含广告金（月度上限 3000 美金）、流量加权、达人/活动优先权。
+# 非白名单店铺只能靠商机中心提报碰概率，因此提报动作本身就是争取 SKPP 的入口，不能停。
+channel_tradeoff:
+  affiliate_enabled: false             # 当前：不开联盟（改 true 前必须先调低净利目标到 0.15）
+  skpp_requires_affiliate: true        # 官方 SKPP 硬性要求含「开通联盟」（第三方整理口径）
+  opportunity_apply_every_days: 3      # 商品机会/商机中心提报频率，唯一免费推流入口
+  # 满足任一即重估"是否开联盟"，三个条件本质都是「货架场被证伪」
+  reevaluate_triggers:
+    shelf_zero_index_days: 20          # 货架场连续 20 天零入池（T+2 曝光持续 <100）
+    t20_zero_orders_ratio: 0.80        # T+20 判定零成交占比 ≥80%（backflow.py stats 可读）
+    target_skus_no_first_order: 150    # 已铺满 150 款且仍无首单

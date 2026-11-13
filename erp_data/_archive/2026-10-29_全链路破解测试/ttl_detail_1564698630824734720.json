@@ -1,0 +1,29 @@
+{
+ "currency": "THB",
+ "fromItemId": "989551711745",
+ "fromPlatform": "ali",
+ "gmtCreated": "2026-10-27 17:53:44",
+ "gmtModified": "2026-10-28 11:21:21",
+ "id": "1564698630824734720",
+ "itemSourceLinks": [
+  {
+   "sourceLink": "https://detail.1688.com/offer/989551711745.html",
+   "sourceNumIid": "989551711745",
+   "sourcePlatform": "1688"
+  }
+ ],
+ "reqInfo": {
+  "shopeeItemModel": null,
+  "temuItemModel": null,
+  "tikTokItemModel": null
+ },
+ "status": 1,
+ "title": "หัวเข็มขัดแบบไม่เจาะรูและไม่มีรอยต่อที่มีประสิทธิภาพตัวยึดแถวปลั๊กผนังติดผนังเราเตอร์ซ็อกเก็ตเราเตอร์หัวเข็มขัดแบบใส10ชิ้น",
+ "toCategoryId": "853128",
+ "toCategoryIdTree": "600001,851848,853128",
+ "toCategoryNameTree": "家居用品,家居收纳,挂钩",
+ "toPlatform": "tiktok",
+ "toSellerId": "7494877320827733079",
+ "toSellerNick": "JingShanShop-TH",
+ "userId": "1323965"
+}

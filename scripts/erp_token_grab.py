@@ -8,7 +8,6 @@
   本脚本解析 LevelDB block（含 snappy 解压）取出完整明文。
 
 用法：
-  export ERP_BASE_URL=https://your-erp-host.example.com   # 仅 --check 需要
   python3 erp_token_grab.py            # 打印 token 及有效期
   python3 erp_token_grab.py --save     # 同时写入 erp_token.txt
   python3 erp_token_grab.py --check    # 顺带验证接口鉴权
@@ -35,7 +34,7 @@ SESSION_DIRS = [
 TOKEN_KEY = "qnquerystring"
 HERE = os.path.dirname(os.path.abspath(__file__))
 TOKEN_FILE = os.path.join(HERE, "erp_token.txt")
-BASE_URL = os.environ.get("ERP_BASE_URL", "").rstrip("/")   # 仅 --check 用；例：https://your-erp-host.example.com
+BASE_URL = "https://erpg.kuaidizs.cn"
 
 try:
     import cramjam

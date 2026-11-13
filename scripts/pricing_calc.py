@@ -18,12 +18,15 @@
   # 一致性自检：yaml 里的 markup 与费率是否吻合、是否有"无解"组合
   python3 scripts/pricing_calc.py --check
 
-退出码：0 正常/全部在带内；2 有超带组合；1 自检发现不一致
+退出码：0 正常/全部在带内；1 自检不一致或豁免已过期；2 有超带组合；
+        3 违反一件代发单件约束（pieces>1 且未显式 --allow-bundle）
 """
 import argparse
 import json
 import os
+import re
 import sys
+from datetime import date, datetime
 
 CONFIG = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                       "config", "pricing.yaml")
@@ -171,6 +174,65 @@ def markup_for(cfg, scheme, margin):
     return 1 / denom
 
 
+# ── 风险断言（P0：把"靠人记得"的日期/费率纪律变成机器阻断）──
+def parse_iso_date(v):
+    """只接受 YYYY-MM-DD；UNCONFIRMED/TBD 等占位串返回 None。"""
+    if v is None:
+        return None
+    if not re.match(r"^\d{4}-\d{2}-\d{2}$", str(v).strip()):
+        return None
+    try:
+        return datetime.strptime(str(v).strip(), "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def bundle_violation(pieces, allow_bundle):
+    """一件代发只准单件。返回非 None 的错误串即代表应阻断（退出码 3）。"""
+    if pieces == 1 or allow_bundle:
+        return None
+    return ("一件代发认领后 SKU 为单件规格、代发只下 1 件，禁止按 2 件套定价/宣称"
+            "（SKILL 4.4 / strategy 3.3，捆绑发货能力 UNKNOWN）。"
+            "若已实测确认一件代发支持 1 SKU 多件捆绑发货，显式加 --allow-bundle 才放行。")
+
+
+def waiver_and_rate_checks(cfg, today=None):
+    """返回 (errors, warnings)：errors 出现即退出码 1，warnings 仅提示。"""
+    today = today or date.today()
+    errors, warnings = [], []
+    site = cfg.get("site", "?")
+    if cfg.get("commission_rate_verified") is False:
+        warnings.append(
+            f"[{site}] 平台佣金 {cfg.get('platform_commission', 0) * 100:.2f}% 未经后台三级类目"
+            "费率表核实（commission_rate_verified=false），当前净利可能被高估；"
+            "核实后回填真实费率并置 true")
+    if cfg.get("transaction_fee_waived"):
+        shelf = cfg["schemes"]["shelf"]
+        raw = shelf.get("waiver_expires")
+        confirmed = shelf.get("waiver_expires_confirmed") is True
+        d = parse_iso_date(raw)
+        if d is None:
+            warnings.append(
+                f"[{site}] 交易手续费豁免到期日未回填（waiver_expires={raw!r}）；"
+                "请按店铺后台显示回填 YYYY-MM-DD（入驻完成验证日+90天）并置 "
+                "waiver_expires_confirmed:true，免期一到 markup 须切到 "
+                "markup_after_waiver_12pct，否则每单少算 6%")
+        elif d < today:
+            errors.append(
+                f"[{site}] 交易手续费豁免已于 {d} 到期，但 transaction_fee_waived 仍为 true："
+                "当前定价每单少算 6%。立即在 pricing.yaml 置 false 并把 shelf.markup 切换为 "
+                "markup_after_waiver_12pct 后重跑 --check")
+        elif not confirmed:
+            warnings.append(
+                f"[{site}] 豁免到期日 {d}（剩 {(d - today).days} 天）尚未经后台确认"
+                "（waiver_expires_confirmed=false），核对无误后置 true；到期前必须完成 markup 切换")
+        else:
+            warnings.append(
+                f"[{site}] 交易手续费豁免将于 {d} 到期（剩 {(d - today).days} 天），"
+                "到期前必须完成 markup 切换")
+    return errors, warnings
+
+
 def compute(cfg, cost, scheme="shelf", pieces=1, weight_g=None, dims=None, margin=None):
     w = chargeable_weight(cfg, weight_g, dims)
     landed = landed_cost(cfg, cost, pieces, w)
@@ -247,7 +309,9 @@ def main():
     ap.add_argument("--site", choices=["TH", "VN"])
     ap.add_argument("--scheme", default="shelf", choices=["shelf", "creator"])
     ap.add_argument("--pieces", type=int, default=1,
-                    help="1=单件（一件代发只准填 1）；2=2件套，仅定价模型测算，禁止据此铺货（见 SKILL 4.4）")
+                    help="1=单件（一件代发只准填 1，默认）；>1 默认直接阻断，仅在实测确认捆绑发货后配 --allow-bundle")
+    ap.add_argument("--allow-bundle", action="store_true",
+                    help="显式确认一件代发支持 1 SKU 多件捆绑发货后才允许 pieces>1（默认禁止）")
     ap.add_argument("--weight", type=float, help="单件实重(g)")
     ap.add_argument("--dims", help="包装长宽高 cm，如 25x20x10；抛重与实重取大")
     ap.add_argument("--margin", type=float, help="覆盖目标净利率，如 0.12（冲量期测算）")
@@ -263,7 +327,11 @@ def main():
 
     if a.check:
         bad = 0
+        all_errors, all_warnings = [], []
         for c in targets:
+            errs, warns = waiver_and_rate_checks(c)
+            all_errors += errs
+            all_warnings += warns
             for name, sc in c["schemes"].items():
                 expect = markup_for(c, name, sc["target_margin"])
                 if expect is None:
@@ -288,6 +356,15 @@ def main():
             # 价格带下限是否可覆盖最低固定成本
             mc_top = max_cost(c, "shelf", 1, WEIGHT_COLS[-1])
             print(f"   {c['site']} 参考：400g 单件采购价上限 {mc_top:.1f} 元")
+        if all_warnings:
+            print("\n⚠️  WARNING（不阻断，但在回填/核实前结果按保守口径使用）：")
+            for w in all_warnings:
+                print(f"  ! {w}")
+        if all_errors:
+            bad += len(all_errors)
+            print("\n❌ 阻断项（定价参数已失效，禁止据此铺货）：")
+            for e in all_errors:
+                print(f"  ✗ {e}")
         print("\n" + ("配置自洽" if bad == 0 else f"{bad} 处需修正"))
         return 0 if bad == 0 else 1
 
@@ -304,7 +381,9 @@ def main():
                                          "weight_g": w,
                                          "markup": round(sc["markup"], 2),
                                          "max_cost_cny": round(max_cost(c, name, p, w, a.margin), 1),
-                                         "feasible": max_cost(c, name, p, w, a.margin) > 0})
+                                         "feasible": max_cost(c, name, p, w, a.margin) > 0,
+                                         # 2 件列仅模型备查；未验证捆绑发货能力前禁止据此铺货
+                                         "listing_allowed": p == 1})
             print(json.dumps(rows, ensure_ascii=False, indent=2))
             return 0
 
@@ -343,9 +422,23 @@ def main():
     if a.cost is None:
         ap.error("需要 --cost，或用 --limits / --check")
 
+    # P0 硬闸：一件代发只准单件，pieces>1 且未显式确认捆绑能力 → 退出码 3
+    bv = bundle_violation(a.pieces, a.allow_bundle)
+    if bv:
+        sys.stderr.write(f"[block] {bv}\n")
+        return 3
+
     dims = parse_dims(a.dims) if a.dims else None
     out = []
     for c in targets:
+        # P0 断言：豁免过期直接阻断；未回填日期/费率未核实仅 WARNING
+        errs, warns = waiver_and_rate_checks(c)
+        for w in warns:
+            sys.stderr.write(f"[warn] {w}\n")
+        if errs:
+            for e in errs:
+                sys.stderr.write(f"[block] {e}\n")
+            return 1
         if not c["schemes"][a.scheme].get("enabled", True):
             sys.stderr.write(f"[warn] {c['site']} 的 {a.scheme} 档在 pricing.yaml 里是 "
                              f"enabled:false（当前策略不开达人佣金），结果仅供参考\n")
@@ -353,6 +446,9 @@ def main():
     if a.json:
         print(json.dumps(out, ensure_ascii=False, indent=2))
     else:
+        if a.allow_bundle and a.pieces > 1:
+            print("⚠️  --allow-bundle 已显式放行多件装：该结果仅在捆绑发货能力实测通过后有效，"
+                  "铺货前须在 SKU 规格列明内含物（平台套装规则），否则禁止使用。\n")
         for r in out:
             tag = "✓ 带内" if r["in_band"] else "✗ 超带 → 换品/改打法，不要硬调 markup"
             print(f"[{r['site']}] {r['scheme']} · {r['pieces']}件 · 采购 {r['cost_cny']:.1f} 元/件"

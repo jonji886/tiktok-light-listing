@@ -11,7 +11,7 @@
 
 ```
 公共采集箱(856997023844)
-  → ttl-claim 认领到 YOUR_SHOP_TH          ✅ 标题自动泰文化、类目自动匹配
+  → ttl-claim 认领到 JingShanShop-TH          ✅ 标题自动泰文化、类目自动匹配
   → set_price.py --rate 2.8 --add 39.26       ✅ 32.05/47.81/57.05 → 129/173/199 THB，数据零丢失
   → ttl-publish --weight 0.3 --dims 30x20x5   ❌ 22:28:42 fail（两条平台校验）
   → fix_sku.py --stock 1000                   ✅ 规格名改纯尺寸泰文 + 库存收敛 1000
@@ -29,7 +29,7 @@
 ERP 前端是 Webpack 分包，接口名被混淆，但**路径字面量没混淆**。抓接口最低成本路径是拉前端包离线搜：
 
 ```bash
-B="https://your-erp-web-frontend.oss-cn-<region>.aliyuncs.com/erpg/0.0.66/js"
+B="https://kdzs-erp-item-web-frontend.oss-cn-zhangjiakou.aliyuncs.com/erpg/0.0.66/js"
 curl -sS "$B/CrossFastUploadTiktokCollection.3afa808d.js" -o chunk.gz
 gunzip -c chunk.gz > chunk.js   # 这些 .js 是 gzip 的，必须先解
 ```
@@ -146,8 +146,8 @@ print(dec(s[i-600:i+600]))
       "skuNameTruncateType":"END","skuValueEnabled":true,"skuValueLimit":50,
       "skuValueTruncateType":"END","skuTotalEnabled":false}},
  "distribItemVos":[{"itemId":"<ttl_id>","sourcePlatform":"kdzs_erp",
-   "targetPlatform":"tiktok","sourceSellerId":"<ERP_SOURCE_SELLER_ID>","targetSellerId":"<sellerId>",
-   "targetSellerNick":"YOUR_SHOP_TH",
+   "targetPlatform":"tiktok","sourceSellerId":"1323965","targetSellerId":"<sellerId>",
+   "targetSellerNick":"JingShanShop-TH",
    "categoryIds":"600001,851848,852744","categoryNames":"家居用品,家居收纳,收纳包"}]}
 ```
 
@@ -186,6 +186,9 @@ CLI：`python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --weight 0.3 --d
 
 ⚠️ **2026-11-12 第二批实测的能力边界**：后两路（配额 / 后台在售数）在 `erp_client.py`
 与现有脚本里**都没有实现**，只能人工确认——`quotaQuery` 这里只是记录过路径，未封装成命令。
+> **2026-11-12 晚勘误**：配额这条路**已封装**为 `erp_client.py quota --region TH`（body 传 `{}`，
+> 返回按 sellerId 的 totalNum/consumeNum/remainingNum + 月度重置窗口；实测已完成 8/5000）。
+> 本段保留原文作为当时的边界记录；**后台在售数仍人工**，这条没变。
 本轮 4 品发布后只验证到前两路，如实写「ERP 日志 success + 采集箱状态 1」，**不要写成四路全过**。
 
 ---
@@ -304,6 +307,7 @@ ERP 把 JWT 放在 `sessionStorage.qnquerystring`，接口鉴权头同名。
 
 ### 9.5 能力边界（别写成「四路全过」）
 - ⚠️ 铺货配额 `quotaQuery` 与 TikTok 后台在售数在 `erp_client.py`／现有脚本里**没有实现**，只能人工确认。
+  > 2026-11-12 晚勘误：配额已封装为 `erp_client.py quota`，可脚本验证；**在售数仍只能人工**。
   本轮 4 品只验证到「ERP 日志 success + 采集箱状态 1 + 异常标签空」。
 - ⚠️ 价格闸门全量退出码 1 是店铺历史 15 条脏草稿所致 → 用本批子集 `--csv` 隔离（本轮 9 品子集退出码 0）。
 - ⚠️ **`image_gate verify` 不扫 `product_attributes`**，补洞脚本 `scripts/prepublish_guard.py`（见 4.2 / SKILL 5.1）。
@@ -324,9 +328,9 @@ ERP 把 JWT 放在 `sessionStorage.qnquerystring`，接口鉴权头同名。
 
 ## 十一、TikTok 后台编辑回执：描述优化项（2026-11-12，一手截图）
 
-**来源 `VERIFIED`**：用户 13:41 提交的 `seller.tiktokshopglobalselling.com/product/edit/1700000000000000001`
-（Thailand / YOUR_SHOP，状态「在售」）编辑页截图；原图存
-`~/clipboard-images/<screenshot>.png`。
+**来源 `VERIFIED`**：用户 13:41 提交的 `seller.tiktokshopglobalselling.com/product/edit/1738510677889025111`
+（Thailand / JingShanShop，状态「在售」）编辑页截图；原图存
+`/Users/jizhongjian/.workbuddy/clipboard-images/clipboard-2026-11-12T05-41-07-494Z-8987ec61.png`。
 弹窗标题「2 个问题可能需要优化」，两行原文：
 
 | 发品详情 | 建议（原文） |
@@ -348,7 +352,7 @@ ERP 把 JWT 放在 `sessionStorage.qnquerystring`，接口鉴权头同名。
   纯文本长度 0 / 0 / 0 / 88 / 134 / 144 / 153 / 160 / 240 / 560，**9/10 < 500 字符**；
   含文字段落数 0 / 0 / 0 / 1 / 1 / 1 / 1 / 1 / 15 / 27，**8/10 不足 2 段**
   （段落数 15 / 27 的两个品是 1688 招商话术与参数碎片、还混着中文，不是可读商品描述）。
-  截图商品的泰文标题（大容量新款防水折叠便携购物袋）与 `ttl_detail_1500000000000000011.json`
+  截图商品的泰文标题（大容量新款防水折叠便携购物袋）与 `ttl_detail_1570393952287219712.json`
   一致，该快照 `纯文本 153 字符 / 1 段 / 3 SKU`，与两条提示吻合。
   ⚠️ **此对应关系为 `INFERRED`**：后台商品 ID 与 ERP ttl_id 无已验证映射，ERP 发布还可能改写描述，
   **不能断言后台实际字符数就是 153**。
@@ -417,3 +421,23 @@ ERP 把 JWT 放在 `sessionStorage.qnquerystring`，接口鉴权头同名。
 - 平台侧详情备份在 `erp_data/_backup/2026-11-12_1404_before_relist/site_details/`。
 - 上/下架接口只探明必填 `ops` / `list`，取值与元素结构 `UNKNOWN`，本轮故意没调用。
 - 泰文文案由 AI 生成、未经母语者复核；**TikTok 后台两条提示是否消失 = `UNKNOWN`，需人工复核**。
+
+## 十三、VN20 批次固化（2026-11-13）
+
+### 13.1 路线与货代
+- 服务商目录列出多仓，不等于当前账号已绑定该仓；以「我的货代」已绑定行的仓库名和地址为准。
+- `ship_transit_days` 必须是发货地→实际绑定仓的逐线路证据；同城、同省、邻省只能作为先验，不能回填成已验证天数。
+- 公司名、籍贯、HTML 里的地名不能替代 1688 已核实发货城市；`location` 为空时保持 `UNVERIFIED`。
+- 确定性复核走 `scripts/route_gate.py`：缺发货城市、缺已绑定仓、缺到仓天数或 >1 天即阻断。
+
+### 13.2 图片与本地负载
+- 每品除白底首图外必须有其他展示图；公网短链不能凭上传返回的 `path` 采纳，必须逐张回读。
+- 并发批量上传曾出现 URL/path 错配；后续按商品顺序上传，并用 `scripts/verify_public_images.py` 做可访问性、SHA-256、尺寸/像素比对。`FileBatchUpload` 单次最多 50 个文件；超限或映射异常时，旧短链只留审计，不得复用。
+- 本地负载先跑 `scripts/listing_payload_audit.py`：站点、图片数量、越南语文本、SKU 单件化、库存/价格、源 SKU 序号、重量尺寸一次核完。
+
+### 13.3 SKU、定价与写操作
+- 保留 `pieces=1`；排除两件/四件装、液体胶水/免钉胶、与主品不同的杆件。`source_sku_index` 是 1-based 源序号，`source_sku_total` 是原始 SKU 总数。
+- 价格只按本批真实 SKU 采购价重算；旧批次 110 个 SKU 的成本和客单价不得复用。杭州地址页面运费不等于货代仓最终快递报价。
+- 认领每批 ≤3；写前先按 `offer_id` 精确查重，公共采集箱的 `total` 可能混入其他站点/历史候选，不能替代本批清单匹配；回执为空也必须回读；接口 `success` 只代表进队列，不等于平台在售。
+- 旧 `ttl-save` body 有清空商品数据风险，继续禁用；新编辑器必须先校验目标 sellerId、店铺名和来源 offer，默认 dry-run，保存后回读。
+- 本地门禁通过只代表本地负载合格；认领后仍须在真实 ERP 详情上重跑图片、价格、发布前闸门。

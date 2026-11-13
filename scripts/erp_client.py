@@ -9,20 +9,17 @@ erp_client.py — 快递助手ERP跨境版 TikTok Shop 铺货接口客户端
   - 请求头 qnquerystring: <JWT> + appType:3
   - token 获取：浏览器登录态内 bu.js 导出 sessionStorage.qnquerystring
 
-TikTok 店铺 sellerId 不写死在代码里，通过环境变量注入：
-  ERP_BASE_URL        目标 ERP 站点地址（必填）
-  TH_SELLER_ID / TH_SHOP_NICK   泰国站店铺 sellerId 与店铺名
-  VN_SELLER_ID / VN_SHOP_NICK   越南站店铺 sellerId 与店铺名
-  ERP_SOURCE_SELLER_ID          发布时必填的来源 sellerId（从自己的发布请求里取）
-  ERP_TOKEN                     登录态 JWT（优先级高于 erp_token.txt）
+TikTok 店铺 sellerId（实测 2026-10-27，有效授权）：
+  TH = 7494877320827733079  (JingShanShop-TH)
+  VN = 8686823118786298967  (JingShanShop-VN)
 
 用法：
   python3 erp_client.py token --check
-  python3 erp_client.py collect --ids 780000000001          # 1688链接采集（复用）
+  python3 erp_client.py collect --ids 989551711745          # 1688链接采集（复用）
   python3 erp_client.py items [--page N] [--size N]        # 公共采集箱列表
   python3 erp_client.py ttl-list [--region TH] [--status 0]  # TikTok采集箱列表
-  python3 erp_client.py ttl-detail --id 1500000000000000002  # 编辑详情
-  python3 erp_client.py ttl-claim --ids <numIid> --region TH  # 认领(写)
+  python3 erp_client.py ttl-detail --id 1564704833189261312  # 编辑详情
+  python3 erp_client.py ttl-claim --ids <numIid> --seller 7494877320827733079  # 认领(写)
   python3 erp_client.py ttl-translate --id <id> --lang th  # 标题一键翻译
   python3 erp_client.py ttl-publish --ids <ttl采集箱id>      # 发布(写)
   python3 erp_client.py logs --months 1                     # 发布记录
@@ -31,7 +28,7 @@ TikTok 店铺 sellerId 不写死在代码里，通过环境变量注入：
 import argparse, csv, json, os, sys, time
 import urllib.request, urllib.error
 
-BASE = os.environ.get("ERP_BASE_URL", "").rstrip("/")  # 例：https://your-erp-host.example.com
+BASE = "https://erp.kuaidizs.cn"
 HEADERS = {
     "Content-Type": "application/json;charset=UTF-8",
     "appType": "3",
@@ -41,14 +38,10 @@ MIN_INTERVAL = 1.0
 _last_ts = 0.0
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "erp_token.txt")
 
-# TikTok 站点配置：sellerId / nick 从环境变量注入，勿硬编码进仓库
+# TikTok 站点配置（sellerId 实测 2026-10-27）
 TT_SHOPS = {
-    "TH": {"sellerId": os.environ.get("TH_SELLER_ID", ""),
-           "nick": os.environ.get("TH_SHOP_NICK", ""),
-           "lang": "th", "currency": "THB"},
-    "VN": {"sellerId": os.environ.get("VN_SELLER_ID", ""),
-           "nick": os.environ.get("VN_SHOP_NICK", ""),
-           "lang": "vi", "currency": "VND"},
+    "TH": {"sellerId": "7494877320827733079", "nick": "JingShanShop-TH", "lang": "th", "currency": "THB"},
+    "VN": {"sellerId": "8686823118786298967", "nick": "JingShanShop-VN", "lang": "vi", "currency": "VND"},
 }
 
 
@@ -63,8 +56,6 @@ def _load_token(args):
 
 def _post(path, body, args):
     global _last_ts
-    if not BASE:
-        sys.exit("[erp] 未配置 ERP_BASE_URL：export ERP_BASE_URL=https://your-erp-host.example.com")
     now = time.time()
     if now - _last_ts < MIN_INTERVAL:
         time.sleep(MIN_INTERVAL - (now - _last_ts))
@@ -293,15 +284,13 @@ def cmd_ttl_claim(args):
     接口 POST /item/crossBorder/commonCollect/batchClaimMultiShop
     body 已破解（2026-10-29 CDP document_start 注入抓真实请求）：
       {"numIids":["<ERP内部ID>"],"targetShops":[{"targetPlatform":"tiktok",
-       "sellerId":"...","sellerNick":"YOUR_SHOP_TH"}]}
+       "sellerId":"...","sellerNick":"JingShanShop-TH"}]}
     注意：numIids 是 ERP内部ID(numIid)，不是1688 offerId。
     """
     shop = TT_SHOPS.get(args.region.upper())
     if not shop:
         sys.exit(f"[erp] 未知站点 {args.region}，支持: {list(TT_SHOPS.keys())}")
     seller_id = args.seller or shop["sellerId"]
-    if not seller_id or not shop["nick"]:
-        sys.exit(f"[erp] 未配置 {args.region} 店铺：export {args.region.upper()}_SELLER_ID=... {args.region.upper()}_SHOP_NICK=...，或传 --seller")
     # 从公共采集箱查 numIid（传入的可能是 offerId，映射到 ERP内部ID）
     ids = [i.strip() for i in args.ids.split(",") if i.strip()]
     d = _post("/item/center/queryErpItemListPage",
@@ -339,7 +328,7 @@ def cmd_ttl_publish(args):
         sourceSellerId/targetSellerId/targetSellerNick/categoryIds/categoryNames}]}
     注意：
       - itemId 是 TikTok采集箱记录 id（ttl_id，即 getDetail 的 id），不是 itemCenterNumIid（2026-10-29 实测对比：ttl_id→受理，center ID→"未找到该平台采集记录"）
-      - sourceSellerId 必须填（实测=<ERP_SOURCE_SELLER_ID>），缺则后端报错
+      - sourceSellerId 必须填（实测=1323965），缺则后端报错
       - categoryIds/categoryNames 是字符串（可为空），不是数组
       - 商品缺类目→"类目不能为空"；缺描述→"商品描述不能为空"（商品自身数据问题，需先在编辑弹窗/接口完善）
     """
@@ -367,7 +356,7 @@ def cmd_ttl_publish(args):
             "itemId": str(it.get("id","")),   # 采集箱记录id（ttl_id）——不是 itemCenterNumIid！
             "sourcePlatform": "kdzs_erp",
             "targetPlatform": "tiktok",
-            "sourceSellerId": str(it.get("sourceSellerId","") or os.environ.get("ERP_SOURCE_SELLER_ID", "")),
+            "sourceSellerId": str(it.get("sourceSellerId","") or "1323965"),
             "targetSellerId": str(it.get("toSellerId","")),
             "targetSellerNick": it.get("toSellerNick",""),
             # 官方前端(chunk77)传的是类目树；旧版传空串，2026-11-11 修正
@@ -443,6 +432,44 @@ def cmd_shops(args):
     print(f"[erp] TikTok店铺: {len(rows)} → {cp}")
 
 
+# ── quota（铺货配额，只读；2026-11-12 实测可读）──────
+def cmd_quota(args):
+    """铺货配额查询（发布后四路验证的第三路，只读）。
+
+    body 实测可为空 {}；返回 businessModule=CROSS_ITEM_LIMIT + details[]，
+    details 按 sellerId 分店铺给 totalNum/consumeNum/remainingNum 与月度重置窗口。
+    """
+    d = _post("/trade/crossItemDistrib/quotaQuery", {}, args)
+    rows = []
+    for it in d.get("details", []):
+        rows.append({
+            "平台": it.get("platform", ""),
+            "sellerId": it.get("sellerId", ""),
+            "站点": _quota_region(it.get("sellerId", "")),
+            "总量": it.get("totalNum", ""),
+            "已用": it.get("consumeNum", ""),
+            "剩余": it.get("remainingNum", ""),
+            "本周期起": it.get("lastResetTime", ""),
+            "下周期起": it.get("nextResetTime", ""),
+        })
+    cp, jp = _write_out(args, "quota", rows)
+    if args.region:
+        rows = [r for r in rows if r["站点"] == args.region.upper()]
+    for r in (rows or []):
+        if r["平台"] == "tiktok":
+            print("[erp] 配额 %s(%s): 已用 %s / 总量 %s（剩余 %s，下次重置 %s）"
+                  % (r["站点"] or r["sellerId"], r["sellerId"], r["已用"], r["总量"],
+                     r["剩余"], r["下周期起"]))
+    print(f"[erp] 配额明细 {len(rows)} 条 → {cp}")
+
+
+def _quota_region(seller_id):
+    for k, v in TT_SHOPS.items():
+        if v["sellerId"] == seller_id:
+            return k
+    return ""
+
+
 # ── ttl-del（删除采集箱记录，写操作）───────────────
 def cmd_ttl_del(args):
     """删除 TikTok 采集箱记录（接口已破解 2026-10-29）。
@@ -480,15 +507,16 @@ def main():
     pdl = sub.add_parser("ttl-del"); pdl.add_argument("--ids", required=True); pdl.add_argument("--out", default="")
     plg = sub.add_parser("logs"); plg.add_argument("--months", type=int, default=1); plg.add_argument("--out", default="")
     ps = sub.add_parser("shops"); ps.add_argument("--platform", default="tiktok"); ps.add_argument("--out", default="")
+    pq = sub.add_parser("quota"); pq.add_argument("--region", default="", help="TH/VN，留空列全部"); pq.add_argument("--out", default="")
 
-    for sp in (pi,pl,plg,ps,pc,pcl,pp,pdl):
+    for sp in (pi,pl,plg,ps,pc,pcl,pp,pdl,pq):
         sp.add_argument("--token", default="")
     args = p.parse_args()
 
     {"token":cmd_token,"collect":cmd_collect,"items":cmd_items,
      "ttl-list":cmd_ttl_list,"ttl-detail":cmd_ttl_detail,"ttl-save":cmd_ttl_save,"ttl-claim":cmd_ttl_claim,
      "ttl-translate":cmd_ttl_translate,"ttl-publish":cmd_ttl_publish,"ttl-del":cmd_ttl_del,
-     "logs":cmd_logs,"shops":cmd_shops}.get(args.cmd, lambda a: None)(args)
+     "logs":cmd_logs,"shops":cmd_shops,"quota":cmd_quota}.get(args.cmd, lambda a: None)(args)
 
 
 if __name__ == "__main__":

@@ -22,7 +22,7 @@
   python3 scripts/batch_prep.py --site VN
 
   # 真跑，但只对点名的 id（写操作必须点名）
-  python3 scripts/batch_prep.py --site VN --ids 1500000000000000021,1500000000000000022 --save
+  python3 scripts/batch_prep.py --site VN --ids 1564670773629267968,1564674540231987200 --save
 
   # 指定目标价位（默认落在带下限的 1.10~1.45 倍之间，主打价格优势）
   python3 scripts/batch_prep.py --site VN --lo-mult 1.10 --hi-mult 1.40 --save --ids ...

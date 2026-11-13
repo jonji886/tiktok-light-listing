@@ -1,0 +1,496 @@
+{
+ "currency": "THB",
+ "fromItemId": "989551711745",
+ "fromPlatform": "ali",
+ "gmtCreated": "2026-10-27 18:18:23",
+ "gmtModified": "2026-10-27 19:58:02",
+ "id": "1564704833189261312",
+ "itemSourceLinks": [
+  {
+   "sourceLink": "https://detail.1688.com/offer/989551711745.html",
+   "sourceNumIid": "989551711745",
+   "sourcePlatform": "1688"
+  }
+ ],
+ "reqInfo": {
+  "shopeeItemModel": null,
+  "temuItemModel": null,
+  "tikTokItemModel": {
+   "currency": "THB",
+   "multiCountrySkuSalesConfig": [
+    {
+     "currency": "PHP",
+     "flag": false,
+     "region": "PH",
+     "regionName": "菲律宾",
+     "sellerId": "8686823118790558807",
+     "skuList": []
+    },
+    {
+     "currency": "SGD",
+     "flag": false,
+     "region": "SG",
+     "regionName": "新加坡",
+     "sellerId": "8686823118790493271",
+     "skuList": []
+    },
+    {
+     "currency": "MYR",
+     "flag": false,
+     "region": "MY",
+     "regionName": "马来西亚",
+     "sellerId": "8686823118786233431",
+     "skuList": []
+    },
+    {
+     "currency": "VND",
+     "flag": false,
+     "region": "VN",
+     "regionName": "越南",
+     "sellerId": "8686823118786298967",
+     "skuList": []
+    }
+   ],
+   "productCreateRequestV2": {
+    "apiDomain": "open-api.tiktokglobalshop.com",
+    "apiMethodName": "/product/202309/products",
+    "category_id": "853128",
+    "certifications": [],
+    "delivery_option_ids": [],
+    "description": "<div style=\"width: 790.0px;\">\r\n        \r\n         <img alt=\"im6Ui/OgyNQvIWnF9TxGzFFNb+9EsW87mL/c\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01iTUXoJ1dmppkpExjw_!!2207966343779-0-cib.jpg?__r__=1761901378202\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_0\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01s3Go131dmppkRo2CC_!!2207966343779-0-cib.jpg?__r__=1761901378202\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_1\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i2/3294796400/O1CN01cx64M61x9FcmpYZMH_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_2\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i3/3294796400/O1CN01Pq26m51x9FctnC2bS_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_3\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i1/3294796400/O1CN01RLInkt1x9Fcj0pZP0_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_4\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i2/3294796400/O1CN01BBS8x21x9FclIf6bX_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_5\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i2/3294796400/O1CN01TVL8rQ1x9FcsuruIj_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_6\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i2/3294796400/O1CN01jxEEAn1x9FcguxGZ9_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_7\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i2/3294796400/O1CN01jZdkjV1x9FciHIxzr_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_8\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i1/3294796400/O1CN01FzdgdD1x9FcoTuFmT_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_9\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i4/3294796400/O1CN01q9bvFk1x9FcrlEQaL_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_10\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i1/3294796400/O1CN01Q2Lm6l1x9Fcr4Kcqs_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_11\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i1/3294796400/O1CN01KuriwD1x9FcsutaFU_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_12\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN018VsbuC1dmppl1iAs9_!!2207966343779-0-cib.jpg?__r__=1761901331524\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_13\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i2/3294796400/O1CN01NKQUhG1x9Fcsuse1h_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_14\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i3/3294796400/O1CN01QKhwFD1x9Fcj0pIlc_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_15\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://img.alicdn.com/imgextra/i1/3294796400/O1CN01NEi46E1x9FcpxzVB7_!!3294796400.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_16\"/>\r\n        \r\n        \r\n    </div>",
+    "external_product_id": "989551711745",
+    "is_cod_allowed": false,
+    "key_product_features": [],
+    "listing_platforms": [],
+    "main_images": [
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN019919lV1x9Fcr4qyzF_!!0-item_pic.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01u29Wm01x9Fclr77w4_!!3294796400.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01tyRkhl1x9FcgvXBJ7_!!3294796400.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01DDwEYw1dmppk5lNEL_!!2207966343779-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01MTEyXR1dmppkTg20X_!!2207966343779-0-cib.jpg"
+     }
+    ],
+    "manufacturer_ids": [],
+    "methodType": "POST",
+    "multipartRequest": false,
+    "package_dimensions": null,
+    "package_weight": null,
+    "product_attributes": [],
+    "responseClass": "com.kuaidizs.erp.index.core.client.tiktok.response.v2.ProductCreateResponseV2",
+    "responsible_person_ids": [],
+    "scheduled_sale": null,
+    "search_terms": [],
+    "size_chart": null,
+    "skus": [
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 984
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "185",
+       "currency": "THB",
+       "sale_price": "185",
+       "source_price": "0.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN012u4NX21dmppjpBO7s_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "1ชุดตัวล็อกแบบแม่เหล็ก [1ด้านเว้า1ด้านนูน]"
+       }
+      ],
+      "seller_sku": "6124463290306"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 979
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "209",
+       "currency": "THB",
+       "sale_price": "209",
+       "source_price": "0.93"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01qycVCN1dmppky5Cpr_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "1ชุดตัวล็อกแบบแม่พิมพ์【แบบสองหัวแนวนอน】"
+       }
+      ],
+      "seller_sku": "6124463290307"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 989
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "214",
+       "currency": "THB",
+       "sale_price": "214",
+       "source_price": "1.03"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN014LJbpW1dmppkvaJ2Y_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "1ชุดตัวล็อกแบบแม่พิมพ์【แบบสองตัวล็อกแนวตั้ง】"
+       }
+      ],
+      "seller_sku": "6124463290308"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 997
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "256",
+       "currency": "THB",
+       "sale_price": "256",
+       "source_price": "1.95"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01rYmtvW1dmppklQJTQ_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "5ชุดตัวล็อกแบบแม่พิมพ์ [5ด้านเว้า5ด้านนูน]"
+       }
+      ],
+      "seller_sku": "6124463290309"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 991
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "376",
+       "currency": "THB",
+       "sale_price": "376",
+       "source_price": "4.6"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01kjYl0M1dmppeauV4v_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "5ชุดตัวล็อกแบบแม่พ่อ【แบบแนวนอนสองตัวล็อก】"
+       }
+      ],
+      "seller_sku": "6124463290310"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 998
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "399",
+       "currency": "THB",
+       "sale_price": "399",
+       "source_price": "5.1"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01avCza61dmppk6KPwJ_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "5ชุดตัวล็อกแบบแม่พิมพ์ [แบบสองตัวล็อกแนวตั้ง]"
+       }
+      ],
+      "seller_sku": "6124463290311"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 994
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "342",
+       "currency": "THB",
+       "sale_price": "342",
+       "source_price": "3.85"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01yfZa5i1dmppjGwaG4_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "10ชุดตัวล็อกแม่เหล็ก [10ตัวเว้า10ตัวนูน]"
+       }
+      ],
+      "seller_sku": "6124463290312"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 997
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "584",
+       "currency": "THB",
+       "sale_price": "584",
+       "source_price": "9.15"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01oRYbzd1dmppjIDCXx_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "10ชุดตัวล็อกแบบแม่พิมพ์ [แบบสองหัวแนวนอน]"
+       }
+      ],
+      "seller_sku": "6124463290313"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 997
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "629",
+       "currency": "THB",
+       "sale_price": "629",
+       "source_price": "10.15"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01grZ0al1dmppjGqg0E_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "10ชุดตัวล็อกแม่-ลูก [แบบสองตัวล็อกแนวตั้ง]"
+       }
+      ],
+      "seller_sku": "6124463290314"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 998
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "514",
+       "currency": "THB",
+       "sale_price": "514",
+       "source_price": "7.62"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01xYpRJ01dmppjIHhRH_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "20ชุดตัวล็อกแบบแม่เหล็ก [20ตัวเป็นร่อง20ตัวนูน]"
+       }
+      ],
+      "seller_sku": "6124463290315"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 1000
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "998",
+       "currency": "THB",
+       "sale_price": "998",
+       "source_price": "18.25"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01Tobfa21dmppkvXglU_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "20ชุดตัวล็อกแบบแม่พิมพ์【แบบสองหัวแนวนอน】"
+       }
+      ],
+      "seller_sku": "6124463290316"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 1000
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "1089",
+       "currency": "THB",
+       "sale_price": "1089",
+       "source_price": "20.25"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN016Rk94D1dmppjIGDqN_!!2207966343779-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "20ชุดตัวล็อกแบบแม่พิมพ์ [แบบสองตัวแนวตั้ง]"
+       }
+      ],
+      "seller_sku": "6124463290317"
+     }
+    ],
+    "title": "ตัวยึดปลั๊กอินแบบถอดได้แบบใหม่ที่อัปเกรดแล้วไม่ต้องเจาะรูเราเตอร์ติดผนังที่มีกาวแข็งแรงหัวเข็มขัดแบบไม่ทำเครื่องหมายบนผนังสติกเกอร์แนวนอนสติกเกอร์แนวตั้ง Universal 10ชิ้น",
+    "video": {
+     "id": "https://cloud.video.taobao.com/play/u/2207966343779/p/1/e/6/t/1/540211937587.mp4"
+    }
+   },
+   "tiktokOverflowConfig": null
+  }
+ },
+ "status": 0,
+ "title": "ตัวยึดปลั๊กอินแบบถอดได้แบบใหม่ที่อัปเกรดแล้วไม่ต้องเจาะรูเราเตอร์ติดผนังที่มีกาวแข็งแรงหัวเข็มขัดแบบไม่ทำเครื่องหมายบนผนังสติกเกอร์แนวนอนสติกเกอร์แนวตั้ง Universal 10ชิ้น",
+ "toCategoryId": "853128",
+ "toCategoryIdTree": "600001,851848,853128",
+ "toCategoryNameTree": "家居用品,家居收纳,挂钩",
+ "toPlatform": "tiktok",
+ "toSellerId": "7494877320827733079",
+ "toSellerNick": "JingShanShop-TH",
+ "userId": "1323965"
+}

@@ -1,0 +1,18 @@
+{
+  "_note": "跨 skill 依赖清单。本地副本与上游权威源的 sha256 都必须与这里一致；任何一侧变化都要复核接口契约后再更新本文件。",
+  "generated_at": "2026-11-12",
+  "dependencies": [
+    {
+      "name": "aibuy_rank_client.py",
+      "local": "scripts/aibuy_rank_client.py",
+      "upstream": "../shopee-light-listing/scripts/aibuy_rank_client.py",
+      "upstream_owner": "shopee-light-listing skill（1688 遨虾 aibuy 客户端，权威源）",
+      "sha256": "6ba6a9d2300f6996d85a5e7cd3d7a9472e773c6868628aabbf7b2b06cdadf118",
+      "lines": 230,
+      "stdlib_only": true,
+      "used_for": "选品 Step 0.2 ③（榜单方向信号）与 Step 0.3（关键词/图搜拿 offerId）",
+      "contract_surface": "子命令 tabs / cate / items / search / search-image；search 输出 CSV 列名 offerId,标题,起批价,1688月销,评分,起订量,供应商,源头工厂,标准offer链接,图片",
+      "on_drift": "先跑 python3 scripts/aibuy_rank_client.py search --keyword 收纳盒 --pages 1 看是否仍能出 CSV，再核对上述列名与 offerId 字段，通过后更新 sha256"
+    }
+  ]
+}

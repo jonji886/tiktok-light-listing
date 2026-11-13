@@ -3,13 +3,12 @@
 """
 快递助手ERP跨境版 · TikTok 选品数据源（免登录）
 
-数据来源：目标跨境 ERP 内部接口（<your-erp-host>），后端直连 FastMoss。
+数据来源：erpg.kuaidizs.cn 内部接口，后端直连 FastMoss（见前端模块 2174）。
 关键结论（2026-11-11 实测）：
   - /item/fastmoss/category/list  和  /item/fastmoss/product/search  无需 token，可直接调用
   - 采集进采集箱 / 铺货 需要 qnquerystring（见 scripts/erp_client.py），本脚本不涉及
 
 用法：
-  export ERP_BASE_URL=https://your-erp-host.example.com
   python3 kdzs_fastmoss.py --region TH --usd-min 2 --usd-max 8 --top 40
   python3 kdzs_fastmoss.py --region VN --order creator_count --out vn.csv
   python3 kdzs_fastmoss.py --categories          # 打印 FastMoss 类目树
@@ -36,8 +35,8 @@ import time
 import urllib.request
 import urllib.error
 
-BASE = os.environ.get("ERP_BASE_URL", "").rstrip("/")        # 例：https://your-erp-host.example.com
-OTHER_BASE = os.environ.get("ERP_ALT_BASE_URL", "").rstrip("/")  # 同一后端的备用域名，可留空
+BASE = "https://erpg.kuaidizs.cn"
+OTHER_BASE = "https://erp.kuaidizs.cn"  # 同一后端，可互换
 
 # 本地货币 -> USD 汇率（单位：1 USD = N 本地货币）
 # 数据源：快递助手跨境版 /item/exchangeRate/getList（2026-11-11 20:15 更新）

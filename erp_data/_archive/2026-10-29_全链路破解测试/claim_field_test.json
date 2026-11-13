@@ -1,0 +1,146 @@
+[
+ {
+  "商品字段": "ids",
+  "店铺字段": "targetShopIds",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "ids",
+  "店铺字段": "shopIds",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "ids",
+  "店铺字段": "targetSellerIds",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "ids",
+  "店铺字段": "sellerIds",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "ids",
+  "店铺字段": "shopIdList",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "ids",
+  "店铺字段": "targetShopIdList",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "itemIds",
+  "店铺字段": "targetShopIds",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "itemIds",
+  "店铺字段": "shopIds",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "itemIds",
+  "店铺字段": "targetSellerIds",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "itemIds",
+  "店铺字段": "sellerIds",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "itemIds",
+  "店铺字段": "shopIdList",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "itemIds",
+  "店铺字段": "targetShopIdList",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "itemIdList",
+  "店铺字段": "targetShopIds",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "itemIdList",
+  "店铺字段": "shopIds",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "itemIdList",
+  "店铺字段": "targetSellerIds",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "itemIdList",
+  "店铺字段": "sellerIds",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "itemIdList",
+  "店铺字段": "shopIdList",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "itemIdList",
+  "店铺字段": "targetShopIdList",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "itemCenterIds",
+  "店铺字段": "targetShopIds",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "itemCenterIds",
+  "店铺字段": "shopIds",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "itemCenterIds",
+  "店铺字段": "targetSellerIds",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "itemCenterIds",
+  "店铺字段": "sellerIds",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ },
+ {
+  "商品字段": "itemCenterIds",
+  "店铺字段": "shopIdList",
+  "success": false,
+  "msg": "目标店铺列表不能为空"
+ },
+ {
+  "商品字段": "itemCenterIds",
+  "店铺字段": "targetShopIdList",
+  "success": false,
+  "msg": "商品 ID 列表不能为空"
+ }
+]

@@ -10,14 +10,14 @@
 |---|---|---|---|---|
 | 1688采集 | POST | /item/center/batchPluginCollectItem | `{"itemIdList":[offerId...]}`（CLI 实测可用） | 数组元素是 1688 offerId，不是 ERP numIid |
 | 公共采集箱列表 | POST | /item/center/queryErpItemListPage | `{pageNo,pageSize,platNumIidList?}` | 复用旧 |
-| TikTok店铺列表 | POST | /index/platformShop/getPlatformShops | `{platform:"tiktok"}` | TH=<TH_SELLER_ID> VN=<VN_SELLER_ID> |
+| TikTok店铺列表 | POST | /index/platformShop/getPlatformShops | `{platform:"tiktok"}` | TH=7494877320827733079 VN=8686823118786298967 |
 | **认领到TikTok** ✅ | POST | /item/crossBorder/commonCollect/batchClaimMultiShop | `{"numIids":["<numIid>"],"targetShops":[{"targetPlatform":"tiktok","sellerId":"<id>","sellerNick":"<nick>"}]}` | numIids=ERP内部ID数组、targetShops=嵌套对象数组；返回 `[{operationId,success}]`；CLI: ttl-claim |
 | **TikTok采集箱列表** | POST | /item/crossBorder/platformCollect/queryListPage | `{pageNo,pageSize,toRegion?,status?}` | 返回id/标题/类目树/售价/SKU/异常标签 |
 | **编辑详情** | POST | /item/crossBorder/platformCollect/getDetail | `{id: ttl_id}` | **仅"有异常标签"商品返回itemModel；异常清空后不再返回**（设计使然，不影响发布） |
 | **保存编辑** ✅ | POST | /item/crossBorder/edit | **见下方"正确 body"（2026-11-12 修正）** | 逐字段校验：id→itemModel→title→类目 |
-| **发布** ✅ | POST | /item/distribute/batchPublish | `{"publishConfig":{weight,weightSet,packageLength/Width/Height,packageSet,filterAlreadyPublish,forbiddenWordDetectMode,priceLimitEnable,priceLimitMultiple,useTiktokMultiCountryConfig,tiktokOverflowConfig},"distribItemVos":[{itemId,sourcePlatform,targetPlatform,sourceSellerId,targetSellerId,targetSellerNick,categoryIds,categoryNames}]}` | itemId=采集箱记录id（ttl_id）；sourceSellerId=<ERP_SOURCE_SELLER_ID>；categoryIds/categoryNames 为**逗号分隔字符串**（传真实类目树）；weight/dims **按真实包裹填**；CLI: ttl-publish |
+| **发布** ✅ | POST | /item/distribute/batchPublish | `{"publishConfig":{weight,weightSet,packageLength/Width/Height,packageSet,filterAlreadyPublish,forbiddenWordDetectMode,priceLimitEnable,priceLimitMultiple,useTiktokMultiCountryConfig,tiktokOverflowConfig},"distribItemVos":[{itemId,sourcePlatform,targetPlatform,sourceSellerId,targetSellerId,targetSellerNick,categoryIds,categoryNames}]}` | itemId=采集箱记录id（ttl_id）；sourceSellerId=1323965；categoryIds/categoryNames 为**逗号分隔字符串**（传真实类目树）；weight/dims **按真实包裹填**；CLI: ttl-publish |
 | **批量操作** ✅ | POST | /item/crossBorder/platformCollect/batchOps | `{"idList":[ttl_id],"platform":"tiktok","opsType":N,...}` | **opsType: 1=类目 2=售价 3=删除 4=备注**；opsType=2 公式改价（CLI: set_price.py）、opsType=3 删除（CLI: ttl-del） |
-| **FastMoss 单品搜索** ✅ | POST | /item/fastmoss/product/search（**<your-erp-host> 域，免 token**） | `{keywords,filter:{region,shopType,priceRange,creatorCountRange},orderby:[{field,order}],page,pagesize}` | field 用 snake_case（day7_units_sold 等）；CLI: kdzs_fastmoss.py |
+| **FastMoss 单品搜索** ✅ | POST | /item/fastmoss/product/search（**erpg.kuaidizs.cn 域，免 token**） | `{keywords,filter:{region,shopType,priceRange,creatorCountRange},orderby:[{field,order}],page,pagesize}` | field 用 snake_case（day7_units_sold 等）；CLI: kdzs_fastmoss.py |
 | **FastMoss 类目树** ✅ | POST | /item/fastmoss/category/list（**免 token**） | `{lang:"ZH_CN"}` | 同上 |
 | 发布记录 | POST | /item/distribute/queryLogs | `{toPlatformList:["tiktok"],fromPlatformList:["1688"],startTime,endTime}` | 时间窗≤31天 |
 | 类目树 | POST | /item/distribute/categoryTree | `{platform:"tiktok"}` | 编辑弹窗加载 |
@@ -63,7 +63,7 @@ post("/item/crossBorder/edit", body)   # → {"data":null,"success":true} 或 {}
 写出问题后只能 `ttl-del` + `ttl-claim` 重建（会丢图片/类目/价格设置）。
 
 **图片替换**：改动写 `itemModel.tikTokItemModel.productCreateRequestV2.main_images[].uri`，
-用 your-cdn.example.com 外链直接填即可（无需 getUploadPolicy）。
+用 aka.doubaocdn.com 外链直接填即可（无需 getUploadPolicy）。
 CLI 用 `prep_publish.py --images "<url1>,<url2>,..."`（数量必须与主图数一致）；
 `erp_client.py ttl-save` 的 body 仍是旧结构，**已标禁用**。
 
@@ -92,8 +92,8 @@ CLI 用 `prep_publish.py --images "<url1>,<url2>,..."`（数量必须与主图�
   id: ttl采集箱记录ID
   title: 泰文标题
   toRegion: "TH"
-  toSellerNick: "YOUR_SHOP_TH"
-  toSellerId: ""
+  toSellerNick: "JingShanShop-TH"
+  toSellerId: "7494877320827733079"
   currency: "THB"
   toCategoryId / toCategoryIdTree / toCategoryNameTree
   reqInfo:                         ← 在顶层
@@ -206,3 +206,28 @@ chunk 文件名解析：主包 `app.<hash>.js` 的 `jsonpScriptSrc` 里有两张
 `({0:"SettlementSetting",...}[a]||a)` 给名字、`{0:"4ba86a77",...}[a]` 给 hash，拼成 `js/<name>.<hash>.js`。
 站点商品页相关分包：`CrossShopeeSiteGoods.*.js`（列表 / 批量操作）、
 `CrossPlatformGoods.*.js`（编辑弹窗 + 保存逻辑）。文件是 gzip，先 `gunzip -c`。
+
+---
+
+## 铺货配额查询（2026-11-12 实测，只读）
+
+`POST /trade/crossItemDistrib/quotaQuery`，**body 传 `{}` 即可**，鉴权头同其它接口。
+
+返回结构：
+
+```json
+{"success": true,
+ "data": {"businessModule": "CROSS_ITEM_LIMIT", "consumedQuota": "8",
+   "details": [{"platform": "tiktok", "sellerId": "7494877320827733079",
+     "totalNum": "5000", "consumeNum": "8", "remainingNum": "4992",
+     "lastResetTime": "2026-10-27 10:48:34", "nextResetTime": "2026-11-26 10:48:34"}]}}
+```
+
+要点：
+- `details[]` **按 sellerId 分店铺**，TH 与 VN 各自独立计数（实测 TH 8/5000、VN 0/5000，月度窗口同步）；
+- 平台字段是 `platform`（`tiktok` / `shopees`），不是 `targetPlatform`；
+- 数值全是**字符串**，比较前要转 int；
+- `nextResetTime` 是配额重置日，铺货排期跨这个点要重算剩余量。
+
+CLI：`python3 scripts/erp_client.py quota --region TH`（`--region` 留空列全部，落 `erp_data/quota.csv`）。
+这是发布后四路验证的第三路，**可以脚本验证**；第四路「TikTok 后台在售数」仍无接口，只能人工看商品管理页。

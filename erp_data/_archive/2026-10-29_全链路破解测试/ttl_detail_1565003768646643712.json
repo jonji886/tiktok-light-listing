@@ -1,0 +1,1936 @@
+{
+ "currency": "THB",
+ "fromItemId": "723309179996",
+ "fromPlatform": "other",
+ "gmtCreated": "2026-10-28 14:06:15",
+ "gmtModified": "2026-10-28 14:07:09",
+ "id": "1565003768646643712",
+ "itemSourceLinks": [
+  {
+   "sourceLink": "https://detail.1688.com/offer/723309179996.html",
+   "sourceNumIid": "723309179996",
+   "sourcePlatform": "1688"
+  }
+ ],
+ "reqInfo": {
+  "shopeeItemModel": null,
+  "temuItemModel": null,
+  "tikTokItemModel": {
+   "currency": "THB",
+   "multiCountrySkuSalesConfig": [
+    {
+     "currency": "PHP",
+     "flag": false,
+     "region": "PH",
+     "regionName": "菲律宾",
+     "sellerId": "8686823118790558807",
+     "skuList": []
+    },
+    {
+     "currency": "SGD",
+     "flag": false,
+     "region": "SG",
+     "regionName": "新加坡",
+     "sellerId": "8686823118790493271",
+     "skuList": []
+    },
+    {
+     "currency": "MYR",
+     "flag": false,
+     "region": "MY",
+     "regionName": "马来西亚",
+     "sellerId": "8686823118786233431",
+     "skuList": []
+    },
+    {
+     "currency": "VND",
+     "flag": false,
+     "region": "VN",
+     "regionName": "越南",
+     "sellerId": "8686823118786298967",
+     "skuList": []
+    }
+   ],
+   "productCreateRequestV2": {
+    "apiDomain": "open-api.tiktokglobalshop.com",
+    "apiMethodName": "/product/202309/products",
+    "category_id": "-9999",
+    "certifications": [],
+    "delivery_option_ids": [],
+    "description": "<div id=\"offer-template-0\"></div><div style=\"width: 790.0px;\">\r\n        \r\n         <img alt=\"im6Ui/OgyNQvIWnF9TxGzFFCb+9AsW4+p1SY\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01z81nJV1iMnHWPM9Z7_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_0\"/>\r\n        \r\n        \r\n    \r\n        <div style=\"display: none;\" class=\"sdmap-dynamic-offer-list\">{&quot;styleType&quot;:&quot;offer-type-1&quot;,&quot;items&quot;:&quot;1041843877330,719830418460,799628093408,1001796930380,730230608946,736301926631,1071704812353,1062209845089,1056150719087&quot;,&quot;usemap&quot;:&quot;_sdmap_1&quot;}</div>\r\n         <img class=\"dynamic-backup-img\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01LeEpDlcj14B1bhaW_!!6000000004557-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_1\" title=\"预览状态下无法点击，发布后，可点击跳转到对应的商品页面\"/>\r\n        \r\n        \r\n    \r\n        \r\n        <div class=\"rich-text-component\" style=\"width: 395.0px;padding: 10.0px;word-break: break-all;white-space: break-spaces;font-family: ali-webfont;zoom: 2;font-size: 0.0px;box-sizing: border-box;\"><p><span style=\"font-size: 16.0px;\">产品注意事项：</span></p><p><span style=\"font-size: 16.0px;\">（1）只能免打孔无痕贴片安装。</span></p><p><span style=\"font-size: 16.0px;\">（2）安装前请务必看一下安装教程，</span><strong style=\"font-size: 16.0px;color: #f44336;\">贴片先卡一半在底座上</strong><span style=\"font-size: 16.0px;\">，在墙上固定好位置后，取下毛巾架，将墙上的贴片挤压一下，将贴片中的空气排出后，方可扣上毛巾架使用了。（安装墙面必须是平整坚固的玻璃、瓷砖等墙面。</span><strong style=\"font-size: 20.0px;\">不可用在</strong><span style=\"font-size: 16.0px;\">不平整不牢固的墙面，如石灰墙、漆墙、墙纸等墙面上。）</span></p><p><strong style=\"font-size: 20.0px;background-color: #000000;color: #ff5722;\">下载素材包：Qh102TpMjjzfx</strong></p></div>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01xl5O721iMn8q9tv5d_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_3\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01NGCmnG1iMn8q9uaf4_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_4\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01vGrB6w1iMn8p47Ilt_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_5\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01Hfc08R1iMn8q9wXEv_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_6\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01BzGqWv1iMn8kvJ9b1_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_7\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN013kPOfB1iMn8fe3e8q_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_8\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01lrMY8g1iMn8hXyaVP_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_9\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01ifjMCJ1iMn8jdMx3w_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_10\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01q8j4g81iMn8n3SFAy_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_11\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01QcUioX1iMn8kvI9Cy_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_12\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01bP061o1iMn8jdO1dk_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_13\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01U8pJ771iMn8qylh51_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_14\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01ErVy3S1iMn8n3RIzq_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_15\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01yxmLfN1iMn8n3SZzL_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_16\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN016nh1LM1iMn8jagaRX_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_17\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01MRSBQt1iMn8mM9TEf_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_18\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01JjzBld1iMn8hXzOQZ_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_19\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01RLh7r91iMn8fe4r30_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_20\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01TL4W2J1iMn9ZN2LN8_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_21\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01y9feMe1iMnIBniCn0_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_22\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01uuJ2kl1iMn8ho3acJ_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_23\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01XuomfJ1iMn8piSNu6_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_24\"/>\r\n        \r\n        \r\n    \r\n        \r\n         <img src=\"https://cbu01.alicdn.com/img/ibank/O1CN01xA3F1d1iMn8aumle5_!!2200767824399-0-cib.jpg\" style=\"display: block;width: 100.0%;height: auto;\" usemap=\"#_sdmap_25\"/>\r\n        \r\n        \r\n    </div>",
+    "external_product_id": "723309179996",
+    "is_cod_allowed": false,
+    "key_product_features": [],
+    "listing_platforms": [],
+    "main_images": [
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01Ox5mP11iMn9o61vN6_!!2200767824399-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01pW5fd31iMn8qyH0oQ_!!2200767824399-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01USfrTf1iMn8jcrb9H_!!2200767824399-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01kLi2LC1iMn8kun84x_!!2200767824399-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN017tPPPX1iMn8kumG8p_!!2200767824399-0-cib.jpg"
+     }
+    ],
+    "manufacturer_ids": [],
+    "methodType": "POST",
+    "multipartRequest": false,
+    "package_dimensions": null,
+    "package_weight": null,
+    "product_attributes": [],
+    "responseClass": "com.kuaidizs.erp.index.core.client.tiktok.response.v2.ProductCreateResponseV2",
+    "responsible_person_ids": [],
+    "scheduled_sale": null,
+    "search_terms": [],
+    "size_chart": null,
+    "skus": [
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9175
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "42.06",
+       "currency": "THB",
+       "sale_price": "42.06",
+       "source_price": "2.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01Veg6FC1iMnIFcKRuN_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰碳钢30cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076564"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 8573
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "45.86",
+       "currency": "THB",
+       "sale_price": "45.86",
+       "source_price": "2.7"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01lWj1Ry1iMnIDu6HJA_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰碳钢40cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076565"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 6943
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "50.42",
+       "currency": "THB",
+       "sale_price": "50.42",
+       "source_price": "3.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01ChWRU11iMnIDM3hZC_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰碳钢50cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076566"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9319
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "54.22",
+       "currency": "THB",
+       "sale_price": "54.22",
+       "source_price": "3.8"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01GfSaNS1iMnIDGt4Sq_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰碳钢60cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076567"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 4732
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "58.78",
+       "currency": "THB",
+       "sale_price": "58.78",
+       "source_price": "4.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01xmm1301iMnIGKsEXE_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰碳钢70cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076568"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9856
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "42.06",
+       "currency": "THB",
+       "sale_price": "42.06",
+       "source_price": "2.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01kc0Woo1iMnIGs8sCn_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "黑色碳钢30cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076569"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9925
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "45.86",
+       "currency": "THB",
+       "sale_price": "45.86",
+       "source_price": "2.7"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01CXSi2i1iMnIEuAZRJ_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "黑色碳钢40cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076570"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9860
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "50.42",
+       "currency": "THB",
+       "sale_price": "50.42",
+       "source_price": "3.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01FvJJrR1iMnIGs8TKH_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "黑色碳钢50cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076571"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9896
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "54.22",
+       "currency": "THB",
+       "sale_price": "54.22",
+       "source_price": "3.8"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01Z1opfU1iMnIEtIGFa_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "黑色碳钢60cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076572"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9961
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "58.78",
+       "currency": "THB",
+       "sale_price": "58.78",
+       "source_price": "4.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN013Tly8H1iMnIDM6O8r_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "黑色碳钢70cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076573"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9879
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "42.06",
+       "currency": "THB",
+       "sale_price": "42.06",
+       "source_price": "2.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01bAFvGV1iMnIDMB5Im_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "奶油色碳钢30cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076574"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9885
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "45.86",
+       "currency": "THB",
+       "sale_price": "45.86",
+       "source_price": "2.7"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01ljsZpH1iMnIFnyPzz_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "奶油色碳钢40cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076575"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9699
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "50.42",
+       "currency": "THB",
+       "sale_price": "50.42",
+       "source_price": "3.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01JAdN4S1iMnIDp7fTA_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "奶油色碳钢50cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076576"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9983
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "54.22",
+       "currency": "THB",
+       "sale_price": "54.22",
+       "source_price": "3.8"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01AzbVm91iMnIC5Xuo0_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "奶油色碳钢60cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076577"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9664
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "58.78",
+       "currency": "THB",
+       "sale_price": "58.78",
+       "source_price": "4.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN013G7usa1iMnIB2e4dq_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "奶油色碳钢70cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5620209076578"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9774
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "51.94",
+       "currency": "THB",
+       "sale_price": "51.94",
+       "source_price": "3.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN017OsLqS1iMn8auedyU_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰30cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5024201064221"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9199
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "57.26",
+       "currency": "THB",
+       "sale_price": "57.26",
+       "source_price": "4.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01vy4t2t1iMn8jtJNAM_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰40cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5024201064222"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9422
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "62.58",
+       "currency": "THB",
+       "sale_price": "62.58",
+       "source_price": "4.9"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN012Uw80e1iMn8grFBpH_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰50cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5024201064223"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9665
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "67.9",
+       "currency": "THB",
+       "sale_price": "67.9",
+       "source_price": "5.6"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01tYgdrf1iMn8n3KzlN_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰60cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5024201064224"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9631
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "73.22",
+       "currency": "THB",
+       "sale_price": "73.22",
+       "source_price": "6.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01850PiR1iMn8kvBu9E_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰70cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5024201064225"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9989
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "79.31",
+       "currency": "THB",
+       "sale_price": "79.31",
+       "source_price": "7.1"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01zqSggo1iMn9W468gi_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰30cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5052859076707"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9915
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "89.95",
+       "currency": "THB",
+       "sale_price": "89.95",
+       "source_price": "8.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01JhV23E1iMn9ZMjgNc_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰40cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5052859076708"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9939
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "101.35",
+       "currency": "THB",
+       "sale_price": "101.35",
+       "source_price": "10"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN012nsxku1iMn9XBLzio_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰50cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5052859076709"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9982
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "111.99",
+       "currency": "THB",
+       "sale_price": "111.99",
+       "source_price": "11.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN019kAaRK1iMn9RvMM4q_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰60cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5052859076710"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9958
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "122.64",
+       "currency": "THB",
+       "sale_price": "122.64",
+       "source_price": "12.8"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01seUZDp1iMn9YKT7Pf_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "枪灰70cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5052859076711"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9987
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "52.7",
+       "currency": "THB",
+       "sale_price": "52.7",
+       "source_price": "3.6"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01HVn4cc1iMnFK4CVW8_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "黑色30cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5570288958737"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9664
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "58.02",
+       "currency": "THB",
+       "sale_price": "58.02",
+       "source_price": "4.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01DKx2vY1iMnFNDQa69_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "黑色40cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5570288958738"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9627
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "63.34",
+       "currency": "THB",
+       "sale_price": "63.34",
+       "source_price": "5"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01NzGGlu1iMnFPw8HcA_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "黑色50cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5570288958739"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9883
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "68.66",
+       "currency": "THB",
+       "sale_price": "68.66",
+       "source_price": "5.7"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01kGRHcd1iMnFQy52jn_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "黑色60cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5570288958740"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9786
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "73.98",
+       "currency": "THB",
+       "sale_price": "73.98",
+       "source_price": "6.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01wENqTB1iMnFLMdKJw_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "黑色70cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5570288958741"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9945
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "51.94",
+       "currency": "THB",
+       "sale_price": "51.94",
+       "source_price": "3.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01jY9mlt1iMnAPiyz8l_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "白色30cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5256296390849"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9868
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "57.26",
+       "currency": "THB",
+       "sale_price": "57.26",
+       "source_price": "4.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN019QccWG1iMnAMxTl1q_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "白色40cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5256296390850"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9972
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "62.58",
+       "currency": "THB",
+       "sale_price": "62.58",
+       "source_price": "4.9"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QKBjNW1iMnAJsWJgp_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "白色50cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5256296390851"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9865
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "67.9",
+       "currency": "THB",
+       "sale_price": "67.9",
+       "source_price": "5.6"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01DSJePb1iMnAMxWmBe_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "白色60cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5256296390852"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9948
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "73.22",
+       "currency": "THB",
+       "sale_price": "73.22",
+       "source_price": "6.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01qmpxOh1iMnAJsUqFr_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "白色70cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5256296390853"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9974
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "79.31",
+       "currency": "THB",
+       "sale_price": "79.31",
+       "source_price": "7.1"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01Ycp59b1iMnAONNCE0_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "白色30cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5256296390856"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9966
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "89.95",
+       "currency": "THB",
+       "sale_price": "89.95",
+       "source_price": "8.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01WeZYNY1iMnAHGxzqm_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "白色40cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5256296390857"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9987
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "101.35",
+       "currency": "THB",
+       "sale_price": "101.35",
+       "source_price": "10"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01J7U5w71iMnAOpXADN_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "白色50cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5256296390858"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9970
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "111.99",
+       "currency": "THB",
+       "sale_price": "111.99",
+       "source_price": "11.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01gzp1dJ1iMnAONLzQZ_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "白色60cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5256296390854"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9986
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "122.64",
+       "currency": "THB",
+       "sale_price": "122.64",
+       "source_price": "12.8"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01bnzqwh1iMnAMIDnf5_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "白色70cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5256296390855"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9958
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "52.7",
+       "currency": "THB",
+       "sale_price": "52.7",
+       "source_price": "3.6"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01aBHtXF1iMnCT6UUSN_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "奶油色30cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5250061637333"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9956
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "58.02",
+       "currency": "THB",
+       "sale_price": "58.02",
+       "source_price": "4.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01zIkczx1iMnCUenxvB_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "奶油色40cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5250061637335"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9964
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "63.34",
+       "currency": "THB",
+       "sale_price": "63.34",
+       "source_price": "5"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01SWS67P1iMnCS9F9md_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "奶油色50cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5250061637334"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9957
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "68.66",
+       "currency": "THB",
+       "sale_price": "68.66",
+       "source_price": "5.7"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01CmsHkS1iMnCX84aCO_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "奶油色60cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5250061637336"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9960
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "73.98",
+       "currency": "THB",
+       "sale_price": "73.98",
+       "source_price": "6.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN015ILlm91iMnCOcTmJq_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "奶油色70cm单杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5250061637332"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9983
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "79.31",
+       "currency": "THB",
+       "sale_price": "79.31",
+       "source_price": "7.1"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01o9FgjU1iMnFIH8jJz_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】枪灰30cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293639"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9968
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "89.95",
+       "currency": "THB",
+       "sale_price": "89.95",
+       "source_price": "8.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01GhsNIt1iMnFBZzh5a_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】枪灰40cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293640"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9966
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "100.59",
+       "currency": "THB",
+       "sale_price": "100.59",
+       "source_price": "9.9"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01e6RiqS1iMnFENb1wF_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】枪灰50cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293641"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9913
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "110.47",
+       "currency": "THB",
+       "sale_price": "110.47",
+       "source_price": "11.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01nBtpSJ1iMnFFAwcev_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】枪灰60cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293642"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9971
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "121.12",
+       "currency": "THB",
+       "sale_price": "121.12",
+       "source_price": "12.6"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01m7o5nI1iMnFENbAEF_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】枪灰70cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293643"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9971
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "131.76",
+       "currency": "THB",
+       "sale_price": "131.76",
+       "source_price": "14"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01WDxpZy1iMnFDb4b7Q_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】枪灰80cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293644"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9987
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "79.31",
+       "currency": "THB",
+       "sale_price": "79.31",
+       "source_price": "7.1"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01Fm3CaD1iMnFEHMsex_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】奶油色30cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293633"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9985
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "89.95",
+       "currency": "THB",
+       "sale_price": "89.95",
+       "source_price": "8.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01egaQIb1iMnFBwwCz8_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】奶油色40cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293634"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9974
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "100.59",
+       "currency": "THB",
+       "sale_price": "100.59",
+       "source_price": "9.9"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01SoyAwN1iMnFGa8tpZ_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】奶油色50cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293635"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9976
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "110.47",
+       "currency": "THB",
+       "sale_price": "110.47",
+       "source_price": "11.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN011L0LqU1iMnFFdJTs4_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】奶油色60cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293636"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9980
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "121.12",
+       "currency": "THB",
+       "sale_price": "121.12",
+       "source_price": "12.6"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01SgPf1c1iMnFBa1hpN_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】奶油色70cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293637"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 9989
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "131.76",
+       "currency": "THB",
+       "sale_price": "131.76",
+       "source_price": "14"
+      },
+      "sales_attributes": [
+       {
+        "name": "尺寸",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01gIl8hJ1iMnFFAw1C1_!!2200767824399-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "【错层】奶油色80cm双杆（贴片式）"
+       }
+      ],
+      "seller_sku": "5394664293638"
+     }
+    ],
+    "title": "ปืนสีเทาติดผนังห้องน้ำติดผนังผ้าขนหนูเสาเดียวห้องน้ำห้องน้ำชั้นเก็บของหนาหรูหราเบา",
+    "video": {
+     "id": "https://cloud.video.taobao.com/play/u/2200767824399/p/1/e/6/t/1/421888359069.mp4"
+    }
+   },
+   "tiktokOverflowConfig": null
+  }
+ },
+ "status": 0,
+ "title": "ปืนสีเทาติดผนังห้องน้ำติดผนังผ้าขนหนูเสาเดียวห้องน้ำห้องน้ำชั้นเก็บของหนาหรูหราเบา",
+ "toCategoryId": "",
+ "toCategoryIdTree": "",
+ "toCategoryNameTree": "",
+ "toPlatform": "tiktok",
+ "toSellerId": "7494877320827733079",
+ "toSellerNick": "JingShanShop-TH",
+ "userId": "1323965"
+}

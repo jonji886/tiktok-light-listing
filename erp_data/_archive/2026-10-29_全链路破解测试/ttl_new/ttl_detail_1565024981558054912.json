@@ -1,0 +1,2645 @@
+{
+ "currency": "THB",
+ "fromItemId": "1053558446709",
+ "fromPlatform": "other",
+ "gmtCreated": "2026-10-28 15:30:32",
+ "gmtModified": "2026-10-28 15:30:49",
+ "id": "1565024981558054912",
+ "itemSourceLinks": [
+  {
+   "sourceLink": "https://detail.1688.com/offer/1053558446709.html",
+   "sourceNumIid": "1053558446709",
+   "sourcePlatform": "1688"
+  }
+ ],
+ "reqInfo": {
+  "shopeeItemModel": null,
+  "temuItemModel": null,
+  "tikTokItemModel": {
+   "currency": "THB",
+   "multiCountrySkuSalesConfig": [
+    {
+     "currency": "PHP",
+     "flag": false,
+     "region": "PH",
+     "regionName": "菲律宾",
+     "sellerId": "8686823118790558807",
+     "skuList": []
+    },
+    {
+     "currency": "SGD",
+     "flag": false,
+     "region": "SG",
+     "regionName": "新加坡",
+     "sellerId": "8686823118790493271",
+     "skuList": []
+    },
+    {
+     "currency": "MYR",
+     "flag": false,
+     "region": "MY",
+     "regionName": "马来西亚",
+     "sellerId": "8686823118786233431",
+     "skuList": []
+    },
+    {
+     "currency": "VND",
+     "flag": false,
+     "region": "VN",
+     "regionName": "越南",
+     "sellerId": "8686823118786298967",
+     "skuList": []
+    }
+   ],
+   "productCreateRequestV2": {
+    "apiDomain": "open-api.tiktokglobalshop.com",
+    "apiMethodName": "/product/202309/products",
+    "category_id": "600621",
+    "certifications": [],
+    "delivery_option_ids": [],
+    "description": "<div id=\"offer-template-0\"></div><div style=\"width: 790.0px;\"><img alt=\"im6Ui/OgyNQvIWnF9TxGzFFCb+9GsWgw4tLQ\" style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01xYmNp21chVebh1Bg7_!!2221280983632-0-cib.jpg\" usemap=\"#_sdmap_0\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01UiFMGn1chVeaxXchY_!!2221280983632-0-cib.jpg\" usemap=\"#_sdmap_1\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN016JPFKs1chVebCm0MV_!!2221280983632-0-cib.jpg\" usemap=\"#_sdmap_2\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01jlg0iR1chVebKkfnE_!!2221280983632-0-cib.jpg\" usemap=\"#_sdmap_3\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01N3UsZH1chVeWYUFKK_!!2221280983632-0-cib.jpg\" usemap=\"#_sdmap_4\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01xEB6Ni1chVebKkbdM_!!2221280983632-0-cib.jpg\" usemap=\"#_sdmap_5\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01IcXBhw1chVeb97Zja_!!2221280983632-0-cib.jpg\" usemap=\"#_sdmap_6\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01Y3OEsR1chVeasn4b7_!!2221280983632-0-cib.jpg\" usemap=\"#_sdmap_7\"/></div>",
+    "external_product_id": "1053558446709",
+    "is_cod_allowed": false,
+    "key_product_features": [],
+    "listing_platforms": [],
+    "main_images": [
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01ukmKti1chVeav1iHK_!!2221280983632-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01JIzuZl1chVebKf6X2_!!2221280983632-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01JUM3m51chVeWWa5Zj_!!2221280983632-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L4iwLR1chVebHkY0f_!!2221280983632-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01xgidIV1chVeeGn0dI_!!2221280983632-0-cib.jpg"
+     }
+    ],
+    "manufacturer_ids": [],
+    "methodType": "POST",
+    "multipartRequest": false,
+    "package_dimensions": null,
+    "package_weight": null,
+    "product_attributes": [
+     {
+      "id": "100443",
+      "values": [
+       {
+        "name": "สามารถซ้อนทับได้"
+       }
+      ]
+     },
+     {
+      "id": "100701",
+      "values": [
+       {
+        "name": "ผ้าไม่ทอ"
+       }
+      ]
+     },
+     {
+      "id": "100398",
+      "values": [
+       {
+        "name": "เรียบง่ายสมัยใหม่"
+       }
+      ]
+     }
+    ],
+    "responseClass": "com.kuaidizs.erp.index.core.client.tiktok.response.v2.ProductCreateResponseV2",
+    "responsible_person_ids": [],
+    "scheduled_sale": null,
+    "search_terms": [],
+    "size_chart": null,
+    "skus": [
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 97999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "40.54",
+       "currency": "THB",
+       "sale_price": "40.54",
+       "source_price": "2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดเล็ก (14*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "42.82",
+       "currency": "THB",
+       "sale_price": "42.82",
+       "source_price": "2.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดกลาง (28*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99699
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "44.34",
+       "currency": "THB",
+       "sale_price": "44.34",
+       "source_price": "2.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดใหญ่ (28*28*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "81.59",
+       "currency": "THB",
+       "sale_price": "81.59",
+       "source_price": "7.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(1ใหญ่ * 2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99949
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "78.54",
+       "currency": "THB",
+       "sale_price": "78.54",
+       "source_price": "7"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุดสามชิ้น (1ใบใหญ่1ใบกลาง1ใบเล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "139.36",
+       "currency": "THB",
+       "sale_price": "139.36",
+       "source_price": "15"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*2กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99739
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "141.64",
+       "currency": "THB",
+       "sale_price": "141.64",
+       "source_price": "15.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่3กลาง2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99899
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "180.05",
+       "currency": "THB",
+       "sale_price": "180.05",
+       "source_price": "20.35"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*4กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "192.57",
+       "currency": "THB",
+       "sale_price": "192.57",
+       "source_price": "22"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(4ใหญ่2กลาง4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99799
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "216.89",
+       "currency": "THB",
+       "sale_price": "216.89",
+       "source_price": "25.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(3ใหญ่*4กลาง*4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99899
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "127.95",
+       "currency": "THB",
+       "sale_price": "127.95",
+       "source_price": "13.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01QoE0hb1chVearPc4K_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเบจ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุด6ชิ้น (ใหญ่2กลาง2เล็ก2)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "40.54",
+       "currency": "THB",
+       "sale_price": "40.54",
+       "source_price": "2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดเล็ก (14*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "42.82",
+       "currency": "THB",
+       "sale_price": "42.82",
+       "source_price": "2.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดกลาง (28*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "44.34",
+       "currency": "THB",
+       "sale_price": "44.34",
+       "source_price": "2.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดใหญ่ (28*28*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "81.59",
+       "currency": "THB",
+       "sale_price": "81.59",
+       "source_price": "7.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(1ใหญ่ * 2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "78.54",
+       "currency": "THB",
+       "sale_price": "78.54",
+       "source_price": "7"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุดสามชิ้น (1ใบใหญ่1ใบกลาง1ใบเล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "139.36",
+       "currency": "THB",
+       "sale_price": "139.36",
+       "source_price": "15"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*2กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "141.64",
+       "currency": "THB",
+       "sale_price": "141.64",
+       "source_price": "15.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่3กลาง2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "180.05",
+       "currency": "THB",
+       "sale_price": "180.05",
+       "source_price": "20.35"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*4กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "192.57",
+       "currency": "THB",
+       "sale_price": "192.57",
+       "source_price": "22"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(4ใหญ่2กลาง4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "216.89",
+       "currency": "THB",
+       "sale_price": "216.89",
+       "source_price": "25.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(3ใหญ่*4กลาง*4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "127.95",
+       "currency": "THB",
+       "sale_price": "127.95",
+       "source_price": "13.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01T5mjqU1chVebJMXW6_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีขาว"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุด6ชิ้น (ใหญ่2กลาง2เล็ก2)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "40.54",
+       "currency": "THB",
+       "sale_price": "40.54",
+       "source_price": "2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดเล็ก (14*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "42.82",
+       "currency": "THB",
+       "sale_price": "42.82",
+       "source_price": "2.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดกลาง (28*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "44.34",
+       "currency": "THB",
+       "sale_price": "44.34",
+       "source_price": "2.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดใหญ่ (28*28*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "81.59",
+       "currency": "THB",
+       "sale_price": "81.59",
+       "source_price": "7.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(1ใหญ่ * 2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "78.54",
+       "currency": "THB",
+       "sale_price": "78.54",
+       "source_price": "7"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุดสามชิ้น (1ใบใหญ่1ใบกลาง1ใบเล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "139.36",
+       "currency": "THB",
+       "sale_price": "139.36",
+       "source_price": "15"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*2กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "141.64",
+       "currency": "THB",
+       "sale_price": "141.64",
+       "source_price": "15.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่3กลาง2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "180.05",
+       "currency": "THB",
+       "sale_price": "180.05",
+       "source_price": "20.35"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*4กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "192.57",
+       "currency": "THB",
+       "sale_price": "192.57",
+       "source_price": "22"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(4ใหญ่2กลาง4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "216.89",
+       "currency": "THB",
+       "sale_price": "216.89",
+       "source_price": "25.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(3ใหญ่*4กลาง*4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "127.95",
+       "currency": "THB",
+       "sale_price": "127.95",
+       "source_price": "13.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01l7KSlwUMTFK1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาเข้ม"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุด6ชิ้น (ใหญ่2กลาง2เล็ก2)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99998
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "40.54",
+       "currency": "THB",
+       "sale_price": "40.54",
+       "source_price": "2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดเล็ก (14*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99998
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "42.82",
+       "currency": "THB",
+       "sale_price": "42.82",
+       "source_price": "2.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดกลาง (28*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "44.34",
+       "currency": "THB",
+       "sale_price": "44.34",
+       "source_price": "2.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดใหญ่ (28*28*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "81.59",
+       "currency": "THB",
+       "sale_price": "81.59",
+       "source_price": "7.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(1ใหญ่ * 2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "78.54",
+       "currency": "THB",
+       "sale_price": "78.54",
+       "source_price": "7"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุดสามชิ้น (1ใบใหญ่1ใบกลาง1ใบเล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "139.36",
+       "currency": "THB",
+       "sale_price": "139.36",
+       "source_price": "15"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*2กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "141.64",
+       "currency": "THB",
+       "sale_price": "141.64",
+       "source_price": "15.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่3กลาง2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "180.05",
+       "currency": "THB",
+       "sale_price": "180.05",
+       "source_price": "20.35"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*4กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "192.57",
+       "currency": "THB",
+       "sale_price": "192.57",
+       "source_price": "22"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(4ใหญ่2กลาง4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "216.89",
+       "currency": "THB",
+       "sale_price": "216.89",
+       "source_price": "25.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(3ใหญ่*4กลาง*4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "127.95",
+       "currency": "THB",
+       "sale_price": "127.95",
+       "source_price": "13.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01w6uZdHfpGSK1PEmw_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีเทาอ่อน"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุด6ชิ้น (ใหญ่2กลาง2เล็ก2)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "40.54",
+       "currency": "THB",
+       "sale_price": "40.54",
+       "source_price": "2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดเล็ก (14*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "42.82",
+       "currency": "THB",
+       "sale_price": "42.82",
+       "source_price": "2.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดกลาง (28*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "44.34",
+       "currency": "THB",
+       "sale_price": "44.34",
+       "source_price": "2.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดใหญ่ (28*28*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "81.59",
+       "currency": "THB",
+       "sale_price": "81.59",
+       "source_price": "7.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(1ใหญ่ * 2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "78.54",
+       "currency": "THB",
+       "sale_price": "78.54",
+       "source_price": "7"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุดสามชิ้น (1ใบใหญ่1ใบกลาง1ใบเล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "139.36",
+       "currency": "THB",
+       "sale_price": "139.36",
+       "source_price": "15"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*2กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "141.64",
+       "currency": "THB",
+       "sale_price": "141.64",
+       "source_price": "15.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่3กลาง2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "180.05",
+       "currency": "THB",
+       "sale_price": "180.05",
+       "source_price": "20.35"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*4กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "192.57",
+       "currency": "THB",
+       "sale_price": "192.57",
+       "source_price": "22"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(4ใหญ่2กลาง4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "216.89",
+       "currency": "THB",
+       "sale_price": "216.89",
+       "source_price": "25.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(3ใหญ่*4กลาง*4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "127.95",
+       "currency": "THB",
+       "sale_price": "127.95",
+       "source_price": "13.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01VhoAejzc2nL1Emyy_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีดำ"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุด6ชิ้น (ใหญ่2กลาง2เล็ก2)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "40.54",
+       "currency": "THB",
+       "sale_price": "40.54",
+       "source_price": "2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดเล็ก (14*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "42.82",
+       "currency": "THB",
+       "sale_price": "42.82",
+       "source_price": "2.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดกลาง (28*14*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "44.34",
+       "currency": "THB",
+       "sale_price": "44.34",
+       "source_price": "2.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ขนาดใหญ่ (28*28*12)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "81.59",
+       "currency": "THB",
+       "sale_price": "81.59",
+       "source_price": "7.4"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(1ใหญ่ * 2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "78.54",
+       "currency": "THB",
+       "sale_price": "78.54",
+       "source_price": "7"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุดสามชิ้น (1ใบใหญ่1ใบกลาง1ใบเล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "139.36",
+       "currency": "THB",
+       "sale_price": "139.36",
+       "source_price": "15"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*2กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "141.64",
+       "currency": "THB",
+       "sale_price": "141.64",
+       "source_price": "15.3"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่3กลาง2เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "180.05",
+       "currency": "THB",
+       "sale_price": "180.05",
+       "source_price": "20.35"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(2ใหญ่*4กลาง*3เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "192.57",
+       "currency": "THB",
+       "sale_price": "192.57",
+       "source_price": "22"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(4ใหญ่2กลาง4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "216.89",
+       "currency": "THB",
+       "sale_price": "216.89",
+       "source_price": "25.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "(3ใหญ่*4กลาง*4เล็ก)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 99999
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "127.95",
+       "currency": "THB",
+       "sale_price": "127.95",
+       "source_price": "13.5"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01L1r8xJAd7TG1chua_!!2221280983632-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "สีชมพู"
+       },
+       {
+        "name": "ขนาด",
+        "sku_img": null,
+        "supplementary_sku_images": [],
+        "value_name": "ชุด6ชิ้น (ใหญ่2กลาง2เล็ก2)"
+       }
+      ],
+      "seller_sku": "lk123789455"
+     }
+    ],
+    "title": "ขายร้อนข้ามพรมแดนชุดชั้นในผ้าพับได้ชุดชั้นในกล่องเก็บชุดชั้นในแบ่งช่องตู้เสื้อผ้าชุดชั้นในถุงเท้าลิ้นชักกล่องคัดแยก",
+    "video": {
+     "id": "https://cloud.video.taobao.com/play/u/2221280983632/p/1/e/6/t/1/545087177297.mp4"
+    }
+   },
+   "tiktokOverflowConfig": null
+  }
+ },
+ "status": 0,
+ "title": "ขายร้อนข้ามพรมแดนชุดชั้นในผ้าพับได้ชุดชั้นในกล่องเก็บชุดชั้นในแบ่งช่องตู้เสื้อผ้าชุดชั้นในถุงเท้าลิ้นชักกล่องคัดแยก",
+ "toCategoryId": "600621",
+ "toCategoryIdTree": "600001,851848,600621",
+ "toCategoryNameTree": "家居用品,家居收纳,收纳盒",
+ "toPlatform": "tiktok",
+ "toSellerId": "7494877320827733079",
+ "toSellerNick": "JingShanShop-TH",
+ "userId": "1323965"
+}

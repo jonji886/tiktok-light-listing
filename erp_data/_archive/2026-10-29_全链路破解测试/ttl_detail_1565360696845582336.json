@@ -1,0 +1,206 @@
+{
+ "currency": "THB",
+ "fromItemId": "738241485567",
+ "fromPlatform": "other",
+ "gmtCreated": "2026-10-29 13:44:33",
+ "gmtModified": "2026-10-29 13:44:52",
+ "id": "1565360696845582336",
+ "itemSourceLinks": [
+  {
+   "sourceLink": "https://detail.1688.com/offer/738241485567.html",
+   "sourceNumIid": "738241485567",
+   "sourcePlatform": "1688"
+  }
+ ],
+ "reqInfo": {
+  "shopeeItemModel": null,
+  "temuItemModel": null,
+  "tikTokItemModel": {
+   "currency": "THB",
+   "multiCountrySkuSalesConfig": [
+    {
+     "currency": "PHP",
+     "flag": false,
+     "region": "PH",
+     "regionName": "菲律宾",
+     "sellerId": "8686823118790558807",
+     "skuList": []
+    },
+    {
+     "currency": "SGD",
+     "flag": false,
+     "region": "SG",
+     "regionName": "新加坡",
+     "sellerId": "8686823118790493271",
+     "skuList": []
+    },
+    {
+     "currency": "MYR",
+     "flag": false,
+     "region": "MY",
+     "regionName": "马来西亚",
+     "sellerId": "8686823118786233431",
+     "skuList": []
+    },
+    {
+     "currency": "VND",
+     "flag": false,
+     "region": "VN",
+     "regionName": "越南",
+     "sellerId": "8686823118786298967",
+     "skuList": []
+    }
+   ],
+   "productCreateRequestV2": {
+    "apiDomain": "open-api.tiktokglobalshop.com",
+    "apiMethodName": "/product/202309/products",
+    "category_id": "600748",
+    "certifications": [],
+    "delivery_option_ids": [],
+    "description": "<div id=\"offer-template-0\"></div><div style=\"width: 790.0px;\"><img alt=\"im6Ui/OgyNQvIWnF9TxGzFFDb+9AsWk/7vJC\" style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN014Gll381fVY4sKPtvA_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_0\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01kYFdKg1fVXtIzmAGt_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_1\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN016fR6Wf1fVXtD9WDaR_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_2\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01EqQTfY1fVXtNwhEIl_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_3\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN010izztW1fVXtIzkUJf_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_4\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01p8jiV31fVXtRL1AAm_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_5\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01YCXkEp1fVXtNwiAWv_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_6\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01nVXKOo1fVXtOcvsU7_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_7\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01N86wEU1fVXtMpKX1g_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_8\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN013glyoy1fVXtJaheZN_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_9\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01fRNW411fVXtLiAJhE_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_10\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01qR4ANg1fVXtHoKZa9_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_11\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01A9LSNf1fVXtMlNcSn_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_12\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01XLxU8A1fVXtPzl7qe_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_13\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01yDqx4I1fVXtLiBOC0_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_14\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01cqMjd21fVXtLiBFu5_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_15\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01OWYy7Y1fVXtLiBzcj_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_16\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01P9yXKu1fVXtOwx87c_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_17\"/> <img style=\"display: block;width: 100.0%;height: auto;\" src=\"https://cbu01.alicdn.com/img/ibank/O1CN01rffr0y1fVXtLaffxU_!!2216522614012-0-cib.jpg\" usemap=\"#_sdmap_18\"/></div>",
+    "external_product_id": "738241485567",
+    "is_cod_allowed": false,
+    "key_product_features": [],
+    "listing_platforms": [],
+    "main_images": [
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01ekKVRb1fVXtPziJ9N_!!2216522614012-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01TVOoGm1fVXtOwwOP1_!!2216522614012-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01JQVqZI1fVXtHoKm1C_!!2216522614012-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01X09dwO1fVY3oNNro0_!!2216522614012-0-cib.jpg"
+     },
+     {
+      "uri": "https://cbu01.alicdn.com/img/ibank/O1CN018x20TC1fVXtMlMLS8_!!2216522614012-0-cib.jpg"
+     }
+    ],
+    "manufacturer_ids": [],
+    "methodType": "POST",
+    "multipartRequest": false,
+    "package_dimensions": null,
+    "package_weight": null,
+    "product_attributes": [],
+    "responseClass": "com.kuaidizs.erp.index.core.client.tiktok.response.v2.ProductCreateResponseV2",
+    "responsible_person_ids": [],
+    "scheduled_sale": null,
+    "search_terms": [],
+    "size_chart": null,
+    "skus": [
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 38582
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "33.65",
+       "currency": "THB",
+       "sale_price": "33.65",
+       "source_price": "1.1"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01kqjEzx1fVXtIzmhZX_!!2216522614012-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "ปลอกพลาสติก40ซม. สาย4.0"
+       }
+      ],
+      "seller_sku": "5832446233392"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 35425
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "34.06",
+       "currency": "THB",
+       "sale_price": "34.06",
+       "source_price": "1.15"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01DRM9SZ1fVXtOcuXJe_!!2216522614012-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "42cm ฝาพลาสติก4.0เส้น"
+       }
+      ],
+      "seller_sku": "5832446233393"
+     },
+     {
+      "combined_skus": [],
+      "external_list_prices": [],
+      "external_urls": [],
+      "extra_identifier_codes": [],
+      "fees": [],
+      "identifier_code": null,
+      "inventory": [
+       {
+        "quantity": 40945
+       }
+      ],
+      "list_price": null,
+      "pre_sale": null,
+      "price": {
+       "amount": "34.41",
+       "currency": "THB",
+       "sale_price": "34.41",
+       "source_price": "1.2"
+      },
+      "sales_attributes": [
+       {
+        "name": "สี",
+        "sku_img": {
+         "uri": "https://cbu01.alicdn.com/img/ibank/O1CN01bRmU1B1fVXtS83sy5_!!2216522614012-0-cib.jpg"
+        },
+        "supplementary_sku_images": [],
+        "value_name": "ฝาพลาสติก45ซม. เส้น4.0"
+       }
+      ],
+      "seller_sku": "5832446233394"
+     }
+    ],
+    "title": "รับประกันสิบปีที่มั่นคงที่แขวนสแตนเลสหนา4.0มม. ซิลิโคนกันลื่นไร้รอยต่อสำหรับผู้ใหญ่ที่แขวนเสื้อผ้าในครัวเรือนไม่เสียรูปง่าย",
+    "video": null
+   },
+   "tiktokOverflowConfig": null
+  }
+ },
+ "status": 0,
+ "title": "รับประกันสิบปีที่มั่นคงที่แขวนสแตนเลสหนา4.0มม. ซิลิโคนกันลื่นไร้รอยต่อสำหรับผู้ใหญ่ที่แขวนเสื้อผ้าในครัวเรือนไม่เสียรูปง่าย",
+ "toCategoryId": "600748",
+ "toCategoryIdTree": "600001,851848,600748",
+ "toCategoryNameTree": "家居用品,家居收纳,衣架和衣夹",
+ "toPlatform": "tiktok",
+ "toSellerId": "7494877320827733079",
+ "toSellerNick": "JingShanShop-TH",
+ "userId": "1323965"
+}

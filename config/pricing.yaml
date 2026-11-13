@@ -6,10 +6,6 @@
 #   3. TH 补入「电商增长服务费」8.03%（此前漏算，导致采购价上限虚高 4.4 元）
 #   4. TH 价格带下限 2.0 → 5.0（$4 以下全成本口径结构性亏损）
 # 改完必须跑：python3 scripts/pricing_calc.py --check && python3 scripts/pricing_calc.py --limits
-#
-# ⚠️ shop_nick / seller_id 是占位符，换成自己店铺的值后再用（不要提交回仓库）。
-#    脚本优先读环境变量 TH_SHOP_NICK / TH_SELLER_ID（VN 同理），见 .env.example。
-#    pricing_calc.py 只读费率与价格带，不读 shop_nick/seller_id。
 
 # 当前策略（2026-11-11 用户确认）：**暂不开达人佣金**，只走货架场 → 只用 shelf 档
 # creator 档保留在配置里，是为了将来开佣金时不用重新推公式；enabled:false 时不参与评分与上限计算
@@ -60,13 +56,16 @@ defaults:
 
 # ── 泰国站 ──
 TH:
-  shop_nick: "YOUR_SHOP_TH"
-  seller_id: ""
+  shop_nick: "JingShanShop-TH"
+  seller_id: "7494877320827733079"
   lang: "th"
   currency: "THB"
 
   # 扣点结构（第一性原理：每一项都是售价的百分比）
   platform_commission: 0.08           # 家居类非 Mall 约 6.42-11.77%，取保守 8%
+  # 费率核实状态：false = 未在后台三级类目费率表逐项核实，pricing_calc --check 会输出 WARNING。
+  # 外部口径（2026-11）：TH 非Mall 6.42%-11.77%。核实后改 true 消除告警。
+  commission_rate_verified: false
   transaction_fee: 0.0321             # 交易手续费 3.21%
   ecommerce_growth_fee: 0.0803        # 电商增长服务费 8.03%（非电子类，单件上限 199 THB）
   # ↑ 官方 seller university essay 6044226542520081：2026-05-06 起非电子品类 8.03%
@@ -119,14 +118,17 @@ TH:
 
 # ── 越南站 ──
 VN:
-  shop_nick: "YOUR_SHOP_VN"
-  seller_id: ""
+  shop_nick: "JingShanShop-VN"
+  seller_id: "8686823118786298967"
   lang: "vi"
   currency: "VND"
 
   platform_commission: 0.14           # 非 Mall 默认 14%
-  # ⚠ 待核：有来源称 VN「家居生活」属最高佣金档，实际可达 18.1%（非 Mall）
-  #   若为真，本项应改 0.181，markup 随之上升约 0.1。**去后台下载三级类目费率表核实后回填**
+  # ⚠ 费率核实状态：false = 未在后台三级类目费率表核实，pricing_calc --check 输出高优先级 WARNING。
+  # 外部口径：2026-07-03 起越南非Mall佣金按类目调整为 1.5%-19.8%；Cube 2026-08 追踪为 2.5%-16.7%。
+  # 有来源称「家居生活」属高档位（16.7%-18.1%），若属实当前 14% 会系统性高估净利 2-4pt、
+  # 采购价上限需整体下移。**核实路径：卖家后台下载三级类目费率表 → 回填本值并改 true**
+  commission_rate_verified: false
   transaction_fee: 0.06               # 交易手续费 6%（2026-05-09 起由 5% 上调）
   # 新店前 90 天免交易手续费，上限 3000 万 VND（≈¥8700）
   # ⚠ 本店入驻约 1 个月 → 仍在免期内，置 true。90 天后必须改回 false，否则整个 VN 定价失准
@@ -172,7 +174,12 @@ VN:
       revert_target_margin: 0.25
       revert_markup: 2.128
       markup_after_waiver_12pct: 1.75
-      waiver_expires: "TBD_入驻日+90天" # 必须回填真实日期
+      # 豁免到期日（ISO 格式 YYYY-MM-DD，= 入驻完成验证日 + 90 天，以店铺后台显示为准）。
+      # 保持 UNCONFIRMED 时 pricing_calc --check / 任何 VN 计算都会输出醒目 WARNING；
+      # 一旦日期已过而 transaction_fee_waived 仍为 true，pricing_calc 直接退出码 1 阻断
+      # （此时 markup 必须切到 markup_after_waiver_12pct=1.75，否则每单少算 6%）。
+      waiver_expires: "UNCONFIRMED"
+      waiver_expires_confirmed: false
     creator:                          # （当前停用）
       enabled: false
       affiliate_commission: 0.20

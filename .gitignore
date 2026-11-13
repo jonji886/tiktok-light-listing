@@ -1,30 +1,53 @@
-# ── 凭据 / 登录态：绝不入库 ──
-scripts/erp_token.txt
-.env
-.env.*
-!.env.example
-*.token
-cookies*.json
-storage_state*.json
+# ============================================================
+# tiktok-light-listing 版本库忽略规则
+# 原则：凭证绝不入库；erp_data 只保留可复现的基线资产，
+#       所有运行时快照/图片/备份均不入库（2026-11-12 P0-4）
+# ============================================================
 
-# ── 运行时产物：真实商品与日志数据 ──
-erp_data/
-aibuy_data/
-out/
-*.log
+# ── 凭证（最高优先级，任何位置的 token 文件都忽略）──
+erp_token.txt
+**/erp_token.txt
+*.token
+sessionStorage*
+# 1688 浏览器 Cookie（selection_intake.py 用它绕 baxia 风控取详情页）
+ali_cookie.txt
+**/ali_cookie.txt
 
 # ── Python ──
 __pycache__/
 *.py[cod]
+*.egg-info/
 .venv/
 venv/
-.Python
-build/
-dist/
-*.egg-info/
 
-# ── 编辑器 / 系统 ──
+# ── macOS / 编辑器 ──
 .DS_Store
+*.swp
 .idea/
 .vscode/
-*.swp
+
+# ── 运行时错误日志与临时文件 ──
+*.err
+*.tmp
+*.bak
+
+# ── erp_data：默认全部忽略，仅白名单放行基线资产 ──
+erp_data/*
+# 类目树 / 店铺基线 / 目录说明：换环境运行脚本的依赖项
+!erp_data/README.md
+!erp_data/case_category_tree.json
+!erp_data/tiktok_shops.json
+!erp_data/tiktok_shops.csv
+# 历史归档属于知识库（接口快照，无凭证），保留
+!erp_data/_archive/
+# 候选清单是人工判断的产物（闸门逐条过了才能写），无法由脚本重算 → 入库
+!erp_data/selection_candidates.csv
+
+# 图片闸门的商品图与人工判定结果（体积大、含供应商素材）
+erp_data/image_gate/
+# 编辑前备份与临时运行目录
+erp_data/_backup/
+erp_data/_run/
+
+# ── 错误工作目录产生的双份数据（应清理，先忽略兜底）──
+scripts/erp_data/

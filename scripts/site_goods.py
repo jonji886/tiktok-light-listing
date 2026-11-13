@@ -32,9 +32,9 @@ import time
 import urllib.error
 import urllib.request
 
-BASE = os.environ.get("ERP_BASE_URL", "").rstrip("/")   # 例：https://your-erp-host.example.com
+BASE = "https://erp.kuaidizs.cn"
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "erp_token.txt")
-DEFAULT_SELLER = os.environ.get("TH_SELLER_ID", "")   # 店铺 sellerId 不写死，见 .env.example
+DEFAULT_SELLER = "7494877320827733079"  # JingShanShop-TH，实测 2026-10-27
 HEADERS = {
     "Content-Type": "application/json;charset=UTF-8",
     "appType": "3",
@@ -43,8 +43,6 @@ HEADERS = {
 
 
 def post(path, body):
-    if not BASE:
-        sys.exit("[site] 未配置 ERP_BASE_URL：export ERP_BASE_URL=https://your-erp-host.example.com")
     if not os.path.exists(TOKEN_FILE):
         sys.exit("[site] 缺 token 文件：先登录 ERP 并用 erp_token_grab.py 落盘")
     tok = open(TOKEN_FILE, encoding="utf-8").read().strip()
@@ -192,8 +190,6 @@ def main():
     p.add_argument("--save", action="store_true")
 
     a = ap.parse_args()
-    if getattr(a, "seller", None) is not None and not a.seller:
-        sys.exit("[site] 未配置 TH_SELLER_ID：export TH_SELLER_ID=... 或传 --seller")
     {"list": cmd_list, "detail": cmd_detail, "log": cmd_log,
      "update-desc": cmd_update_desc}[a.cmd](a)
 

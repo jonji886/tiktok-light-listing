@@ -32,7 +32,7 @@ import sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from pricing_calc import load_config, merged, compute, max_cost  # noqa: E402
+from pricing_calc import load_config, merged, compute, max_cost, bundle_violation  # noqa: E402
 
 ROOT = os.path.dirname(HERE)
 DEFAULT_CSV = os.path.join(ROOT, "erp_data", "tiktok_list.csv")
@@ -133,7 +133,9 @@ def main():
     ap.add_argument("--hint", action="store_true", help="反推建议挂价（配 --cost/--site/--pieces）")
     ap.add_argument("--cost", type=float, help="采购价(元/件)，--hint 用")
     ap.add_argument("--weight", type=float, default=150, help="实重 g，--hint 用")
-    ap.add_argument("--pieces", type=int, default=1, help="1=单件 2=2件套，--hint 用")
+    ap.add_argument("--pieces", type=int, default=1, help="1=单件（默认，唯一允许铺货的取值）")
+    ap.add_argument("--allow-bundle", action="store_true",
+                    help="实测确认捆绑发货后才允许 pieces>1（与 pricing_calc 同一硬闸）")
     ap.add_argument("--dims", help="包装尺寸 如 20x15x8，--hint 用")
     a = ap.parse_args()
 
@@ -142,6 +144,10 @@ def main():
     if a.hint:
         if a.cost is None:
             ap.error("--hint 需要 --cost")
+        bv = bundle_violation(a.pieces, a.allow_bundle)
+        if bv:
+            print(f"[block] {bv}", file=sys.stderr)
+            return 3
         sites = [a.site] if a.site else ["TH", "VN"]
         for s in sites:
             cfg = merged(cfg_all, s)
@@ -207,7 +213,7 @@ def main():
         if blocks:
             print(f"[gate] ❌ 阻断 {len(blocks)} 条 —— 禁止对这些商品 ttl-publish。")
             print("       修价：python3 scripts/price_gate.py --hint --cost <采购价> --site <TH|VN> "
-                  "--pieces <1|2> 得到目标价，再 set_price.py 提交")
+                  "--pieces 1 得到目标价，再 set_price.py 提交")
             print("       修库存/类目：python3 scripts/fix_sku.py --id <ttl_id> --stock 1000 ...")
         else:
             print("[gate] ✅ 无阻断项，可进入 ttl-publish")
