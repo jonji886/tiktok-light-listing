@@ -1,0 +1,24 @@
+# VN 商品卡热搜词根（一行一个）。
+# 种子词仅用于跑通闸门，**必须**用官方来源替换/扩充：
+#   商家后台 → 数据罗盘 → 商品卡 → 关键词榜单（热门/飙升/高潜力）
+#   商家后台 → 商品 → 商品机会中心 → 热门搜索 / 精选搜索
+# 匹配规则：标题去重音小写后匹配；拉丁字母按词边界、泰语按子串；命中 ≥N 个不同词根才通过。
+# 少于 3 个字符的词不参与匹配（会在别的词里误命中）。
+nha bep
+luu tru
+hop dung
+moc treo
+khay
+lam sach
+choi
+gio
+tui
+ve sinh
+phong tam
+gap gon
+da nang
+treo tuong
+inox
+nhua
+ke treo
+tu quan ao
