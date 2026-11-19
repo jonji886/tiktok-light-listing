@@ -137,6 +137,81 @@ def fetch_to(url, dest):
     return real
 
 
+def image_dims(path):
+    """纯标准库解析 jpg/png 宽高（TikTok 主图硬要求：方形且 ≥600px）。失败返回 None。"""
+    with open(path, "rb") as f:
+        b = f.read()
+    if b[:8] == b"\x89PNG\r\n\x1a\n" and len(b) > 24:
+        return int.from_bytes(b[16:20], "big"), int.from_bytes(b[20:24], "big")
+    if b[:2] == b"\xff\xd8":
+        i = 2
+        while i < len(b) - 9:
+            if b[i] != 0xFF:
+                i += 1
+                continue
+            m = b[i + 1]
+            if m in (0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7,
+                     0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF):
+                return int.from_bytes(b[i + 7:i + 9], "big"), int.from_bytes(b[i + 5:i + 7], "big")
+            if m in (0xD8, 0x01) or 0xD0 <= m <= 0xD7:
+                i += 2
+            else:
+                i += 2 + int.from_bytes(b[i + 2:i + 4], "big")
+        return None
+    return None
+
+
+def check_main_dims(p, d, args, extra_urls=None):
+    """主图序列硬校验（2026-11-19 教训代码化）：
+    垃圾袋 desc_08（790×1200 竖版）与魔力擦 desc_25（265×320）都是"内容好但不能升主图"——
+    TikTok 主图要求方形（±12% 容差）且 ≥600px。目视挑选必漏尺寸账，机器兜底。
+    extra_urls：详情图升主图的候选（finalize 自动收集 verdict≠L0 的 desc/sku 图 + CLI --promote）。"""
+    umap = d.get("uri_map") or {}
+    mains = [i for i in d["images"] if "main" in (i.get("channels") or [])]
+    cand = list(mains) + [i for i in d["images"]
+                          if not i["id"].startswith("main") and i.get("local_file")
+                          and (i.get("verdict") != "L0_drop"
+                               or i.get("probe_suggest") in ("L1_inpaint", "L3_keep"))]
+    bad = []
+    print(f"[check] 主图 {len(mains)} 张 + 升级候选 {len(cand)-len(mains)} 张，尺寸核验:")
+    for img in cand:
+        url = umap.get(img["url"], img["url"])
+        local = img.get("fixed_local") and os.path.join(os.path.dirname(p), img["fixed_local"])
+        if not local or not os.path.exists(local):
+            local = img.get("local_path") and os.path.join(
+                os.path.dirname(os.path.dirname(p)), "..", img["local_path"])
+        dims = None
+        try:
+            if local and os.path.exists(local):
+                dims = image_dims(local)
+            else:
+                tmp = "/tmp/chk_" + re.sub(r"\W", "", url)[-16:] + ".img"
+                urllib.request.urlretrieve(url, tmp)
+                dims = image_dims(tmp)
+        except Exception:
+            dims = None
+        if not dims:
+            bad.append((img["id"], url[-40:], "无法解析尺寸"))
+            continue
+        w, h = dims
+        is_main = img in mains
+        if abs(w - h) > w * 0.12:
+            msg = "非方形——不可作主图" + ("" if is_main else "（升主图候选不合格）")
+            bad.append((img["id"], f"{w}x{h}", msg))
+        elif min(w, h) < 600:
+            bad.append((img["id"], f"{w}x{h}", "短边<600px——不达平台下限"))
+        elif is_main:
+            print(f"  ✓ {img['id']} {w}x{h}")
+    for b in bad:
+        print(f"  ✗ {b[0]} {b[1]} {b[2]}")
+    if any(i in mains for i, _, _ in bad):
+        sys.exit(f"[check] 主图序列不合格 → 禁止进 apply/publish")
+    if bad:
+        print(f"[check] 主图序列通过；{len(bad)} 个升级候选被标记不可升（详情图保留）")
+    else:
+        print("[check] 全部方形 ≥600px ✅")
+
+
 def fix_one(img, dst_lang, gate_dir, umap):
     """单图修复+转存。返回新 ERP URL；失败返回 None（写 img['fix_error']）。
     起点优先取 uri_map 里的上一轮结果（补刀场景：在原图已擦字的基础上继续擦图形），
@@ -236,7 +311,13 @@ def cmd_finalize(args):
         print("   待复检:", i.get("fixed_local", "(无)"))
     if bad or pend:
         sys.exit(1)
+    check_main_dims(p, d, args)   # 主图尺寸硬核验（方形≥600），不过即 exit 1
     print("[finalize] 全部就绪 → 可跑 image_gate.py apply")
+
+
+def cmd_check(args):
+    p, d = load_review(args.review)
+    check_main_dims(p, d, args)
 
 
 def main():
@@ -248,8 +329,11 @@ def main():
     s.add_argument("--dst", default="ms", help="L2 目标语言（MY=ms/TH=th/VN=vi）")
     s.add_argument("--matting-first", action="store_true")
     s = sub.add_parser("finalize"); s.add_argument("--review", required=True)
+    s = sub.add_parser("check", help="主图尺寸硬核验（方形≥600px）+ 升级候选盘点")
+    s.add_argument("--review", required=True)
     args = ap.parse_args()
-    {"probe": cmd_probe, "fix": cmd_fix, "finalize": cmd_finalize}[args.cmd](args)
+    {"probe": cmd_probe, "fix": cmd_fix, "finalize": cmd_finalize,
+     "check": cmd_check}[args.cmd](args)
 
 
 if __name__ == "__main__":
