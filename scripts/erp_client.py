@@ -42,6 +42,7 @@ TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "erp_token
 TT_SHOPS = {
     "TH": {"sellerId": "7494877320827733079", "nick": "JingShanShop-TH", "lang": "th", "currency": "THB"},
     "VN": {"sellerId": "8686823118786298967", "nick": "JingShanShop-VN", "lang": "vi", "currency": "VND"},
+    "MY": {"sellerId": "8686823118786233431", "nick": "JingShanShop-MY", "lang": "ms", "currency": "MYR"},
 }
 
 
@@ -208,76 +209,12 @@ def cmd_ttl_detail(args):
     print(f"  SKU: {len(skus)} 个, 首SKU价: {skus[0].get('price',{}).get('amount','') if skus else '?'} {v2.get('currency','')}")
 
 
-# ── ttl-save（保存编辑，写操作）──────────────────────
-def cmd_ttl_save(args):
-    """保存编辑。接口 POST /item/crossBorder/edit
-    正确body（2026-10-28破解）：顶层字段(id/itemModel=整个外层tikTokItemModel/platform/reqInfo/title/类目三件套/店铺/币种/来源/status)
-    用法：python3 erp_client.py ttl-save --id <ttl_id> [--price 190] [--weight 0.5] [--category 853128 --cat-tree "600001,851976,853128" --cat-name "家居用品,家居收纳,挂钩"]
-    注意：保存后 getDetail 不再返回 itemModel（异常清空=保存生效）。仅对"有异常标签"的商品用（发布需itemModel可读）。
-    ⚠⚠ 2026-11-11 实测：本命令的 body 结构是错的 —— itemModel 应传「整个 reqInfo 结构」
-       （含 shopeeItemModel/temuItemModel/tikTokItemModel），且不能传顶层 reqInfo；
-       否则会把商品数据清空成 MISSING_ITEM_DATA，发布必失败。
-       正确实现见 fix_sku.py；改价请用 set_price.py（batchOps opsType:2）。
-       保留本命令仅作历史记录，**不要直接使用**。
-    """
-    # 1) 拉详情（注意：reqInfo/tikTokItemModel 在响应顶层，不在 data 里，2026-10-28 实测）
-    d = _post("/item/crossBorder/platformCollect/getDetail", {"id": args.id}, args)
-    data = d.get("data") or {}
-    req_info = d.get("reqInfo") or {}
-    ttm = req_info.get("tikTokItemModel") or {}
-    v2 = ttm.get("productCreateRequestV2") or {}
-    if not ttm:
-        sys.exit(f"[erp] 该商品 getDetail 无 itemModel（仅'带异常标签'商品才有；接口保存/完善后会清空）。本命令仅对'有异常标签'商品可用")
-    # 2) 改价格（可选）
-    if args.price:
-        for sku in v2.get("skus", []):
-            sku.setdefault("price", {})["amount"] = str(args.price)
-            sku["price"]["currency"] = v2.get("currency", "THB")
-        print(f"  价格已改为: {args.price} {v2.get('currency','')}")
-    # 3) 改重量（可选）
-    if args.weight:
-        v2["package_weight"] = {"value": str(args.weight), "unit": "KILOGRAM"}
-        print(f"  重量已改为: {args.weight} KG")
-    # 3.5) 改主图（可选，按顺序替换 main_images[].uri，2026-10-29 图片语言测试新增）
-    if args.images:
-        urls = [u.strip() for u in args.images.split(",") if u.strip()]
-        imgs = v2.get("main_images") or []
-        if len(urls) != len(imgs):
-            sys.exit(f"[erp] --images 数量 {len(urls)} 与主图数 {len(imgs)} 不一致，中止保存")
-        for img, u in zip(imgs, urls):
-            img["uri"] = u
-        print(f"  主图已替换: {len(urls)} 张 → {urls[0][:40]}...")
-    # 4) 改类目（可选）
-    if args.category:
-        v2["category_id"] = int(args.category)
-        data["toCategoryId"] = args.category
-        if args.cat_tree: data["toCategoryIdTree"] = args.cat_tree
-        if args.cat_name: data["toCategoryNameTree"] = args.cat_name
-        print(f"  类目已改为: {args.cat_name or args.category}")
-    # 5) 构造edit body（正确结构：顶层字段 + itemModel=整个外层tikTokItemModel；顶层字段取自响应 d 顶层，2026-10-28 实测）
-    # 注意：类目/店铺/币种/来源字段在 data 里（不在 d 顶层），2026-10-29 修复
-    body = {
-        "id": data.get("id") or d.get("id") or args.id,
-        "itemModel": ttm,
-        "platform": "tiktok",
-        "reqInfo": req_info,
-        "title": data.get("title") or d.get("title") or v2.get("title"),
-        "toSellerId": data.get("toSellerId"),
-        "toSellerNick": data.get("toSellerNick"),
-        "toCategoryId": data.get("toCategoryId"),
-        "toCategoryIdTree": data.get("toCategoryIdTree"),
-        "toCategoryNameTree": data.get("toCategoryNameTree"),
-        "currency": data.get("currency"),
-        "fromItemId": data.get("fromItemId"),
-        "fromPlatform": data.get("fromPlatform"),
-        "status": data.get("status"),
-    }
-    # 6) 提交
-    result = _post("/item/crossBorder/edit", body, args)
-    print(f"[erp] 保存提交 id={args.id}: success={result.get('success', True)}")
-    print(f"  判定生效：刷新 ttl-list 看异常标签清空 + 类目生效")
-
-
+# ── ttl-save（已移除，2026-11-13）────────────────────
+# 旧实现的 body 结构是错的：itemModel 被写成内层 ttm 且额外传顶层 reqInfo，
+# 会把商品清空成 MISSING_ITEM_DATA（发布必失败）；而且它从 d["data"] 取店铺/类目/币种，
+# 实测 getDetail 的 data 恒为 null（字段都在顶层），构造出的 body 关键字段全是 None。
+# 正确做法：改价用 set_price.py（batchOps opsType:2）、修 SKU 用 fix_sku.py、
+# 整品重建用 image_gate.py apply --save。子命令已从 CLI 移除，勿再复活。
 # ── ttl-claim（认领到TikTok店铺，写操作）─────────────
 def cmd_ttl_claim(args):
     """把公共采集箱商品认领到指定TikTok站点店铺。
@@ -496,7 +433,6 @@ def main():
     pi = sub.add_parser("items"); pi.add_argument("--page", type=int, default=1); pi.add_argument("--size", type=int, default=50); pi.add_argument("--ids", default=""); pi.add_argument("--out", default="")
     pl = sub.add_parser("ttl-list"); pl.add_argument("--page", type=int, default=1); pl.add_argument("--size", type=int, default=50); pl.add_argument("--region", default=""); pl.add_argument("--status", type=int, default=None); pl.add_argument("--out", default="")
     pd = sub.add_parser("ttl-detail"); pd.add_argument("--id", required=True); pd.add_argument("--out", default="")
-    psv = sub.add_parser("ttl-save"); psv.add_argument("--id", required=True); psv.add_argument("--price", type=float, default=0); psv.add_argument("--weight", type=float, default=0); psv.add_argument("--images", default=""); psv.add_argument("--category", default=""); psv.add_argument("--cat-tree", default=""); psv.add_argument("--cat-name", default=""); psv.add_argument("--out", default="")
     pcl = sub.add_parser("ttl-claim"); pcl.add_argument("--ids", required=True); pcl.add_argument("--region", default="TH"); pcl.add_argument("--seller", default=""); pcl.add_argument("--out", default="")
     ptr = sub.add_parser("ttl-translate"); ptr.add_argument("--id", required=True); ptr.add_argument("--lang", default="th")
     pp = sub.add_parser("ttl-publish"); pp.add_argument("--ids", required=True)
@@ -514,7 +450,7 @@ def main():
     args = p.parse_args()
 
     {"token":cmd_token,"collect":cmd_collect,"items":cmd_items,
-     "ttl-list":cmd_ttl_list,"ttl-detail":cmd_ttl_detail,"ttl-save":cmd_ttl_save,"ttl-claim":cmd_ttl_claim,
+     "ttl-list":cmd_ttl_list,"ttl-detail":cmd_ttl_detail,"ttl-claim":cmd_ttl_claim,
      "ttl-translate":cmd_ttl_translate,"ttl-publish":cmd_ttl_publish,"ttl-del":cmd_ttl_del,
      "logs":cmd_logs,"shops":cmd_shops,"quota":cmd_quota}.get(args.cmd, lambda a: None)(args)
 

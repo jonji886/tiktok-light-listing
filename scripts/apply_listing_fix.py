@@ -17,6 +17,7 @@ import argparse
 import copy
 import json
 import os
+import re
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -47,8 +48,45 @@ WEIGHT_KG = 0.4
 MAX_SOURCE_PRICE = 9.4  # SKILL: TH 150g shelf 2件套单件等效上限；这里作高价SKU剔除线
 STOCK = 1000
 
-# 泰文规格名：不带任何中文/功能描述，避开平台敏感词
-TH_SPEC = ["สี ชมพู", "สี ฟ้า", "สี เทา", "สี ดำ", "สี ขาว", "สี เขียว"]
+CJK = re.compile(r"[\u4e00-\u9fff]")
+
+
+def localized_attr(attrs, field="value_name"):
+    """把规格的某个字段换成泰语；拿不到真译名就返回 None（调用方跳过该 SKU）。
+
+    ⚠ 2026-11-13 审查删除的旧实现：`TH_SPEC[i % len(TH_SPEC)]` 按 SKU 序号轮流贴
+    「粉/蓝/灰/黑/白/绿」——与商品真实颜色无关，属主动造假（已保存过的商品存在
+    「白色标成粉色」）。规格名只能来自源 specAttrs 的译名表，查不到就转人工。
+    """
+    if not attrs or not isinstance(attrs, dict):
+        return None
+    origin = str(attrs.get(field) or "").strip()
+    if not origin:
+        return None
+    if not CJK.search(origin):
+        return origin            # 已是当地语言，原样保留
+    try:
+        from i18n import get as i18n_get
+    except ImportError:
+        return None
+    kind = "attr" if field == "name" else "spec"
+    return i18n_get("TH", kind, src=origin)
+
+
+def localize_sku_attrs(sku):
+    """就地本地化一个 SKU 的规格名；返回 None 表示成功，返回字符串为跳过原因。"""
+    attrs = sku.get("sales_attributes") or []
+    if not attrs:
+        return "无规格属性"
+    name = localized_attr(attrs[0], "name")
+    if name is None:
+        return f"属性名无泰语译名：{str(attrs[0].get('name'))[:20]}"
+    value = localized_attr(attrs[0], "value_name")
+    if value is None:
+        return f"规格值无泰语译名：{str(attrs[0].get('value_name'))[:24]}"
+    attrs[0]["name"] = name
+    attrs[0]["value_name"] = value
+    return None
 
 
 def get_v2(d):
@@ -90,19 +128,24 @@ def plan_one(args, tid, name, cost, cat_fix, keep_max):
     dropped = len(skus) - len(kept)
 
     modified = copy.deepcopy(v2)
-    new_skus = []
-    for i, s in enumerate(kept):
+    new_skus, skipped = [], []
+    for s in kept:
         s = copy.deepcopy(s)
+        why = localize_sku_attrs(s)
+        if why:
+            skipped.append(why)
+            continue
         s["inventory"] = [{"quantity": STOCK}]
-        attrs = s.get("sales_attributes") or []
-        if attrs:
-            attrs[0]["name"] = "สี" if "颜色" in str(attrs[0].get("name", "")) or str(attrs[0].get("name", "")) == "สี" else attrs[0].get("name", "สี")
-            attrs[0]["value_name"] = TH_SPEC[i % len(TH_SPEC)]
         p = s.setdefault("price", {})
         p["amount"] = str(target_thb)
         p["sale_price"] = str(target_thb)
         p["currency"] = "THB"
         new_skus.append(s)
+    if not new_skus:
+        return None, (f"[跳过] {name}: 全部 SKU 无泰语规格名（{skipped[0] if skipped else '?'}）"
+                      " → 补 config/i18n/th.csv 后重跑，禁止按序号套色")
+    for why in skipped:
+        print(f"    ! {name}: 跳过 1 个 SKU —— {why}")
     modified["skus"] = new_skus
     modified["package_weight"] = {"value": str(WEIGHT_KG), "unit": "KILOGRAM"}
 

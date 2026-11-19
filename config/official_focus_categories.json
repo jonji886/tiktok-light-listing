@@ -1,0 +1,37 @@
+{
+  "_source": {
+    "title": "【东南亚】跨境新商经营方法论 - 新商破\"零\"",
+    "section": "1.1 2026年重点品类一览",
+    "url": "https://seller.tiktokglobalshop.com/university/course?learning_id=7503059048466178&content_id=3303870252762881&default_language=zh-CN",
+    "page_updated": "2024-09-19",
+    "body_signed": "TikTok Shop东南亚跨境招商团队 2026/01",
+    "time_warning": "页面元数据与正文署名时间不一致；✅ 类目表按 2026 版理解，但不是当天更新的实时数据",
+    "policy": "官方 ✅ = 平台优先方向，不是准入白名单。未命中只 WARN，不阻断 collect；命中只在结果里标记 OFFICIAL_FOCUS_HIT"
+  },
+  "categories": [
+    {"section": "Home & Care", "en": "Tissues & Wipes", "zh": "纸巾及湿巾", "keywords": ["纸巾", "湿巾"]},
+    {"section": "Home & Care", "en": "Home Organizers", "zh": "家居收纳用品", "keywords": ["收纳"]},
+    {"section": "Home & Care", "en": "Haircare & Styling", "zh": "美发造型用品", "keywords": ["美发", "造型"]},
+    {"section": "Home & Care", "en": "Hand & Foot & Nail Care", "zh": "手足及美甲护理用品", "keywords": ["美甲", "手足"]},
+    {"section": "Home & Care", "en": "Textiles & Soft Furnishings", "zh": "纺织品及软装家居", "keywords": ["纺织", "软装"]},
+    {"section": "Home & Care", "en": "Bathroom Supplies", "zh": "卫浴用品", "keywords": ["卫浴"]},
+    {"section": "Home & Care", "en": "Nasal & Oral Care", "zh": "鼻喉及口腔护理用品", "keywords": ["口腔", "鼻喉"]},
+    {"section": "Home & Care", "en": "Motorcycle Parts & Accessories", "zh": "摩托车配件及零件", "keywords": ["摩托"]},
+    {"section": "Home & Care", "en": "Eye & Ear Care", "zh": "眼耳护理用品", "keywords": ["眼耳"]},
+    {"section": "Home & Care", "en": "Tools & Hardware", "zh": "工具及五金用品", "keywords": ["五金", "工具"]},
+    {"section": "Home & Care", "en": "Office Supplies", "zh": "办公用品", "keywords": ["办公"]},
+    {"section": "Home & Care", "en": "Lights & Electrical Equipment", "zh": "灯具及电气设备", "keywords": ["灯具", "电气"]},
+    {"section": "Home & Care", "en": "Baby Fashion", "zh": "婴儿时尚服饰", "keywords": ["婴儿"]},
+    {"section": "Home & Care", "en": "Miscellaneous Home & Laundry Accessories", "zh": "家居及洗衣杂项配件", "keywords": ["洗衣"]},
+    {"section": "Home & Care", "en": "Maternity Supplies & Nursing & Feedings", "zh": "孕妇用品、哺乳用品、喂养用品", "keywords": ["孕妇", "哺乳", "喂养"]},
+    {"section": "Home & Care", "en": "Home Improvement (without Lights & Electrical Equipment)", "zh": "家居装修用品（不含灯具及电气设备）", "keywords": ["装修"]},
+    {"section": "Home & Care", "en": "Pets Food", "zh": "宠物食品", "keywords": ["宠物食品"]},
+    {"section": "Lifestyle", "en": "Festive & Party Supplies & Decor", "zh": "节日派对用品及装饰", "keywords": ["节日", "派对"]}
+  ],
+  "cross_category_reference_only": [
+    {"section": "FMCG", "en": "Fragrance", "zh": "香氛产品", "note": "非家居树，家居店不跨类目；仅作送礼季方向参考"},
+    {"section": "FMCG", "en": "Nutrition & Wellness", "zh": "营养保健用品", "note": "非家居树，仅作方向参考"},
+    {"section": "FMCG", "en": "Snacks & Pantry Food", "zh": "零食及粮油干货", "note": "非家居树，仅作方向参考"},
+    {"section": "FMCG", "en": "Drinks", "zh": "饮品饮料", "note": "非家居树，仅作方向参考"}
+  ]
+}

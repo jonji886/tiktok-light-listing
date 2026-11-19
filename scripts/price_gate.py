@@ -75,8 +75,8 @@ def fnum(v, default=0.0):
 
 def judge(row, cfg_all):
     site = (row.get("站点") or "").strip()
-    if site not in ("TH", "VN"):
-        return {"verdict": "SKIP", "reason": f"未知站点 {site or '(空)'}", "site": site}
+    if site not in ("TH", "VN", "MY"):
+        return {"verdict": "SKIP", "reason": f"未知站点 {site or '(空)'}", "site": site, "issues": []}
     cfg = merged(cfg_all, site)
     cfg["site"] = site
     cny_per_usd = cfg["cny_per_usd"]
@@ -127,7 +127,7 @@ def judge(row, cfg_all):
 def main():
     ap = argparse.ArgumentParser(description="发布前价格/库存闸门")
     ap.add_argument("--csv", default=DEFAULT_CSV, help="ttl-list 落盘的 CSV 路径")
-    ap.add_argument("--site", choices=["TH", "VN"], help="只判某个站")
+    ap.add_argument("--site", choices=["TH", "VN", "MY"], help="只判某个站")
     ap.add_argument("--status", choices=["0", "1"], help="0=未发布 1=已发布（只看哪一种）")
     ap.add_argument("--json", action="store_true")
     ap.add_argument("--hint", action="store_true", help="反推建议挂价（配 --cost/--site/--pieces）")

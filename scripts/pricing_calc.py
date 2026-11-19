@@ -294,7 +294,7 @@ def max_cost_at_price(cfg, price_usd, scheme="shelf", pieces=1, weight_g=None, m
 
 def sites_of(cfg_all, only=None):
     out = []
-    for s in ("TH", "VN"):
+    for s in ("TH", "VN", "MY"):
         if only and s != only:
             continue
         c = merged(cfg_all, s)
@@ -306,7 +306,7 @@ def sites_of(cfg_all, only=None):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--cost", type=float, help="采购价(元/件)")
-    ap.add_argument("--site", choices=["TH", "VN"])
+    ap.add_argument("--site", choices=["TH", "VN", "MY"])
     ap.add_argument("--scheme", default="shelf", choices=["shelf", "creator"])
     ap.add_argument("--pieces", type=int, default=1,
                     help="1=单件（一件代发只准填 1，默认）；>1 默认直接阻断，仅在实测确认捆绑发货后配 --allow-bundle")

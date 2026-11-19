@@ -189,6 +189,65 @@ VN:
 
   note: "前90天免交易手续费期间把 transaction_fee 置 0，系数降到 1.85/2.27；VN 扣点比 TH 重 0.8 个点"
 
+# ── 马来西亚站（2026-11-18 新增；参数来源见各行注释）──
+MY:
+  shop_nick: "JingShanShop-MY"
+  seller_id: "8686823118786233431"
+  lang: "ms"                     # ⚠ i18n/ms.csv 不存在，标题翻译能力 UNKNOWN（ERP 是否自动译马来语未实测）
+  currency: "MYR"
+
+  # 佣金：官方 2026-10-31 新费率表（含SST）。Home 子类精确值在 PDF 附件（MY TTS Commission_20261031.pdf，
+  # 直链需签名 CDN 未取到）→ 保守按官方示例非BXP非Mall档 12.96%。多个来源证实家居在本轮"上调"栏。
+  platform_commission: 0.0          # 2026-11-18 用户确认：MY 店在 120 天免佣期内 → 佣金=0
+  # ⚠⚠ 免佣到期（入驻+120天，以后台为准）必须改回 0.1296 并把 shelf.markup 切到 1.556，否则每单少算 13%
+  commission_rate_verified: false
+  transaction_fee: 0.0378           # VERIFIED 官方页【马来西亚】交易手续费（含SST；PayLater 订单 2026-10-16 起 4.86%）
+  ecommerce_growth_fee: 0.0         # MY 无此项
+  refund_reserve: 0.07
+
+  # 平台支持费 RM0.54/妥投单（2026-02-15 起，VERIFIED 官方页）。
+  # 豁免：2026-04-01 后入驻的新 Marketplace 卖家 30 天；月净单 1-100 的 SMB 每月 Mission 领取后 30 天。
+  # 破零期按"可豁免"填 0，但需在后台 Mission Tab 主动领取，未领取前实际会扣 → 保守可改 0.33
+  order_fixed_fee_cny: 0.0          # RM0.54 × 0.6112 = 0.33；豁免未领取时改 0.33
+  tax_withhold: 0.0                 # MY 平台代扣税未核实到（SST 已含在费率内）
+  buyer_tax_rate: 0.0               # ⚠ 马来西亚低值货物税 LVG 10%（<$500 进口小包）是否由买家承担 UNKNOWN，暂不计
+
+  rate_to_local: 0.6112             # RMB→MYR（er-api 2026-11-18；ERP 汇率表无 MYR）
+  domestic_shipping: 3.5            # 2026-11-18 用户确认：可按供应商城市选就近货代 → 按省内/邻近档
+  cny_per_usd: 6.6799               # er-api 2026-11-18
+
+  # 跨境头程（2026 Q4 飞轮计划新价卡，THIRD_PARTY_ONLY 转述官方）：
+  # 起重 30g = RM0.18，续重 RM0.12/10g → 线性近似 RM0.012/g（比 TH 便宜约 63%）
+  shipping_cny_per_gram: 0.007334   # 0.012 MYR/g × 0.6112
+  shipping_min_cny: 0.11            # RM0.18 起重
+
+  # 价格带（USD）：本次 FastMoss MY 家居实拉 n=380，中位 $3.32、P75 $5.29 → 对齐 TH 口径
+  price_band_usd:
+    # MY 下限 3.5→2.2（2026-11-18）：免佣期扣点仅 10.78% + 头程比 TH 便宜 63%，
+    # $2.2 档仍有 ~10% 净利；MY 家居实拉 n=380 中位 $3.32，卡 3.5 会放弃大半货盘。
+    # ⚠ 免佣到期后此下限失效，回 3.5
+    min: 2.2
+    max: 8.0
+
+  schemes:
+    shelf:
+      enabled: true
+      affiliate_commission: 0.0
+      target_margin: 0.12
+      markup: 1.295                 # 1/(1-0-0.0378-0.07-0.12) 免佣期
+      markup_after_commission: 1.556  # 1/(1-0.1296-0.0378-0.07-0.12) 免佣到期后
+      # 若确认在 120 天免佣期（2026-10-01~12-31 开店）：佣金=0 → markup 1.312
+      markup_waived_commission: 1.312
+      revert_target_margin: 0.25
+      revert_markup: 2.049
+    creator:
+      enabled: false                # 停用；启用前须先确认佣金档期(当前免佣=0)
+      affiliate_commission: 0.20
+      target_margin: 0.15
+      markup: 1.844                 # 1/(1-0-0.0378-0.07-0.20-0.15) 免佣期；到期后改 2.424
+
+  note: "免佣窗口=入驻后120天、上限4500 MYR、免佣GMV上限$1000（官方2026-10-09政策，2026-10-01~12-31入驻）。MY店入驻日期未核 → 使用前必须在后台确认是否仍在免佣期与免佣剩余额度。"
+
 # ── 售价公式（唯一口径，勿自创）──
 # 到岸成本(CNY) = 采购价×件数 + 国内运费 + 货代操作费 + 包材 + 物流藏价
 #   物流藏价 = max(实重, 抛重) × shipping_cny_per_gram × 件数
