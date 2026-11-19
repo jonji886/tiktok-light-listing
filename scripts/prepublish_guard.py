@@ -52,6 +52,8 @@ except Exception:
     _gate_cfg = {}
 DESC_MIN_CHARS = int(_gate_cfg.get("description_min_plain_chars", 500))
 DESC_MIN_PARAS = int(_gate_cfg.get("description_min_paragraphs", 2))
+# 2026-11-19：主图发布硬下限（官方建议≥5；围裙删到1张仍过闸的教训）。读不到保守取 5。
+MIN_MAIN_PUBLISH = int(_gate_cfg.get("min_publish_main_images", 5))
 
 
 def find_v2(obj):
@@ -164,8 +166,18 @@ def check_one(tid, detail_path, list_rows, allow_short_desc=False):
     stats["main_images"] = len(imgs)
     if not imgs:
         issues.append("main_images = 0（min_clean_main_images 硬闸）")
-    elif not (imgs[0].get("uri") if isinstance(imgs[0], dict) else imgs[0]):
+    elif len(imgs) < MIN_MAIN_PUBLISH:
+        # 2026-11-19 提级：1 张也能过旧闸是围裙「有曝光没人点」的直接根因。
+        # 补足路径 = image_fix.py（擦字/翻译保图）或 SKU 图/详情图降级复用；凑不出即换货源。
+        issues.append(f"主图仅 {len(imgs)} 张 < {MIN_MAIN_PUBLISH}（官方建议≥5；"
+                      "先跑 image_fix 修复保图，勿靠脏图凑数）")
+    first_uri = imgs[0].get("uri") if (imgs and isinstance(imgs[0], dict)) else (imgs[0] if imgs else None)
+    if imgs and not first_uri:
         issues.append("首图 uri 为空")
+    for img in imgs:
+        uri = img.get("uri") if isinstance(img, dict) else img
+        if "aka.doubaocdn.com" in str(uri):
+            issues.append(f"主图仍用 aka 短链：{uri}；短链 302 到签名直链且跳转 Content-Type=JSON，平台取图报「无效的参数」，须回读最终 byteimg 直链")
 
     # 4) SKU
     skus = v2.get("skus") or []
@@ -203,9 +215,15 @@ def check_one(tid, detail_path, list_rows, allow_short_desc=False):
     # 6) 重量尺寸：publishConfig 是整批统一参数，这里只能提醒
     warns.append("ttl-publish 的 --weight/--dims 必须按品单条提交；"
                  "禁用脚本默认 1kg / 10x10x10；尺寸按产品参数表推算的值标 INFERRED")
+    dims = v2.get("package_dimensions") or {}
+    missing_dims = [k for k in ("length", "width", "height") if not dims.get(k)]
+    if missing_dims:
+        issues.append(f"包裹长/宽/高缺失: {', '.join(missing_dims)}；VN 发布平台返回 [12052018/12052019/12052020] 必填，禁止用 10x10x10 或估计值补位")
     if v2.get("package_weight"):
         warns.append(f"detail.package_weight={v2['package_weight']} 只是定价模型参数，"
                      f"不是平台申报重量（申报值在 publishConfig）")
+    else:
+        issues.append("package_weight 缺失")
 
     # 7) 重复认领
     if list_rows:

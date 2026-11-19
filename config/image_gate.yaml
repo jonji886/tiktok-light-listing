@@ -36,6 +36,10 @@ b2b_markers:
 
 # ── 发布前硬闸阈值 ──
 min_clean_main_images: 1          # 删完主图至少要剩 1 张（TikTok 首图硬要求）
+# 2026-11-19 新增：官方建议每品 ≥5 图（seller.tiktokglobalshop.com 发布指南，VERIFIED）。
+# 围裙批次实测教训：闸门把 5 张删到 1 张仍"合法"发布 → 有曝光没人点。
+# 修复供给走 image_fix.py（Aidge 擦字/翻译 + 转存）；修不出 5 张的品由本闸拦截。
+min_publish_main_images: 5        # 发布闸硬下限（prepublish_guard 拦截）
 min_desc_images_after_gate: 0     # 详情图允许全删（只留当地语言文本也是合法描述）
 max_cjk_chars_in_description: 0   # description 文本节点允许的最大汉字数（0 = 一个不留）
 require_no_template_residue: true # 禁止 usemap / styleType / offer-template / <map> / <script> 残渣

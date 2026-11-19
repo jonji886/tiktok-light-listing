@@ -31,9 +31,26 @@
   dims_cm             包装长宽高 cm，如 20x15x8；抛重=L×W×H÷6000×1000，与实重取大
   redline_check       红线核查结论，必须含 pass（strategy 5.1 十条红线）
   pieces              必须为 1 或留空（一件代发禁多件装，见 pricing_calc 硬闸）
+图片供给预测列（P0-3，2026-11-19 新增；表头存在即强制，缺列只 WARN）：
+  clean_main_images_after_fix  预测「image_fix 修复 + SKU图/详情图降级复用」后可用主图数。
+    发布硬闸 min_publish_main_images=5（围裙 5→1 教训），选品期就按修复预算预测供给：
+    = L3_keep + 探针判可修的 L1/L2 + 可提升的干净 SKU/详情图。≥5 绿灯；<5 且无补图路径 → 淘汰。
+    证据来源：selection_intake image 拉的 5 张主图 + scripts/image_fix.py probe（¥0.02/张，
+    免费额度 100 张）的 seen_text，不必等采集后整链跑完再判。
+价格竞争力证据列（P0-1，2026-11-18 新增；表头存在即强制，旧清单缺列只 WARN）：
+  market_median_price_usd  站内同款中位价（USD，买家实付口径要注明）
+  market_price_source      来源：官方价格诊断 / fastmoss:floorPrice / aibuy:opprank
+  market_price_n           样本量（< market_price_min_sample 只 WARN）
+  market_price_sampled_at  采集日期 YYYY-MM-DD（价格是时效数据）
 推荐列（给值才校验，缺失只 WARN）：
   category_id         平台类目 ID；非空时必须在家居用品树内且类目可用
   ship_city / forwarder_city  地域聚簇信息（strategy 2.0）
+
+官方重点类目信号（2026-11-18 新增）：
+  config/official_focus_categories.json 收录官方 2026 ✅ 重点类目（家居树内 18 项 + 跨类目参考）。
+  在「category_id 对应类目名 + title_zh」上匹配：命中在结果标 [官方✅:...]，未命中只 WARN。
+  ✅ 是平台「优先方向」不是准入白名单，未命中绝不阻断 collect。
+  来源页面元数据 2024-09 / 正文署名 2026-01，时间不一致已写进配置文件。
 
 用法：
   python3 scripts/select_gate.py --init-template                 # 生成候选 CSV 模板
@@ -59,17 +76,34 @@ SELECTION_YAML = os.path.join(ROOT, "config", "selection.yaml")
 DEFAULT_CSV = os.path.join(ROOT, "erp_data", "selection_candidates.csv")
 CATEGORY_TREE = os.path.join(ROOT, "erp_data", "case_category_tree.json")
 HOME_CATEGORY_ROOT = "600001"   # 家居用品根类目
+FOCUS_CONFIG = os.path.join(ROOT, "config", "official_focus_categories.json")
 
 # 阈值兜底（正常应从 selection.yaml 读取覆盖；与 config 当前值保持一致）
 DEFAULTS = {
     "clean_consumer_images_min": 3,
+    # 2026-11-19：图片供给预测闸。发布硬闸 min_publish_main_images=5 已落地（prepublish_guard），
+    # 货源在选品期就要预测「修复后能凑几张干净主图」：L3_keep + 可修L1/L2 + 可提升SKU/详情图。
+    # 不足 5 的货源最终必被发布闸拦截（围裙 5→1 实测），选品期拦下才不白跑。
+    "clean_images_after_fix_min": 5,
     "stock_min": 200,
     "min_order_qty": 1,
     "chargeable_weight_max_g": 400,
     "max_transit_days": 1,
     "true_free_shipping": "required",
     "seller_ships_48h_proof": "required",
+    # 价格竞争力闸（P0-1）：挂价上限相对「站内同款中位价」的倍数
+    "market_price_tolerance": 1.05,
+    "market_price_min_sample": 5,
 }
+
+# 价格竞争力证据列：只在表头存在时强制（旧清单缺列 → WARN，不静默通过）
+MARKET_COLS = [
+    "market_median_price_usd", "market_price_source",
+    "market_price_n", "market_price_sampled_at",
+]
+
+# 图片供给预测列（2026-11-19）：同样"表头存在即强制"，缺列只 WARN
+SUPPLY_COL = "clean_main_images_after_fix"
 
 REQUIRED_COLS = [
     "offer_id", "region", "cost_cny", "max_sku_cost_cny", "clean_main_images",
@@ -81,10 +115,12 @@ REQUIRED_COLS = [
 TEMPLATE_HEADER = [
     "offer_id", "offer_url", "title_zh", "region", "category_id",
     "cost_cny", "max_sku_cost_cny", "pieces",
-    "clean_main_images", "desc_rebuildable",
+    "clean_main_images", "desc_rebuildable", "clean_main_images_after_fix",
     "stock", "min_order_qty", "ship_transit_days", "seller_48h_proof",
     "free_shipping", "free_shipping_proof",
     "weight_g", "dims_cm", "redline_check",
+    "market_median_price_usd", "market_price_source", "market_price_n",
+    "market_price_sampled_at",
     "ship_city", "forwarder_city", "domestic_shipping_cny", "markup",
     "seller_48h_proof_text", "reason",
 ]
@@ -175,7 +211,57 @@ def load_home_category_ids():
     return ids
 
 
-def judge(row, idx, thr, price_cfg_all, home_ids):
+# ── 官方 2026 ✅ 重点类目（优先方向，非准入白名单）──
+def load_official_focus():
+    """返回官方重点类目配置；文件缺失返回 None（调用方降级为不检查）。"""
+    if not os.path.exists(FOCUS_CONFIG):
+        return None
+    try:
+        with open(FOCUS_CONFIG, encoding="utf-8") as f:
+            return json.load(f)
+    except (ValueError, OSError):
+        return None
+
+
+def build_category_name_map():
+    """categoryId -> 自身与祖先名称串（小写），用于把平台类目 ID 对回官方中英文名。"""
+    if not os.path.exists(CATEGORY_TREE):
+        return {}
+    with open(CATEGORY_TREE, encoding="utf-8") as f:
+        tree = json.load(f)
+    names = {}
+
+    def walk(node, ancestors):
+        cid = str(node.get("categoryId", ""))
+        here = [str(node.get("name") or ""), str(node.get("fullName") or "")] + list(ancestors)
+        if cid:
+            names[cid] = " ".join(x for x in here if x).lower()
+        for child in node.get("children") or []:
+            walk(child, here)
+
+    for node in tree.get("data") or []:
+        walk(node, [])
+    return names
+
+
+def match_official_focus(text, focus_cfg):
+    """在「类目名称路径 + 候选标题」上匹配官方 ✅ 关键词。
+
+    返回 (hit/miss/unknown, 命中的中文类目名列表)。
+    未命中不阻断：官方 ✅ 是优先方向，不是准入资格。
+    """
+    if not focus_cfg or not str(text or "").strip():
+        return "unknown", []
+    hay = str(text).lower()
+    hits = []
+    for cat in focus_cfg.get("categories", []):
+        if any(str(k).lower() in hay for k in cat.get("keywords", [])):
+            hits.append(cat.get("zh") or cat.get("en") or "")
+    return ("hit" if hits else "miss"), hits
+
+
+def judge(row, idx, thr, price_cfg_all, home_ids, market_gate=False,
+          focus_cfg=None, cat_names=None):
     issues, warns = [], []
     ident = str(row.get("offer_id") or "").strip() or f"第{idx + 1}行"
 
@@ -183,8 +269,8 @@ def judge(row, idx, thr, price_cfg_all, home_ids):
         issues.append(f"MISSING_FIELD: 必需列 {col} 为空或无法解析")
 
     region = str(row.get("region") or "").strip().upper()
-    if region not in ("TH", "VN"):
-        issues.append(f"REGION_INVALID: region={row.get('region')!r}（只接受 TH/VN）")
+    if region not in ("TH", "VN", "MY"):
+        issues.append(f"REGION_INVALID: region={row.get('region')!r}（只接受 TH/VN/MY）")
         return ident, issues, warns, None
 
     # ── 字段解析（缺失逐项报，不提前 return，一次给全问题）──
@@ -216,6 +302,22 @@ def judge(row, idx, thr, price_cfg_all, home_ids):
     elif imgs < thr["clean_consumer_images_min"]:
         issues.append(f"IMG_CLEAN_LT3: 干净消费者向主图 {imgs:g} 张 "
                       f"< {thr['clean_consumer_images_min']} 张（选品线，不是发布线 1 张）")
+
+    # 图片供给预测闸（2026-11-19）：发布硬闸要 5 张，选品期就得预测「修复后凑得出几张」。
+    # 计入口径 = L3_keep + image_fix 可救的 L1/L2 + 可提升为主图的干净 SKU/详情图。
+    # 表头存在才强制（同 MARKET_COLS 渐进策略，旧清单只 WARN）；<5 = 发布必挂，别浪费采集坑位。
+    fix_imgs = fnum(row.get("clean_main_images_after_fix"))
+    if "clean_main_images_after_fix" in row:
+        if fix_imgs is None:
+            miss("clean_main_images_after_fix")
+        elif fix_imgs < thr["clean_images_after_fix_min"]:
+            issues.append(
+                f"IMG_SUPPLY_LT5: 预测修复后可用主图 {fix_imgs:g} 张 < "
+                f"{thr['clean_images_after_fix_min']}（发布硬闸会拦；补图路径=SKU图/详情图降级复用、"
+                "image_fix 修图救回、或换图源充足的同款供应商）")
+    else:
+        warns.append("IMG_SUPPLY_UNPREDICTED: 缺 clean_main_images_after_fix 列——"
+                     "发布闸要 5 张主图，选品期先按 image_fix probe 证据预测一次再填")
 
     if fbool(row.get("desc_rebuildable")) is not True:
         issues.append("DESC_NOT_REBUILDABLE: desc_rebuildable 非 true，详情长图无法干净重建")
@@ -259,7 +361,7 @@ def judge(row, idx, thr, price_cfg_all, home_ids):
     elif thr["true_free_shipping"] == "cost_in_price":
         if free_ship is False and (domestic_shipping is None or domestic_shipping < 0):
             issues.append("DOMESTIC_SHIPPING_MISSING: 非包邮货源必须填 domestic_shipping_cny 页面运费")
-        if free_ship is False:
+        if free_ship is False and domestic_shipping is not None and domestic_shipping >= 0:
             warns.append(f"国内运费 ¥{domestic_shipping:g} 已计入成本；页面报价不等于实际货代仓最终报价")
         elif not proof_text:
             issues.append("FREE_SHIP_PROOF: 包邮货源需记录包邮条件核查证据")
@@ -285,7 +387,7 @@ def judge(row, idx, thr, price_cfg_all, home_ids):
 
     # ── 价格带：用最高 SKU 采购价现场重算，不信任人工填写的 in_band ──
     price_result = None
-    if max_sku and cost and region in ("TH", "VN"):
+    if max_sku and cost and region in ("TH", "VN", "MY"):
         cfg_site = merged(price_cfg_all, region)
         cfg_site["site"] = region
         markup_override = fnum(row.get("markup"))
@@ -307,6 +409,42 @@ def judge(row, idx, thr, price_cfg_all, home_ids):
                 f"客单价 ${price_result['order_usd']} 落在价格带 "
                 f"${price_result['band'][0]}–{price_result['band'][1]} 之外 → 换品，不要硬调 markup")
 
+    # ── 价格竞争力（P0-1）：挂价不得高于站内同款中位价 × tolerance ──
+    # 价格带校验只回答「这单赚不赚钱」，不回答「挂这个价有没有人点」。
+    # 在 $3.5–8 的白牌家居里，比站内中位价贵 5% 就等于把点击让给同款。
+    if market_gate:
+        median = fnum(row.get("market_median_price_usd"))
+        source = str(row.get("market_price_source") or "").strip()
+        n = fnum(row.get("market_price_n"))
+        sampled = str(row.get("market_price_sampled_at") or "").strip()
+        if median is None or median <= 0:
+            issues.append("MARKET_PRICE_MISSING: market_median_price_usd 为空 —— 选品阶段就必须查"
+                          "站内同款中位价（官方价格诊断 / FastMoss floorPrice / 遨虾同款中位价），"
+                          "不许先铺货再补")
+        else:
+            if not source:
+                issues.append("MARKET_PRICE_NO_SOURCE: 缺 market_price_source，中位价无法复核来源")
+            if not sampled:
+                warns.append("market_price_sampled_at 为空：价格是时效数据，没采集日期判不出是否过期")
+            if n is not None and n < thr["market_price_min_sample"]:
+                warns.append("市场价样本只有 %g 条 < %d 条，中位价可能被单款带偏"
+                             % (n, thr["market_price_min_sample"]))
+            if price_result:
+                order_usd = price_result["order_usd"]
+                cap = median * thr["market_price_tolerance"]
+                if order_usd > cap:
+                    issues.append(
+                        "PRICE_ABOVE_MARKET: 挂价 $%s > 站内中位价 $%g × %g = $%.2f "
+                        "→ 货架场比价必输（换货源/换品，不要靠压净利硬调）"
+                        % (order_usd, median, thr["market_price_tolerance"], cap))
+            band_min = float((price_result or {}).get("band", [0, 0])[0] or 0)
+            if band_min and median < band_min * 0.5:
+                warns.append("中位价 $%g 低于价格带下限 $%s 的一半，口径可疑（含税/不含税？）"
+                             % (median, band_min))
+    else:
+        warns.append("未启用价格竞争力闸：候选表缺 %s 列（用 --init-template 生成新表头）"
+                     % "/".join(MARKET_COLS))
+
     # ── 类目（推荐列：给值才硬校验，缺值提醒）──
     cat = str(row.get("category_id") or "").strip()
     if cat:
@@ -318,13 +456,26 @@ def judge(row, idx, thr, price_cfg_all, home_ids):
     else:
         warns.append("category_id 为空：认领后必须复核 ERP 匹配结果属家居用品 AVAILABLE 类目")
 
+    # ── 官方 2026 ✅ 重点类目（优先方向，非准入；给信号不阻断）──
+    focus_status, focus_hits = "unknown", []
+    if focus_cfg is not None:
+        hay = " ".join(x for x in (
+            cat_names.get(cat, "") if cat else "",
+            str(row.get("title_zh") or ""),
+        ) if x).strip()
+        focus_status, focus_hits = match_official_focus(hay, focus_cfg)
+        if focus_status == "miss":
+            warns.append("OFFICIAL_FOCUS_MISS: 类目/标题未命中官方 2026 ✅ 重点类目；"
+                         "家居树内仍可发品（✅ 是优先方向，不是准入资格，不阻断）")
+
     if not str(row.get("ship_city") or "").strip() or not str(row.get("forwarder_city") or "").strip():
         warns.append("ship_city/forwarder_city 未填齐，地域聚簇与货代覆盖无法复核（strategy 2.0）")
 
     if "pass" not in str(row.get("redline_check") or "").lower():
         issues.append("REDLINE_UNCHECKED: redline_check 不含 pass（strategy 5.1 十条红线须逐条核查留痕）")
 
-    return ident, issues, warns, price_result
+    return (ident, issues, warns, price_result,
+            {"status": focus_status, "hits": focus_hits})
 
 
 def write_template(path):
@@ -369,12 +520,16 @@ def main():
     thr = load_thresholds()
     price_cfg_all = load_config()
     home_ids = load_home_category_ids()
+    cat_names = build_category_name_map()
+    focus_cfg = load_official_focus()
+    market_gate = all(c in header for c in MARKET_COLS)
 
     results = []
     for i, row in enumerate(rows):
-        ident, issues, warns, price_result = judge(row, i, thr, price_cfg_all, home_ids)
+        ident, issues, warns, price_result, focus = judge(
+            row, i, thr, price_cfg_all, home_ids, market_gate, focus_cfg, cat_names)
         results.append({"offer_id": ident, "issues": issues, "warns": warns,
-                        "price": price_result})
+                        "price": price_result, "official_focus": focus})
 
     n_block = sum(1 for r in results if r["issues"])
     n_warn = sum(1 for r in results if r["warns"] and not r["issues"])
@@ -393,7 +548,10 @@ def main():
             if r["price"]:
                 p = r["price"]
                 price_note = f" 客单${p['order_usd']} 带${p['band'][0]}-{p['band'][1]}"
-            print(f"{mark} {r['offer_id']}{price_note}")
+            focus = r.get("official_focus") or {}
+            focus_note = (" [官方✅: %s]" % "/".join(focus.get("hits", [])[:2])
+                          if focus.get("status") == "hit" else "")
+            print(f"{mark} {r['offer_id']}{price_note}{focus_note}")
             for x in r["issues"]:
                 print(f"   ✗ {x}")
             for x in r["warns"]:

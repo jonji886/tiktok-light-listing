@@ -12,7 +12,13 @@
 设计前提（重要）：
   **本脚本不假装能看图**。艺术字、竖排字、印章字 OCR 会漏，所以整图判定交给
   多模态模型逐张目视后回填 review.json 的 verdict。脚本只做确定性的活：
-  下载两个通道的图 → 出待判定清单 → 按判定重建 → 写回 ERP → 回读验收 → 发布拦截。
+  下载三个通道的图（主图 / description 详情长图 / SKU 规格图）→ 出待判定清单
+  → 按判定重建 → 写回 ERP → 回读验收 → 发布拦截。
+
+三通道（2026-11-13 审查补齐 SKU 图）：
+  main  main_images[].uri                     实测恒 5 张
+  desc  description 里的 <img src>            实测 8–25 张（旧版只处理主图，一张没碰）
+  sku   sales_attributes[].sku_img.uri        实测 32/35 个属性带图，全是 1688 原图
 
 四级判定（review.json → images[].verdict）：
   L0_drop      B2B 素材 / 参数表 / 工厂仓库证书 / 整版中文 → 整图删
@@ -69,9 +75,14 @@ TAG_RE = re.compile(r"<[^>]+>")
 
 VALID_VERDICTS = {"L0_drop", "L1_inpaint", "L2_localize", "L3_keep", "pending"}
 
+# review 过期判定：判定表里失效 URL 达到 3 条或占比 >20% 即认为 detail 已换过
+STALE_MIN_COUNT = 3
+STALE_RATIO = 0.2
+
 DEFAULTS = {
     "b2b_markers": [],
     "min_clean_main_images": 1,
+    "min_publish_main_images": 5,   # 2026-11-19 发布闸硬下限（prepublish_guard 用）
     "min_desc_images_after_gate": 0,
     "max_cjk_chars_in_description": 0,
     "require_no_template_residue": True,
@@ -165,6 +176,71 @@ def main_image_urls(v2):
             if isinstance(x, dict) and x.get("uri")]
 
 
+def sku_image_urls(v2):
+    """SKU 规格图（sales_attributes[].sku_img.uri）。
+
+    2026-11-13 审查新增：实测 32/35 个 SKU 属性带 sku_img，全部指向 cbu01.alicdn.com
+    的 1688 原图。旧版只扫 main_images + description，这条通道一张都没碰——
+    而它是买家选规格时第一眼看到的图，中文/水印会原样发布。
+    """
+    out = []
+    for s in (v2.get("skus") or []):
+        if not isinstance(s, dict):
+            continue
+        for a in (s.get("sales_attributes") or []):
+            if isinstance(a, dict):
+                u = ((a.get("sku_img") or {}) or {}).get("uri")
+                if isinstance(u, str) and u.strip():
+                    out.append(u.strip())
+    return out
+
+
+def all_image_urls(v2):
+    """三通道合集：主图 + 详情图 + SKU 规格图（去重保序）。"""
+    seen, out = set(), []
+    for u in (main_image_urls(v2)
+              + desc_image_urls(v2.get("description") or "")
+              + sku_image_urls(v2)):
+        if u not in seen:
+            seen.add(u)
+            out.append(u)
+    return out
+
+
+def review_coverage(d, review):
+    """当前 detail 的图 URL 与判定表的差异，返回 dict：
+      missing  当前有图但判定表没有 → 有图从未被目视就发布
+      pending  当前有图但仍是 pending
+      stale    判定表有但当前已没有 → review 已过期（detail 被 ERP 改写/重新落盘）
+      known    判定表 URL ∪ uri_map 译文 URL（apply 之后图已换 URL，仍算已判定）
+
+    为什么必须查 stale（2026-11-13 审查实测）：4 次 apply 的 `before` 与 `after`
+    完全相同，却记录 dropped_images=12~17 —— 判定表里的图在当前 detail 里早已不存在，
+    闸门在"自我表演"。旧实现只查 missing（当前⊆判定），当前图更少时永远通过。
+    """
+    v2 = get_v2(d, strict=False)[2]
+    cur = all_image_urls(v2)
+    images = (review or {}).get("images") or []
+    verdicts = {str(x["url"]): (x.get("verdict") or "pending")
+                for x in images if isinstance(x, dict) and x.get("url")}
+    uri_map = {str(k): str(v) for k, v in ((review or {}).get("uri_map") or {}).items() if v}
+    known = set(verdicts) | set(uri_map.values())
+    return {
+        "missing": [u for u in cur if u not in known],
+        "pending": [u for u in cur if verdicts.get(u) == "pending"],
+        "stale": [u for u in verdicts if u not in set(cur)],
+        "known": known,
+        "verdicts": verdicts,
+    }
+
+
+def stale_too_much(stale, total):
+    """判定表失效比例是否已达「review 过期」级别（少量失效属正常：ERP 会剔图）。"""
+    if not stale:
+        return False
+    return len(stale) >= STALE_MIN_COUNT or len(stale) / max(1, total) > STALE_RATIO
+
+
 def download(url, dest, timeout=15):
     req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=timeout) as resp:
@@ -173,6 +249,15 @@ def download(url, dest, timeout=15):
         raise ValueError("空响应")
     dest.write_bytes(data)
     return len(data)
+
+
+def image_ext(url):
+    """按 URL 后缀取真实扩展名（旧版一律写 .jpg，png/webp 会被下游按错格式解码）。"""
+    low = (url or "").lower().split("?")[0]
+    for ext in (".png", ".webp", ".jpeg", ".jpg", ".gif", ".bmp"):
+        if low.endswith(ext):
+            return ".jpg" if ext == ".jpeg" else ext
+    return ".jpg"
 
 
 # ── inspect：verify 与 fix_sku 共用的纯函数 ──
@@ -197,6 +282,7 @@ def inspect_detail(d, cfg=None, review=None):
     stats["description_len"] = len(desc)
     stats["main_images"] = len(main)
     stats["desc_images"] = len(desc_image_urls(desc))
+    stats["sku_images"] = len(sku_image_urls(v2))
 
     if not desc.strip():
         issues.append(("FAIL", "EMPTY_DESCRIPTION", "description 为空 → 平台报「商品描述不能为空」"))
@@ -246,11 +332,11 @@ def inspect_detail(d, cfg=None, review=None):
         issues.append(("WARN", "FEW_DESC_IMAGES",
                        f"重建后详情图仅 {stats['desc_images']} 张"))
 
-    # 与判定表交叉：被判 L0 的 URL 不得残留在任何通道
+    # 与判定表交叉：被判 L0 的 URL 不得残留在任何通道（含 SKU 规格图）
     if review:
         dropped = {x["url"] for x in review.get("images", [])
                    if x.get("verdict") == "L0_drop" and x.get("url")}
-        leaked = [u for u in desc_image_urls(desc) + main_image_urls(v2) if u in dropped]
+        leaked = [u for u in all_image_urls(v2) if u in dropped]
         stats["dropped_url_leaked"] = len(leaked)
         if leaked:
             issues.append(("FAIL", "DROPPED_IMAGE_LEAK",
@@ -272,6 +358,7 @@ def cmd_scan(args, cfg):
     desc = v2.get("description") or ""
     main_urls = main_image_urls(v2)
     desc_urls = desc_image_urls(desc)
+    sku_urls = sku_image_urls(v2)
     text = plain_text(desc)
     cjk_count = len(CJK.findall(text))
     cjk_sample = re.sub(r"\s+", " ", "".join(dict.fromkeys(CJK.findall(text))))[:60]
@@ -279,7 +366,7 @@ def cmd_scan(args, cfg):
 
     # 按 URL 去重：同一张图可能同时是主图和详情图，只需判定一次
     order, channels = [], {}
-    for ch, urls in (("main", main_urls), ("desc", desc_urls)):
+    for ch, urls in (("main", main_urls), ("desc", desc_urls), ("sku", sku_urls)):
         for u in urls:
             if u not in channels:
                 order.append(u)
@@ -289,7 +376,7 @@ def cmd_scan(args, cfg):
     images = []
     for i, url in enumerate(order, 1):
         digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:12]
-        dest = out_dir / f"{digest}.jpg"
+        dest = out_dir / f"{digest}{image_ext(url)}"
         state, size = "skipped", 0
         if not args.no_download:
             if dest.exists():
@@ -307,10 +394,15 @@ def cmd_scan(args, cfg):
             hints.append(f"所在 description 含 {cjk_count} 个中文文本字符（可能同版素材，仅提示）")
         if "desc" in channels[url] and residue:
             hints.append(f"所在 description 含模板残渣 {','.join(residue[:3])}（仅提示）")
+        if "sku" in channels[url]:
+            hints.append("SKU 规格图：买家选规格第一眼可见，中文/水印同样要处理")
         images.append({
             "id": f"{sorted(channels[url])[0]}_{i:02d}",
             "url": url,
             "channels": sorted(channels[url]),
+            # local_file 是权威字段（相对图片目录）：Skill 目录搬家后 local_path 会失效，
+            # 相对名始终可用。local_path 仅作便利，不参与任何判断。
+            "local_file": dest.name,
             "local_path": str(dest),
             "download": state,
             "bytes": size,
@@ -326,7 +418,8 @@ def cmd_scan(args, cfg):
         "source_detail": str(Path(args.detail).resolve()),
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "how_to_judge": (
-            "逐张打开 local_path 看图（不要只看 heuristic_flags）。判定单位是整张图："
+            "逐张打开 local_file（图片目录下的文件名；local_path 搬家后会失效）看图，"
+            "不要只看 heuristic_flags。判定单位是整张图："
             "B2B 渠道标注/参数表/工厂仓库证书/整版中文=L0_drop；干净商品图只叠一行营销字=L1_inpaint；"
             "产品功能词=L2_localize；无中文无水印=L3_keep。低置信度一律转人工，不要猜。"
         ),
@@ -334,6 +427,7 @@ def cmd_scan(args, cfg):
         "summary": {
             "main_images": len(main_urls),
             "desc_img_tags": len(desc_urls),
+            "sku_images": len(sku_urls),
             "unique_images": len(order),
             "cjk_text_chars": cjk_count,
             "cjk_text_sample": cjk_sample,
@@ -346,7 +440,8 @@ def cmd_scan(args, cfg):
     }
     review_path = out_dir / "review.json"
     review_path.write_text(json.dumps(review, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"[gate] 详情 {Path(args.detail).name}：主图 {len(main_urls)} 张 / 描述图 {len(desc_urls)} 张 / 去重 {len(order)} 张")
+    print(f"[gate] 详情 {Path(args.detail).name}：主图 {len(main_urls)} 张 / 描述图 {len(desc_urls)} 张"
+          f" / SKU 图 {len(sku_urls)} 张 / 去重 {len(order)} 张")
     print(f"[gate] description 中文文本字符 {cjk_count} 个；模板残渣 {residue or '无'}")
     print(f"[gate] 待判定清单: {review_path}")
     print(f"[gate] 图片目录: {out_dir}")
@@ -376,12 +471,16 @@ def cmd_apply(args, cfg):
         sys.exit(f"[gate] 还有 {len(pending)} 张未判定，拒绝执行。逐张看图回填 verdict，"
                  "或显式 --assume-pending drop（保守全删）")
 
-    # 清单必须覆盖当前 detail 的两个通道，否则有未判定图会被静默放行
-    all_urls = set(main_image_urls(v2) + desc_image_urls(v2.get("description") or ""))
-    uncovered = sorted(all_urls - set(verdicts))
-    if uncovered:
-        sys.exit(f"[gate] 清单未覆盖 {len(uncovered)} 个当前 detail 里的 URL（例 {uncovered[0][:70]}）；"
-                 "detail 可能已换过，重跑 scan 并重新判定")
+    # 清单必须覆盖当前 detail 的三个通道，否则有未判定图会被静默放行
+    cov = review_coverage(d, review)
+    # 反向先查：判定表大面积失效时，"清单未覆盖"只是过期症状，先报根因
+    if stale_too_much(cov["stale"], len(verdicts)):
+        sys.exit(f"[gate] 判定表 {len(cov['stale'])}/{len(verdicts)} 条 URL 已不在当前 detail："
+                 "review 已过期（detail 被 ERP 改写或重新落盘过）。旧快照的判定对现在的商品无效，"
+                 "请重跑 scan 后重新判定；不要用 --assume-pending 绕过")
+    if cov["missing"]:
+        sys.exit(f"[gate] 清单未覆盖 {len(cov['missing'])} 个当前 detail 里的 URL"
+                 f"（例 {cov['missing'][0][:70]}）；detail 可能已换过，重跑 scan 并重新判定")
 
     drop = {u for u, v in verdicts.items()
             if v == "L0_drop" or (v == "pending" and args.assume_pending == "drop")}
@@ -446,6 +545,26 @@ def cmd_apply(args, cfg):
     cv2["main_images"] = new_main
     cv2["description"] = new_desc
 
+    # SKU 规格图：同一套判定。被判 L0 的置空（不留中文缩略图），其余按 uri_map 换 URL。
+    # 不做这一步的话，32/35 个 SKU 的 1688 原图会原样上线（买家选规格第一眼可见）。
+    sku_dropped, sku_mapped = 0, 0
+    for s in (cv2.get("skus") or []):
+        if not isinstance(s, dict):
+            continue
+        for a in (s.get("sales_attributes") or []):
+            if not isinstance(a, dict):
+                continue
+            img = a.get("sku_img") or {}
+            u = img.get("uri") if isinstance(img, dict) else None
+            if not isinstance(u, str) or not u.strip():
+                continue
+            if u in drop:
+                a["sku_img"] = {}
+                sku_dropped += 1
+            elif u in uri_map:
+                a["sku_img"] = {**img, "uri": uri_map[u]}
+                sku_mapped += 1
+
     # 用同一套硬闸验收重建结果，别只信"我改过了"
     issues, stats = inspect_detail(clean, cfg, review)
     fails = [x for x in issues if x[0] == "FAIL"]
@@ -467,12 +586,17 @@ def cmd_apply(args, cfg):
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "before": {"main_images": len(v2.get("main_images") or []),
                    "desc_img_tags": len(desc_image_urls(v2.get("description") or "")),
+                   "sku_images": len(sku_image_urls(v2)),
                    "description_len": len(v2.get("description") or ""),
                    "cjk_text_chars": len(CJK.findall(plain_text(v2.get("description") or "")))},
         "after": {"main_images": len(new_main), "desc_img_tags": len(kept_tags),
+                  "sku_images": len(sku_image_urls(cv2)),
                   "description_len": len(new_desc), "cjk_text_chars": stats.get("cjk_text_chars", 0)},
         "dropped_images": len(drop),
         "kept_images": len(keep),
+        "sku_images_dropped": sku_dropped,
+        "sku_images_remapped": sku_mapped,
+        "review_stale_urls": len(cov["stale"]),
         "uri_map_applied": sum(1 for u in kept_urls + [x["uri"] for x in new_main] if u in uri_map),
         "pending_external_work": {
             "inpaint": todo_inpaint,
@@ -486,6 +610,8 @@ def cmd_apply(args, cfg):
 
     print(f"[gate] 重建完成：主图 {report['before']['main_images']}→{len(new_main)}，"
           f"描述图 {report['before']['desc_img_tags']}→{len(kept_tags)}，"
+          f"SKU 图 {report['before']['sku_images']}→{report['after']['sku_images']}"
+          f"（删 {sku_dropped} / 换 {sku_mapped}），"
           f"中文文本 {report['before']['cjk_text_chars']}→{report['after']['cjk_text_chars']}")
     print(f"[gate] 整图删 {len(drop)} 张 / 保留 {len(keep)} 张 / 待外部处理 "
           f"{len(todo_inpaint) + len(todo_localize)} 张")
@@ -537,10 +663,45 @@ def push_to_erp(clean, args, cfg):
 
 
 # ── verify ──
+def review_gate_issues(d, review, require_review=True):
+    """判定表覆盖率闸门（与 inspect_detail 分开，因为它需要 review 本体）。
+
+    为什么必须默认开启（2026-11-13 审查实测）：旧 verify 不传 --review 也能退出码 0，
+    于是"发布前 verify 必须 0"这条纪律可以在**一张图都没目视过**的情况下被满足。
+    文本扫描只能证明"文字里没有汉字"，证明不了图里的中文。
+    """
+    issues = []
+    if not review:
+        if require_review:
+            issues.append(("FAIL", "NO_REVIEW",
+                           "未提供判定表（--review）：等于没有任何图被目视过，不能进 ttl-publish。"
+                           "先跑 scan 回填 verdict；确已逐张人工确认再加 --no-require-review"))
+        else:
+            issues.append(("WARN", "NO_REVIEW",
+                           "显式放行：本次未校验判定表覆盖率（图里是否有中文未经本脚本确认）"))
+        return issues
+    cov = review_coverage(d, review)
+    if cov["missing"]:
+        issues.append(("FAIL", "REVIEW_MISSING_URL",
+                       f"{len(cov['missing'])} 张当前图不在判定表（例 {cov['missing'][0][:70]}）"
+                       "→ 这些图从未被判定，重跑 scan"))
+    if cov["pending"]:
+        issues.append(("FAIL", "REVIEW_PENDING",
+                       f"{len(cov['pending'])} 张仍是 pending → 未判定就发布"))
+    if stale_too_much(cov["stale"], len(cov["verdicts"])):
+        issues.append(("WARN", "REVIEW_STALE",
+                       f"{len(cov['stale'])}/{len(cov['verdicts'])} 条判定已失效"
+                       "（URL 不在当前 detail，detail 可能被改写或重新落盘）→ 建议重跑 scan"))
+    return issues
+
+
 def cmd_verify(args, cfg):
     d = read_json(args.detail)
     review = read_json(args.review) if args.review else None
     issues, stats = inspect_detail(d, cfg, review)
+    issues += review_gate_issues(d, review, getattr(args, "require_review", True))
+    if any(x[0] == "FAIL" for x in issues):
+        issues = [x for x in issues if x[1] != "PASS"]   # 别在 FAIL 旁边留一行「闸门通过」
     print(f"[gate] {Path(args.detail).name}: {json.dumps(stats, ensure_ascii=False)}")
     for level, code, msg in issues:
         mark = {"FAIL": "✗", "WARN": "⚠", "INFO": "✓"}.get(level, "·")
@@ -562,7 +723,7 @@ def main():
     ap = argparse.ArgumentParser(description="详情页中文/B2B 素材图片闸门")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("scan", help="扫主图 + description 两通道，下载并生成待判定清单")
+    s = sub.add_parser("scan", help="扫主图 + description + SKU 图三通道，下载并生成待判定清单")
     s.add_argument("--detail", required=True, help="ttl-detail 落盘的 JSON")
     s.add_argument("--out", help="输出目录（默认 erp_data/image_gate/<item_id>/）")
     s.add_argument("--no-download", action="store_true", help="只出清单不下图（离线自检）")
@@ -583,6 +744,10 @@ def main():
     v = sub.add_parser("verify", help="发布前硬闸；退出码 1 = 拦截")
     v.add_argument("--detail", required=True, help="原始或 cleaned_detail.json")
     v.add_argument("--review", help="带 verdict 的清单，用于交叉检查被删 URL 是否残留")
+    v.add_argument("--require-review", dest="require_review", action="store_true", default=True,
+                   help="要求判定表覆盖全部当前图（默认开启；缺判定即拦截）")
+    v.add_argument("--no-require-review", dest="require_review", action="store_false",
+                   help="显式放行无判定表的情况（仅当图已逐张人工确认过）")
     v.add_argument("--json", help="把结果另存为 JSON（供其他脚本消费）")
     v.add_argument("--config")
 

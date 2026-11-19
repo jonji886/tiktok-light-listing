@@ -129,6 +129,13 @@ supplier_gates:
   # → 取到 offerId 后必须先拉 1688 主图目视过闸，才能进 Step 1 采集。
   # 注意别和发布闸门 image_gate.yaml 的 min_clean_main_images:1 混用，这里要求 3 张。
   clean_consumer_images_min: 3        # 无中文/无B2B字样的消费者向主图 ≥3 张（按整图删后的余量估）
+  # ── 图片供给预测闸（2026-11-19 新增，围裙 5→1 教训的前置化）──
+  # 发布硬闸已提级 min_publish_main_images=5：任何货源最终必须凑出 5 张干净主图，
+  # 凑不出=发布被拦+全流程白跑。选品时就按「修复预算」预测供给：
+  #   clean_main_images_after_fix = L3_keep 张数 + 探针判可修的 L1/L2 张数 + 可提升的干净 SKU/详情图张数
+  # ≥5 → 绿灯直接进；<5 → 该货源只有两种去路：确认能低成本补到 5（AI 生成/换源同款）或放弃。
+  # 依据：5 品批次 83% 主图被判删、修复救回率 ~3:4（围裙实测），纯删不修的货源发布必挂。
+  clean_images_after_fix_min: 5
   desc_rebuildable: true              # 详情长图允许整图删后用当地语言文本+干净图重建；全脏且无可重建图 = 换货源
   # ⛔ 以下 3 行是 $5 下限时代的残留，仅定价模型备查，**不得据此铺货**（2026-11-12 第二批纠正）：
   # 一件代发认领后 SKU 是单件规格、代发只下 1 件，按 2 件成本定价 = 收 2 件钱发 1 件（履约事故）。
@@ -231,9 +238,39 @@ cadence:
   optimize_day: 7           # 第7天看曝光/点击数据
   kill_day: 20              # 20天无出单/无流量即下架换品
   data_backflow_day: [2, 7, 20]  # T+2 入池、T+7 曝光点击、T+20 成交判定
+  # ── T+7 四象限（2026-11-18 新增）──
+  # 官方口径：低曝光+高转化 = 搜索不匹配，回「商品可被搜索」阶段改标题，不是 kill。
+  # 低曝光线复用 index_exposure_min；「高转化」在 T+7 只能用加购率代理（成交要等 T+20），
+  # 这是本 skill 的经验阈值，非官方数字。
+  quadrant_high_addcart_rate: 0.10    # 加购/点击 ≥10% 视为高转化
+  # ── T+0 发布后免费流量三件套（2026-11-18 新增）──
+  # 官方优先级：销售加速工具 > 营销工具(早鸟价) > 广告工具。
+  traffic_action_hours: 24            # 上架满 24h 应完成三项动作，超时列入 traffic-due
   # 延迟发货率告警线：超过即视为链路信号（换货代/转备货），不是选品问题。
   # 本 skill 的经验阈值，**非官方口径**；官方按订单履约报表给数，发现更严口径时以官方为准。
   late_ship_rate_warn: 0.10
+
+# ── 价格竞争力闸（P0-1，2026-11-18 新增）──
+# 价格带 price_band_usd 只判"这单赚不赚钱"，不判"挂这个价有没有人点"。
+# 白牌家居同款满地跑，比站内中位价贵 5% 就等于把点击让给同款。
+# 证据落 selection_candidates.csv 的 market_* 四列，由 select_gate.py 机器校验。
+market_price:
+  market_price_tolerance: 1.05   # 挂价上限 = 站内同款中位价 × 1.05；超出即换货源/换品
+  market_price_min_sample: 5     # 中位价样本量下限，低于此只 WARN（数据不稳）
+  # 键名带前缀是刻意的：select_gate.load_thresholds 是扁平正则读标量，靠唯一键名命中
+  # 取数来源（按可信度）：官方商家后台「价格诊断」> FastMoss floorPrice > 遨虾 opprank 同款中位价
+  # 注意口径：比价必须同口径（都含税或都不含税），TH 买家侧还有 17.7% 进口税
+
+# ── 商品卡质量闸（P0-3，2026-11-18 新增）──
+# 官方四阶段「可售→可被搜索→被点击→下单」，image_gate/prepublish_guard 只覆盖第一段。
+# 本节阈值由 scripts/listing_quality_gate.py 执行，发布前退出码必须为 0。
+card_quality:
+  title_min_chars: 40          # 官方口径：标题字符数越多越容易被搜到，建议 ≥40
+  title_min_keyword_hits: 3    # 标题至少命中 3 个热搜词根（词表 config/keywords/<site>.txt）
+  min_main_images: 5           # 官方建议主图不少于 5 张
+  min_attributes: 5            # product_attributes 已填项下限（实测 34/34 款为 0，曝光为 0 的直接原因）
+  require_video: required      # 无商品视频直接阻断
+  require_card_evidence: warn  # 主图角色（卖点/场景/尺寸/细节）证据缺失：warn=只提醒，required=阻断
 
 # ── 渠道取舍（2026-11-12 显式记录机会成本，理由见 strategy §8.4）──
 # 当前决定：不开达人佣金、只走货架场（pricing.yaml 的 creator 档 enabled:false）。
