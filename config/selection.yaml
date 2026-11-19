@@ -269,7 +269,9 @@ card_quality:
   title_min_keyword_hits: 3    # 标题至少命中 3 个热搜词根（词表 config/keywords/<site>.txt）
   min_main_images: 5           # 官方建议主图不少于 5 张
   min_attributes: 5            # product_attributes 已填项下限（实测 34/34 款为 0，曝光为 0 的直接原因）
-  require_video: required      # 无商品视频直接阻断
+  require_video: warn          # 2026-11-19 降档：破零期走货架场(creator档enabled:false)、无视频素材源
+                               # （需实拍/平台生成，铺货管道造不出视频）。required 会阻断全部上架，
+                               # 与「先上架拿曝光数据」矛盾 → 降 warn 只提醒。有视频源后再改回 required。
   require_card_evidence: warn  # 主图角色（卖点/场景/尺寸/细节）证据缺失：warn=只提醒，required=阻断
 
 # ── 渠道取舍（2026-11-12 显式记录机会成本，理由见 strategy §8.4）──
