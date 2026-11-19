@@ -47,11 +47,23 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
 - 接口为未公开内部接口：**报错先读 `失败原因`/`errorMessage` 原文，按 `references/erp-pitfalls.md` 的码表定位**，
   不要用同一份数据重试；确认是接口不可用时再回退浏览器操作
 - 所有写操作(claim/edit/publish/del)仅对用户明确点名的清单执行；改价、修 SKU 一律先 `--dry-run`
+- **标题/描述/规格名译名只查表**：`config/i18n/<lang>.csv`（`VN→vi.csv`、`TH→th.csv`），
+  入口 `scripts/i18n.py`。加新品 = 加一行，不改代码；查不到返回 `None`，由调用方转人工或阻断。
+  **禁止按 SKU 序号套模板**（2026-11-13 删除的旧实现会轮流贴「粉/蓝/灰/黑/白/绿」，与真实颜色无关）。
 - **拿不到数据就写"拿不到"，不要用旧快照或推测值补位**
 - **发布前 `image_gate.py verify` 退出码必须为 0**（退出码 1 = 图片闸门拦截，禁止 `ttl-publish`；
   详见 Step 4.3 / 5.1）。脚本不会看图，整图判定由多模态模型回填 `review.json`，未判定即拒绝 apply
 
-## 复盘结论速查（动手前先读这 8 条；全文见 `references/replay-log.md`）
+## 复盘结论速查（动手前先读这 11 条；全文见 `references/replay-log.md`）
+
+> **2026-11-18 破零三闸（最高优先级，先于一切铺货动作）**：本 skill 旧版 768 行只管「能不能发出去」，
+> 零行管「发出去有没有人看」——这是 22 天 7 款零单的结构性根因。现补三道强制闸，**不跑等于没做破零**：
+> ① 选品期 `select_gate.py` 的 **价格竞争力闸**（挂价 ≤ 站内同款中位价×1.05，详见 Step 0.5）；
+> ② 发布前 `listing_quality_gate.py` 的 **商品卡质量闸**（标题词根/5 主图/属性/视频，详见 Step 5.1 第 0d 项）；
+> ③ T+2 `backflow.py index` 的 **入池体检**（48h 强制、陌生账号搜词 + 7 天曝光，详见 Step 6.1）。
+> 判据从「上架数/出单」改为「入池率」——出单是结果，入池是唯一你能控的过程指标。
+> 同日再补两条执行闸：T+0 **免费流量三件套**（`backflow.py traffic-due`，24h 强制）与
+> T+7 **曝光×加购率四象限**（低曝光+高转化 = 搜索不匹配 → 改标题补词，**禁止 kill**）。
 
 > 四批实测（2026-11-12）与三个真实 case 的原文已全部下沉到 `references/replay-log.md`。
 > 这里只留「会改变当前动作」的结论；相互冲突时以 `replay-log.md` 中时间最新者为准。
@@ -68,7 +80,9 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
 6. **SKU 规格名逐品对齐 1688 原始 `skus`**，禁止整批套同一套颜色名（写错 = 买家选 A 收 B）。
 7. **重量尺寸显式按品传**：卖家 `itemWeight` 全填 0，净重/尺寸藏在详情参数表里；三套默认值打架，
    推算值一律标 `INFERRED`。`price_gate` 用本批子集（`--csv`）避免被历史脏草稿拖成退出码 1。
-8. **别承诺出单**：官方口径 150 款才出首单，10 款差一个数量级；配额与后台在售数当前无脚本能力，如实标「未验证」。
+8. **别拿「款数不够」解释零单**：官方「约 150 款出首单」是统计规律不是承诺；当前 22 天 7 款的瓶颈是
+   **入池率 0**，不是差一个数量级——判据是 `backflow.py index-stats`，不是累计上架数。
+   配额与后台在售数当前无脚本能力，如实标「未验证」。
 
 ### VN20 新增硬规则（2026-11-13）
 
@@ -137,7 +151,11 @@ python3 scripts/erp_token_grab.py --save --check    # 从 Chrome Session Storage
     --keywords-file erp_data/keywords_th.txt --usd-min 3.5 --usd-max 8 --max-creator 100 --min-video 10`
     → 逐词拉取、去重、按 `creatorOrderRate` 分 `ideal/shelf/mixed` 档并剔除纯达人驱动，落 `selection_pool.csv`。
     实测 3 个泰语词 24+46+34 条去重到 91 条、入池 71 条；换成 18 词就是几百条，不用再人工抄榜单。
-  - ⚠️ **不再需要**买 FastMoss 订阅或开 LinkFox 权限（`echotik/listProduct`、`fastmoss/productSearch` 直连均 402，ERP 后端可透传）。
+  - ⚠️ **不需要**买 FastMoss 订阅：ERP 后端透传是主通道（免 token）。**LinkFox 直连通道 2026-11-18 复测已打通**
+    （`fastmoss/productSearch`、`echotik/listProduct`、`echotik/batchProductDetail` 均 `errcode:200`），
+    旧的"直连均 402、别去试"结论**已过期作废**；但 LinkFox 数据为第三方快照（`THIRD_PARTY_ONLY`），
+    与 ERP 透传口径可能不一致（同一商品销量两源差近一倍），**两者不要混用同一评分维度**，
+    且必须用当地语言长尾词（中文词命中 0）。取数脚本见 `scripts/linkfox_sourcing.py`。
   - **判读优先看 `creatorOrderRate`（达人出单率）而不是周销排行**：出单率 = 0 说明销量几乎全靠自然搜索/货架场，
     这正是「不开达人佣金」的新人最该抢的品；出单率 100% 说明全靠达人带货，你不开佣金就拿不到这个量（详见 strategy 4.7）。
   - 降级仍保留：接口不可用时按 `content.proxy_mode` 打分，上限 6 分，标注 `content_source: proxy`。**不得因缺数据给假高分。**
@@ -156,7 +174,7 @@ python3 scripts/erp_token_grab.py --save --check    # 从 Chrome Session Storage
   本节凡出现「组合装 / 2件套 / 同店可搭配 SKU」的条件均为 $5 下限时代残留，**不作选品依据**。
 - 采购价上限（150g / shelf，`--limits` 实算）：TH 单件 **22.4** / 2件套单件等效 **9.4**；VN 单件 **16.7** / 2件套 **6.6**。重量上去上限迅速下降（TH 400g 单件仅 17.4）。**超上限 = 换品，不要硬调 markup。**
 - 供应链门槛全部要过（见 strategy 5.2）：跨境专供 / 一件代发 / **无隐形起订量** / 库存≥200 / **承诺48h发货（要客服书面确认）** / **快递到货代仓 ≤1 天** / 非预售非定制 / 主图可复用 / **无中文干净消费者向主图 ≥3 张 + 详情图可重建**（`selection.yaml` → `supplier_gates.clean_consumer_images_min`；
-  全脏的货源在 1688 找货阶段就换掉，别等铺进采集箱才发现） / **实重 ≤400g 且抛重 ≤400g**
+  全脏的货源在 1688 找货阶段就换掉，别等铺进采集箱才发现；**且修复后须能凑 ≥5 张**，见 `clean_images_after_fix_min`） / **实重 ≤400g 且抛重 ≤400g**
   （对应体积 ≤2400cm³，约 20×15×8cm）/ **真包邮（`true_free_shipping: required`，硬门槛）**：
   1 件起包邮且无满件/隐形条件，须在 `free_shipping_proof` 留核查证据，警惕「满 3 件才包邮」的假包邮（strategy 3.4）。
   - 尺寸一律按**抛重**判：`抛重(g) = 长×宽×高(cm) ÷ 6000 × 1000`。实重轻不代表运费低（假花/收纳筐这类必算）。
@@ -182,6 +200,13 @@ python3 scripts/erp_token_grab.py --save --check    # 从 Chrome Session Storage
 
 配套两条否决规则：① 标题含品牌名（大写英文词）= 已被品牌方运营，撞侵权红线；② 一批达人反复带同款、每达人周销 <2 件 = 铺达人打法，不是真实需求。
 
+  - **IP 红线自动检测能力边界（2026-11-18 实测，见 `references/linkfox-ip-detection-coverage.md`）**：
+    LinkFox 睿观 5 个工具里**只有外观专利支持 TH**（须显式 `regions:"TH"`），
+    文本/图形商标与实用新型**均不支持 TH/VN**，版权检测无区域参数且噪声大。
+    因此 brand_ip 红线**主判据仍是"标题大写英文词 + 主图目视"**，不可托付给睿观。
+    TH 站可选加一道外观专利预检：仅当 `radarResult.same==true` 或 `troCase==true` 才拦截，
+    **禁止用 similarity 阈值自动否决**（通用包装图实测虚高到 0.69）；VN 站如实标 UNKNOWN 转人工。
+
 #### 0.5 出候选清单 + select_gate 采集前硬闸（退出码 1 禁止 Step 1）
 **「第二批实测」第 1 条的四道门槛已代码化为 `scripts/select_gate.py`，不再靠人工记得执行。**
 历史教训：门槛本来就在 `selection.yaml`/strategy 5.2 里，但本轮选品只用遨虾搜索结果（不返回图片）、
@@ -201,7 +226,12 @@ python3 scripts/selection_intake.py seed --batch erp_data/selection_intake/prefi
    `seed` 直接生成下面这套骨架行，把「抄录」这一最耗工的环节省掉（历史候选只有 14 条的根因就是这里）。
    ⚠ 1688 详情页对无 Cookie 直连有 IP 级风控，拿不到全 5 张图时会降级为遨虾单图并如实标注，不要当成已达标。
 2. 按 strategy 第九章字段回填候选行，**人工/多模态目视的结论必须落成证据列**：
-   `clean_main_images`（≥3）/`desc_rebuildable`/`seller_48h_proof`/`free_shipping`+`free_shipping_proof`/
+   `clean_main_images`（≥3）/`desc_rebuildable`/
+   `clean_main_images_after_fix`（**2026-11-19 新增 P0-3**：预测修复后可用主图 ≥5——发布硬闸
+   `min_publish_main_images=5` 会拦掉不足品，围裙 5→1 白跑教训；口径 = L3_keep + image_fix probe
+   判可修的 L1/L2 + 可提升的干净 SKU/详情图；证据 = `selection_intake.py image` 拉的主图 +
+   `image_fix.py probe` 的 seen_text，采集前 ¥0.02/张即可预测）/
+   `seller_48h_proof`/`free_shipping`+`free_shipping_proof`/
    `ship_transit_days`/`weight_g`+`dims_cm`/`max_sku_cost_cny`/`redline_check`（含 pass）。
    脚本不联网、不看图（与 image_gate 同一哲学），只保证这些证据不缺失、达标且与定价配置自洽。
 3. collect 前必须跑闸门，**退出码 0 才允许把 offerId 传入 Step 1**：
@@ -212,6 +242,37 @@ python3 scripts/route_gate.py --csv erp_data/selection_candidates.csv --warehous
    闸门会现场用 `pricing_calc` 按**最高 SKU 采购价**+实重/抛重重算价格带（不信任人工填的 in_band），
    并校验类目树、真包邮、48h 书面确认、库存/MOQ、pieces=1 等全部硬门槛；issue code 与修复指引逐条打印。
    `route_gate.py` 只复核已绑定仓和到仓证据：不猜同城/同省时效，公司名不能替代发货城市。
+
+#### 0.5b 价格竞争力闸（2026-11-18 新增，P0：解决「挂价没人点」）
+
+**价格带校验只回答「这单赚不赚钱」，不回答「挂这个价有没有人点」。** 实测在售 7 款挂价 ฿129–201
+全部高于站内家居中位价 ฿113（$3.37）——比价场直接被同款淘汰。旧版只有自设 $3.5–8 带内校验，不是市场价。
+
+`select_gate.py` 会**检测候选表头**：含下列 4 列时自动启用价格竞争力闸，缺列则只 WARN（旧清单向后兼容）：
+
+| 列名 | 含义 | 取数来源（按可信度） |
+|---|---|---|
+| `market_median_price_usd` | 站内同款中位价（USD） | 官方商家后台「价格诊断」> FastMoss `floorPrice` > 遨虾 opprank 同款中位价 |
+| `market_price_source` | 来源标识 | 必填，无来源即阻断（`MARKET_PRICE_NO_SOURCE`） |
+| `market_price_n` | 样本量 | < `market_price_min_sample`（默认 5）只 WARN，中位价可能被单款带偏 |
+| `market_price_sampled_at` | 采集日期 | 价格是时效数据，无日期判不出过期 |
+
+判定：`pricing_calc` 重算的挂价 `order_usd > 中位价 × market_price_tolerance`（默认 1.05）→ `PRICE_ABOVE_MARKET` 阻断，
+**换货源/换品，不许靠压净利硬调**。注意比价口径必须一致（都含税或都不含税；TH 买家侧还有 17.7% 进口税楔）。
+`--init-template` 已把这 4 列写进模板头。
+
+#### 0.5c 官方 2026 ✅ 重点类目信号（2026-11-18 新增）
+
+官方《新商破零》「1.1 2026 年重点品类一览」把家居树内 18 个类目标 ✅（家居收纳、纸巾湿巾、
+卫浴、五金工具、办公用品、灯具电气、节日派对装饰、宠物食品、孕妇/哺乳用品等）。
+`config/official_focus_categories.json` 收录这份白名单，`select_gate.py` 在
+「`category_id` 对应类目名 + `title_zh`」上匹配：
+
+- 命中 → 结果标 `[官方✅: 类目名]`，同等条件下优先排进候选清单；
+- 未命中 → 只 WARN，**不阻断 collect**（✅ 是平台优先方向，不是准入资格，家居树内仍可发品）。
+
+**来源时效**：官方页面元数据 `Updated 09/19/2024`，正文署名「招商团队 2026/01」且标题写「2026 年重点品类」。
+两个时间对不上，类目表按 2026 版理解，但别当成当天实时数据；以商家大学「选品指南 → 家居品类材料」复核为准。
 
 落盘 `erp_data/selection_candidates.csv`，字段见 strategy 第九章（必须含 `landed_cny`/`price_local`/`in_band`/`pieces`/`content_source`/`creator_order_rate`/`competition_source`/`fulfill_check`/
 `clean_main_images`/`desc_rebuildable`——后两项是图片闸门的源头门槛，缺了就等于把脏图判断推迟到发布前）。
@@ -313,14 +374,19 @@ python3 scripts/erp_client.py ttl-detail --id <ttl_id>
 **Hero 挑选规则**：只挑「已算出毛利 ≥20% + 站内搜索词明确 + 有已售数据」的前 10–20 个。其余全部走长尾档。
 **长尾档的底线不变**：主图少于 1 张干净图 → 换货源（`min_clean_main_images`），不要留脏图凑数。
 
-#### 4.3 图片闸门（本Skill核心，2026-11-12 重写）
+#### 4.3 图片闸门（本Skill核心，2026-11-12 重写；2026-11-13 补第三通道）
 
-**先认清两条图片通道**（实测 9 个真实 `ttl_detail_*.json`）：
+**先认清三条图片通道**（实测 10 个真实 `ttl_detail_*.json`）：
 
 | 通道 | 字段 | 实测张数 | 旧流水线是否处理 |
 |---|---|---|---|
-| 主图 | `main_images[].uri` | 恒 5 张 | ✅ 旧 Step 4.3 只管这里 |
-| 详情长图 | `description` 里的 `<img src>` | **8–25 张** | ❌ 一张都没碰 |
+| 主图 | `main_images[].uri` | 1–5 张 | ✅ 旧 Step 4.3 只管这里 |
+| 详情长图 | `description` 里的 `<img src>` | **0–25 张** | ❌ 一张都没碰 |
+| SKU 规格图 | `skus[].sales_attributes[].sku_img.uri` | **32/35 个属性带图** | ❌ 完全在扫描范围外（2026-11-13 补） |
+
+SKU 图是买家**选规格时第一眼看到**的图，且实测全部指向 `cbu01.alicdn.com` 的 1688 原图——
+中文/水印会原样发布。`apply` 对它的处置与主图一致：被判 `L0_drop` 的**置空 `sku_img`**，
+其余按 `uri_map` 换 URL。
 
 「跨境电商专用 / 工厂直供 / 一件代发 / 支持OEM / 5000平大仓库」这类字，
 大面积漏进 TikTok 商品详情页的是**详情长图**，不是主图。真实样本还带 133 个中文文本节点
@@ -334,13 +400,13 @@ python3 scripts/erp_client.py ttl-detail --id <ttl_id>
 
 **判定不能用 OCR 关键字表**：艺术字、竖排字、印章字 OCR 会漏。用多模态模型逐张看整图，
 输出结构化判定（是否 B2B 素材 / 命中文字 / 置信度 / 处置建议），低置信度转人工。
-`image_gate.py` **不假装能看图**：`scan` 只负责下载两通道的图并出待判定清单，
+`image_gate.py` **不假装能看图**：`scan` 只负责下载三通道的图并出待判定清单，
 判定由模型回填 `review.json` 的 `verdict`。`config/image_gate.yaml` 里的 B2B 词表
 只是 `verify` 阶段的**文本残留兜底**，不是判定规则。
 
 | 级别 | 判定 | 处置 |
 |---|---|---|
-| `L0_drop` | B2B 渠道标注、参数表、工厂/仓库/证书图、整版中文 | **整图删**（主图移除；描述图从 HTML 移除） |
+| `L0_drop` | B2B 渠道标注、参数表、工厂/仓库/证书图、整版中文 | **整图删**（主图移除；描述图从 HTML 移除；SKU 图置空） |
 | `L1_inpaint` | 干净消费者向商品图，只叠了一行营销字 | 保留，列入待擦除清单 |
 | `L2_localize` | 产品功能词 | 保留，擦原文 + 原位写泰文/越南文 |
 | `L3_keep` | 无中文无水印 | 原样保留 |
@@ -349,13 +415,15 @@ python3 scripts/erp_client.py ttl-detail --id <ttl_id>
 **执行（必须先 `ttl-detail` 落盘，全流程纯标准库）**：
 ```bash
 python3 scripts/image_gate.py scan --detail erp_data/ttl_detail_<id>.json
-# 【多模态模型】逐张打开 erp_data/image_gate/<id>/*.jpg，回填 review.json：
+# 【多模态模型】逐张打开 erp_data/image_gate/<id>/ 下的图（用 images[].local_file，
+#   不要用 local_path —— 绝对路径在 Skill 目录搬家后失效），回填 review.json：
 #   images[].verdict / seen_text / confidence / note
 #   localized_text：当地语言纯文本段落（必填，否则重建后描述为空）
 #   uri_map：L1/L2 处理完的新图 URL（旧 URL → 新 URL）
 python3 scripts/image_gate.py apply --detail erp_data/ttl_detail_<id>.json \
     --review erp_data/image_gate/<id>/review.json          # dry-run，只出文件
-python3 scripts/image_gate.py verify --detail erp_data/image_gate/<id>/cleaned_detail.json
+python3 scripts/image_gate.py verify --detail erp_data/image_gate/<id>/cleaned_detail.json \
+    --review erp_data/image_gate/<id>/review.json
 python3 scripts/image_gate.py apply --detail erp_data/ttl_detail_<id>.json \\
     --review erp_data/image_gate/<id>/review.json --save  # 写回 ERP（写操作，需确认）
 ```
@@ -368,15 +436,38 @@ python3 scripts/image_gate.py apply --detail erp_data/ttl_detail_<id>.json \\
    没给当地语言文本时脚本直接中止，**不会替你编一段**。
 2. **主图删完必须 ≥1 张**（`config/image_gate.yaml` → `min_clean_main_images`）。
    一张不剩 = 换货源，**不要留一张脏图凑数**。
-3. **发布前必须 `verify` 且退出码 0**。检查：描述非空 / 主图 ≥1 / 文本与 `img alt` 无汉字 /
-   B2B 词无残留 / 无模板残渣 / 被判 `L0_drop` 的 URL 未在两个通道残留。
-   退出码 1 = 禁止 `ttl-publish`。⚠️ 文本扫描看不见图里的中文字，只能兜底，判定表不能省。
+3. **发布前必须 `verify` 且退出码 0，且必须带 `--review`**。检查：描述非空 / 主图 ≥1 /
+   文本与 `img alt` 无汉字 / B2B 词无残留 / 无模板残渣 / 被判 `L0_drop` 的 URL 未在三个通道残留 /
+   **判定表覆盖全部当前图（`REVIEW_MISSING_URL`、`REVIEW_PENDING` 均阻断）**。
+   退出码 1 = 禁止 `ttl-publish`。⚠️ 文本扫描看不见图里的中文字，只能兜底，判定表不能省；
+   不给 `--review` 时 `NO_REVIEW` 直接 FAIL——否则"发布前 verify 必须 0"这条纪律可以在
+   **一张图都没目视过**的情况下被满足。
+4. **判定表过期必须重扫**。`apply` 会反向校验：判定表里有 3 条以上（或 >20%）URL
+   已不在当前 detail，说明 detail 被 ERP 改写/重新落盘过，旧判定对现在的商品无效，
+   直接拒绝执行。（2026-11-13 前无此校验，实测 4 次 `apply` 的 before/after 完全相同，
+   却报告 `dropped_images=12~17` —— 闸门在空转。）
+   ⚠️ **2026-11-13 之前生成的 review.json 只覆盖主图+详情图**，现在会因未覆盖 SKU 图而拒绝 `apply`，
+   属预期：重跑 `scan` 重新判定即可（实测同一商品从 19 张变 38 张，多出的 19 张全是 SKU 图）。
 
-**L1/L2 保留图的擦字与翻译仍走原 AI 流水线**，但只作用于少量干净图，不再对整版招商素材做无用功：
-1. 下载原图 → OCR 文字块（位置+内容）→ 分类 → inpaint 擦除 / 原位写泰文·越南文
-2. 第 1 张主图额外 AI 抠图换白底（TikTok 硬要求）
-3. 新 URL 填回 `review.json` 的 `uri_map`，再 `apply` 一次（换 URL 不改数量，避免错位）
-4. 直通外链填 `main_images[].uri` 即可，无需 getUploadPolicy/OSS 上传
+**L1/L2 保留图的擦字/翻译/白底走 `scripts/image_fix.py`**（2026-11-19 实测定型，Aidge 专用 API + ERP 图床转存）：
+1. `image_fix.py probe --review <review.json>`：逐张跑智能元素识别（ImageRecognition），
+   把 `seen_text` 证据写回 review.json。**判 L0 必须先有证据**——治"空判过杀"（围裙 5 张主图
+   被删到 1 张、31 条判定 seen_text 全空的根因之一）。探针提示"少量可擦文字"但判了 L0 的图 = 疑似过杀，目视复核改判。
+2. `image_fix.py fix --review <review.json> --dst ms|th|vi [--matting-first]`：
+   - L1 → `ImageRemove` 元素模式 `NonObjectRemoveElements=[1,2,3,4]`（自动擦非主体的文字/水印/牛皮癣，
+     mask 外像素不动；实测四宫格 4 标签全净、商品布标正确保留——布标属主体，合规）
+   - 复检残留图形元素（图标/底板）→ 该图加 `fix_boxes:[x1,y1,x2,y2]` 重跑（走 `Position` 参数；
+     ⚠ `Mask` 要 RLE 编辑器编码，传矩形会被静默忽略——2026-11-19 实测踩坑）
+   - L2 → `ImageTranslationPro`（实测小字标注直接擦除不留痕、数字保留；语言码无效会 InvalidParameter，脚本回退 en 并标注）
+   - 首图 → `ImageMatting WHITE_BACKGROUND`（⚠ 抠图会把非商品元素一并抠掉，挂架/场景图慎用，先目视再定稿）
+   - 每张结果：下载 → `erp_upload.py` 转存 ERP OSS → 新直链写 `uri_map`（Aidge 临时链约 30 天过期，禁止直接进 uri_map）
+   - 补刀起点自动接 `uri_map` 上一轮结果（链式修复，不重复擦已净区域）
+3. **复检五条款**（目视 `fixed_*`）：①文字完整正确 ②无中文残留 ③无幻觉字 ④无URL残留 ⑤商品本体未被改动。
+   过 → `recheck:"ok"`；不过 → 补刀限 1 轮，仍不行 → verdict 改 `L0_drop`（宁缺毋滥，不无限返修）
+4. `image_fix.py finalize --review <review.json>`：校验 L1/L2 全部有 URL 且复检完毕，退出码 0 才 `apply`。
+5. **不用 wan2.7-image 修图**（2026-11-19 A/B 实测）：指令式编辑=整图重绘——织纹变细、色调偏移、
+   分辨率重采样、五金件形变，"更好看但非实物"，命中 TikTok「真实反映收到商品」合规线；
+   且质检需逐区域比对原图，人力成本远超 API 差价。留给未来 AI 场景图（本版不做）。
 
 **AI 生成泰文/越南文的高发缺陷（2026-10-29 真实case实测，必须逐张校验）**：
 - **幻觉字高发**：AI 会在无关区域（金属反光、玻璃、花盆、空白处）注入杂散伪泰文字符甚至反向英文（实测图2右侧火花区出现"ตกหก/ตาน"、图3玻璃区出现"ARIEL 反向字样"），**原图没有的元素不能信任生成结果**，生成后必须逐区域目视
@@ -484,11 +575,15 @@ python3 scripts/set_price.py --id <ttl_id> --rate 2.8 --add 39.26 --save   # 提
 **恢复被写坏的商品**：`ttl-del --ids <ttl_id>` → `ttl-claim --ids <货源ID> --region TH`。
 注意重认领会**丢设置**（图片回原图、类目回未匹配、价格回原始值），只有标题保留当地语言——别把它当日常手段。
 
-**图片处理捷径**：擦字/白底图**直接用外链 URL 填 `main_images[].uri` 保存即可**，无需 getUploadPolicy/OSS 上传（aka.doubaocdn.com 外链实测有效）。
+**图片上传通道（2026-11-19 破解，替代旧"外链捷径"）**：`getUploadPolicy` curl 可通——之前 500 的根因是 body 缺唯一必填参数
+`{"fileUploadTypeEnum":"PIC"}`（与鉴权/浏览器无关，逆向证据见 `tiktok-api.md` 待补第 2 条）。
+处理后的图用 `python3 scripts/erp_upload.py <files>` 上传得到官方 OSS 公网直链，再填 `main_images[].uri` 保存。
+⚠️ aka.doubaocdn 外链只是"能保存"，发布时 302→json 会被平台拒图（pitfalls 13.4），**发布用途一律走 erp_upload.py**。
 
 **图片与 description 重建写回走 `image_gate.py apply --save`**（按官方 edit body 结构，自动回读验收）；
 只改 SKU/库存用 `fix_sku.py`，只改价格用 `set_price.py`，补重量用 `prep_publish.py`。
-**不要用 `erp_client.py ttl-save`**：body 仍是旧结构，docstring 已标「不要直接使用」。
+**不要用 `erp_client.py ttl-save`**：该子命令已于 2026-11-13 从 CLI 移除（body 是旧结构，
+且从 `d["data"]` 取店铺/类目/币种而实测该字段恒为 null → 会写出 `MISSING_ITEM_DATA`）。
 `prep_publish.py --images` 按逗号分隔替换时数量必须与主图数一致（不一致即中止，防错位）。
 
 **保存后编辑弹窗实测表现（2026-10-29，重要）**：
@@ -531,21 +626,34 @@ python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --weight 0.3 --dims 30x
    逐条校验售价是否落在价格带、库存是否超 999999、类目/SKU 数据是否坏。
    退出码 1 = 禁止 `ttl-publish`。实测首次全量跑：20 条里 **19 条阻断**（价格破带 / 库存 9 位数 / 类目未匹配），
    其中含一个**已在售**的 29.13 THB（$0.87）牙刷架——每单净亏 ¥10+，旧版没有任何机制拦它。
-0b. **`python3 scripts/image_gate.py verify --detail <cleaned_detail.json>` 退出码 0**（2026-11-12）：
-   两通道无中文/B2B 素材、description 已重建、被判删的图未残留。退出码 1 时**禁止发布**
+0b. **`python3 scripts/image_gate.py verify --detail <cleaned_detail.json> --review <review.json>` 退出码 0**（2026-11-12；2026-11-13 收紧）：
+   三通道（主图 / 详情图 / SKU 规格图）无中文/B2B 素材、description 已重建、被判删的图未残留；
+   **且判定表必须覆盖当前全部图**——`--review` 已是硬要求，缺判定直接 FAIL（`NO_REVIEW`）。
+   确实逐张人工确认过才用 `--no-require-review` 放行。退出码 1 时**禁止发布**。
 0c. **`python3 scripts/prepublish_guard.py --refresh --ids <ttl_id,...>` 退出码 0**（2026-11-12 第二批新增）：
    递归扫整个 `productCreateRequestV2` 的汉字（`image_gate` 只扫 description/图片，**扫不到 `product_attributes`**）、
    规格名/库存/类目/重复认领，**并查描述质量（纯文本 ≥500 字符 / ≥2 段，第三批新增；
-   不达标可用 `--allow-short-desc` 降级为提醒）**。`--refresh` 必加，否则读到 edit 之前的旧快照会误判。
+   不达标可用 `--allow-short-desc` 降级为提醒）**。**主图 <5 张硬拦**（2026-11-19 提级，
+   `min_publish_main_images: 5`——围裙删到 1 张仍过闸是「有曝光没人点」直接根因；补足走 image_fix 修图保量，凑不出换货源）。
+   `--refresh` 必加，否则读到 edit 之前的旧快照会误判。
    **本轮 #3 就是两个闸门全过、仍被 `[12052250] 不允许使用汉字` 拒发**（属性残留「悬挂/塑料」）。
+0d. **`python3 scripts/listing_quality_gate.py --ids <ttl_id,...>` 退出码 0**（2026-11-18 新增，P0：解决「有曝光没人点」）：
+   商品卡质量闸——前三个闸只保证「干净能发布」，不保证「能被搜到、有人点」。本闸校验本地 `ttl_detail_*.json`：
+   标题 ≥40 字符且命中 ≥3 个当地热搜词根、主图 ≥5 张、属性 ≥5 项、≥1 条商品视频。
+   `--all` 扫全部、`--summary` 落 `erp_data/card_quality.csv`、`--strict` 连主图角色证据缺失也阻断。
+   **实测全量 34 款 全部阻断**（33 款标题词根不足、34 款属性 <5、26 款主图 <5、13 款无视频）——
+   这是「发出去没人点」的直接原因。热搜词表放 `config/keywords/{th,vn}.txt`，用
+   `--keywords-template --site VN` 生成骨架后**填真实后台热搜词**（骨架里的占位词不算数）；
+   拉丁语系按词边界、泰语按子串匹配。退出码 1 = 禁止发布。
 1. `ttl-detail` 能读到 `reqInfo.tikTokItemModel.productCreateRequestV2`（读不到 = 数据被写坏）
 2. `description` 长度 > 0，且**无中文文本节点 / 无 B2B 字样 / 无 1688 模板残渣**（由第 0 项保证）；
    **纯文本 ≥500 字符、≥2 段**（第三批实测的后台优化项，由第 0c 项拦截）
 3. 类目三件套齐全且在**家居用品**树下
 4. 每个 SKU：`price` 在价格带内、`inventory` ≤ **999999**（建议统一 1000）
 5. 每个 SKU 规格名：**纯尺寸 + 当地语言**，不含「自/最/第一/包退/工厂/包邮」这类词
-6. 主图数 = `main_images` 数（闸门删完仍须 ≥1），首图白底、无中文残留
-7. `--dry-run` 输出的 publishConfig / 类目树 / 店铺都对
+6. 主图数 = `main_images` 数（闸门删完仍须 ≥1），首图白底、无中文残留；图片必须是回读一致的最终直链，禁用 `aka.doubaocdn.com` 跳转短链
+7. 包裹重量与长/宽/高逐品真实，VN 缺尺寸由 `prepublish_guard.py` 阻断；禁止用默认 `10×10×10` 或估计值补位
+8. `--dry-run` 输出的 publishConfig / 类目树 / 店铺都对；若返回 `[12052585] 存款金额不足`，先去卖家后台「资产/财务 → 保证金」补齐，不是商品文本问题
 
 #### 5.2 平台前置校验错误码（fail 时逐条对，全部是商品数据问题不是接口问题）
 
@@ -554,6 +662,9 @@ python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --weight 0.3 --dims 30x
 | `[12052250] 不允许使用汉字。修改产品属性的属性值名称: 悬挂` | **`product_attributes` 里残留中文**（2026-11-12 #3 沥水篮实测）。图片闸门不扫这个字段，前两个闸门全过也会 fail | 清空 `product_attributes=[]` 后重发即 success；发布前用 `prepublish_guard.py --refresh` 递归扫 v2 全部汉字 |
 | `[12052153] 产品可变选项…内容词 (自)` | SKU 规格名含平台敏感词（「立体打印**自**透气」的「自」被判违规） | 规格名改纯尺寸当地语言 `ขนาด 50x70x30 ซม.`，去掉一切功能描述 |
 | `[12052055] SKU inventory quantity … between 0 and 999999` | 库存沿用 1688 原值（9,981,384）超上限 | `fix_sku.py --stock 1000` 统一收敛 |
+| `主图上传失败: 无效的参数` | 图片仍用 `aka.doubaocdn.com` 短链；短链 302 到签名直链但跳转响应 `Content-Type: application/json`，平台取图失败 | 解析到最终 `byteimg.com` 直链，逐张下载并与本地图 SHA-256 一致后回写负载 |
+| `[12052018/12052019/12052020] 包裹长/宽/高是必需的` | VN 发布把包裹尺寸列为必填；负载缺真实长/宽/高 | 回货源详情/规格表补齐真实包裹尺寸；查不到就保留草稿，禁止默认 `10×10×10` 或猜测补位 |
+| `[12052585] 您的存款金额不足` | 店铺保证金/账户资金不足，非商品字段问题；东南亚保证金通常在卖家后台「资产/财务 → 保证金」处理 | 人工登录 TikTok 卖家后台核验并充值；商品文本/图片闸门不能绕过该账号状态 |
 | `商品描述不能为空` | `description` HTML 长度 = 0 | 编辑侧补描述 |
 | `类目不能为空` | 重认领后类目回空、自动匹配失败 | 显式写类目三件套 |
 | `tikTokItemModel不能为空` | `edit` body 结构错，商品数据被写坏 | 见 Step 4.5 正确结构；或删除重认领 |
@@ -618,12 +729,27 @@ python3 scripts/backflow.py stats                # 判定分布 + 赢家/待下�
 ```
 数据本身仍要人工从 TikTok 商家后台抄（无接口），但**不用再记哪天该看哪一款**。
 
+**入池体检（2026-11-18 新增，P0：破零最关键，独立于 T+7 数据回流）**：
+不要等到 T+7 才发现没曝光。上架满 **48h** 就强制体检一次，两条证据都要记：
+
+```bash
+python3 scripts/backflow.py index-due            # 列出满 48h 仍未体检的款（退出码 1 = 有逾期，强制补做）
+python3 scripts/backflow.py index --ttl-id <id> --found yes|no --keyword '<核心短词>' --exposure-7d <数>
+python3 scripts/backflow.py index-stats          # 入池率 + 待换主图清单
+```
+1. 陌生账号（未登录过店铺、无浏览记录）搜 2–3 个核心短词，能否搜到本款 → `--found`；
+2. 后台「商品分析 → 近 7 天曝光」→ `--exposure-7d`。
+判定（`backflow.yaml` → `index_exposure_min`，默认 100）：搜不到或曝光 <100 = **未入池** →
+满 48h 后换主图强制重收录（48h 内禁止动，见下方纪律 1）。`--found unknown` 不算通过，会进 `index-due` 催办。
+**实测 2026-11-18：7 款在售全部逾期未检（挂 6–22 天一次没做）**——把「入池率」当成新 KPI，
+两周后看「7 天曝光 >100 的款数占比」，不看出单。出单是结果，入池是过程。
+
 TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
 
 | 时点 | 字段 | 用途 |
 |---|---|---|
 | **T+2（48h）** | **推荐/商城曝光** | **入池检查（新增，破零最关键）**：曝光 <100 = 未入池 → 换主图强制重收录；≥100 才算发布成功 |
-| T+7 | 曝光、点击、CTR、加购 | 有点击无加购 → 换主图/调价；零曝光 → 等 T+20 |
+| T+7 | 曝光、点击、CTR、加购 | **四象限判定**：低曝光 + 高加购率(≥10%) = 搜索不匹配 → 只改标题补热搜词根，**禁止 kill**；高曝光低点击 → 换主图；高曝光低转化 → 调价。零曝光且无转化信号 → 等 T+20 |
 | T+20 | 曝光、点击、成交单量、成交额、退款率、**履约率/延迟发货率** | 决定 kill / 培养 / 放大 |
 
 **T+0～T+2 两条纪律（旧版完全没有，是"铺了没曝光"的常见原因）**：
@@ -631,6 +757,20 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
 2. **每 3 天回后台「商品 → 商品机会」提报关联**：把「热门搜索」和「精选搜索」里与你的品相关的词全部关联提报，
    平台推这些词时会顺带推你的商品。这是不开达人佣金时**唯一能主动拿到的免费推流**，
    而旧版只把商品机会中心当"选品信号源"读，从来没把它当"流量入口"用。
+
+**T+0 免费流量三件套（2026-11-18 新增，官方优先级：销售加速 > 早鸟价 > 广告）**：
+旧版只写在 `references/selection-strategy.md` §8.3，没有任何检查项 —— 7 款零入池时这三项一个没做。
+现已在 `backflow.py` 脚本化，上架满 24h 未完成即进 `traffic-due` 逾期清单：
+
+```bash
+python3 scripts/backflow.py traffic-due       # 列出未完成三件套的款（退出码 1 = 有逾期）
+python3 scripts/backflow.py traffic --ttl-id <id> \
+  --new-user-discount true --discount-set-at YYYY-MM-DD \
+  --accelerator-task true --accelerator-done-at YYYY-MM-DD \
+  --opportunity-apply true --opportunity-apply-at YYYY-MM-DD
+```
+只勾 `true` 不记日期 = 自证不清，按未完成处理。`judge` 会把未完成项追加进 action
+（记录在 `erp_data/traffic_actions.csv`），不再只是文档里的一句话。
 
 判定规则（`selection.yaml` → `cadence`）：T+20 仍无曝光无转化 → 下架换品；有成交 → 进第二批放大的方向池。
 **履约率是链路信号不是选品信号**：延迟发货率上升 → 先换货代或转小批量备货（>30 单/日），不要靠继续换品掩盖。
@@ -654,6 +794,7 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
   `edit` 正误 body 对照、`batchOps` 四类 opsType、发布错误码表、1688 采集/授权坑、token 抓取原理、浏览器通道边界、发布前自检清单；
   **第十章 = 2026-11-12 第二批 10 品复盘；第十三章 = 2026-11-13 VN20 路线、图片回读、单件 SKU 与写操作纪律**。
 - `references/selection-strategy.md`：选品模块核心（九章）——一件代发三条铁律、履约链路与城市判据、成本结构与采购价上限矩阵、数据源分层与可信度分级、红线与供应链门槛、四维评分、TH/VN差异、破零节奏与数据回流、输出格式。Step 0 前必读。
+- `references/linkfox-ip-detection-coverage.md`：睿观 IP 检测对 TH/VN 覆盖实测——**只有外观专利支持 TH**，商标/实用新型不支持，版权噪声大；brand_ip 红线仍靠人工。涉及 IP 检测前必读。
 - `references/tiktok-api.md`：TikTok接口契约（已实测+待补）
 - 图片闸门（两通道扫描 → 多模态整图判定 → description 重建 → 发布前硬闸）见上方 Step 4.3；
   执行脚本 `scripts/image_gate.py`、参数 `config/image_gate.yaml`
@@ -665,6 +806,9 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
 - `config/selection.yaml`：选品参数（履约红线/门槛/四维权重/需求过滤/竞争与内容力口径/单量分层/铺货节奏）
 - `scripts/pricing_calc.py`：售价计算与价格带校验（`--cost` 算售价 / `--limits` 反推采购价上限 / `--check` 自检）。纯标准库，配置改完必跑 `--check`。
 - `scripts/kdzs_fastmoss.py`：FastMoss 选品数据（**免 token**，ERP 后端透传；`--categories` / `--live-fx`）
+- `scripts/linkfox_sourcing.py`（2026-11-18 新增）：LinkFox 取数**本地加工器**（不联网）——
+  `screen` 找货预筛（代发/48h/起订量/体验分）、`same-source` 同款跨供应商（`--enrich` 补公司）、
+  `spec-terms` 竞品规格名提取。吃 MCP 落盘 JSON（见 `erp_data/linkfox/README.md`），产出仍须过 `select_gate.py`。
 - `scripts/erp_client.py`：采集/认领/删除/发布/日志 主客户端（`ttl-publish` 支持 `--weight/--dims/--dry-run`；`ttl-save` 已标禁用）
 - `scripts/erp_token_grab.py`：从 Chrome LevelDB 自动捞 JWT（`--save --check`），不用手工复制
 - `erp_data/README.md`：**落盘目录约定**——顶层只放有效资产（`case_category_tree.json` 查类目 ID、`tiktok_shops.json` 拿 sellerId），
@@ -682,6 +826,15 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
   脚本不联网不看图，只认人工/多模态回填的证据列，专治「门槛写在文档里但没执行」（第二批白跑 6 品的根因）
 - `scripts/route_gate.py`：**货代路线复核（2026-11-13 新增，纯本地只读）**——校验 `ship_city`、`forwarder_city`、
   `ship_transit_days`，仓库必须在已绑定列表内；缺发货城市、缺仓、缺到仓天数或 >1 天即退出码 1。
+- `scripts/listing_quality_gate.py`：**商品卡质量闸（2026-11-18 新增，P0，纯本地只读）**——读本地
+  `ttl_detail_*.json`，校验标题 ≥40 字符且命中 ≥3 个当地热搜词根、主图 ≥5、属性 ≥5、≥1 条视频。
+  `--all` / `--ids` / `--site` / `--strict` / `--json` / `--summary`（落 `erp_data/card_quality.csv`）；
+  `--keywords-template --site VN` 出热搜词表骨架（`config/keywords/{th,vn}.txt`，需填真实后台词）。
+  只保证「能被搜到、有人点」，与 `image_gate`（干净）/ `prepublish_guard`（能发布）互补，三者都要过。
+- `config/keywords/{th,vn}.txt`：当地热搜词根表——拉丁语系按词边界、泰语按子串匹配，<3 字符的词不参与（误命中）。
+- `scripts/backflow.py` 的 `index` / `index-due` / `index-stats`：**入池体检（2026-11-18 新增，P0）**——
+  上架满 48h 强制做一次「陌生账号搜词 + 7 天曝光」判定，逾期 `index-due` 退出码 1 催办，
+  结果落 `erp_data/index_check.csv`（与 `backflow.csv` 的 T+7 数据回流分开）。判据从出单改为入池率。
 - `scripts/price_gate.py`：**发布前价格/库存硬闸**（读 `ttl-list` 落盘 CSV，逐条判价格带/库存上限/类目异常，
   退出码 1 = 禁止发布）。另有 `--hint --cost <采购价> --pieces <1|2>` 反推建议挂价与本币价格带。
   **任何 `ttl-publish` 之前必须先跑它**——ERP 认领自动价（≈采购价×7.574+25.24）不区分重量与类目费率，
@@ -703,10 +856,28 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
   `replicatedProducts` 并回读对比。⚠️ 回读有数分钟缓存延迟，别立刻判失败。
   上/下架 `ops` 未实测，**脚本刻意不实现**。接口契约见 `tiktok-api.md` 末章
 - `scripts/prep_publish.py`：铺货前置一体化（按 SKU 梯度改价 + 补重量 + 回读验证 + 图片替换）
-- `scripts/image_gate.py`：**详情页图片闸门**（`scan` 两通道扫描出待判定清单 / `apply` 按 L0–L3 重建并可选 `--save` 写回 /
-  `verify` 发布前硬闸，退出码 1 = 拦截）。纯标准库，scan/apply(dry-run)/verify 全程离线；**脚本不判图**，判定由多模态模型回填 review.json
+- `scripts/image_gate.py`：**详情页图片闸门**（`scan` 三通道扫描出待判定清单：主图 / 详情长图 / **SKU 规格图** /
+  `apply` 按 L0–L3 重建并可选 `--save` 写回 / `verify` 发布前硬闸，退出码 1 = 拦截，
+  **`--review` 为硬要求**，缺判定报 `NO_REVIEW`）。纯标准库，scan/apply(dry-run)/verify 全程离线；
+  **脚本不判图**，判定由多模态模型回填 review.json。
+- `scripts/i18n.py`：**译名表查询（2026-11-13 新增）**——`config/i18n/<lang>.csv` 是标题/描述/规格名译名的唯一来源，
+  `get()` 未命中返回 `None`（不猜、不套模板）；`--list / --get / --missing-check` 三个子命令做查表与缺项体检。
 - `scripts/verify_public_images.py`：**公网商品图回读核验（2026-11-13 新增）**——按商品逐张下载 URL，
-  与本地正式图核对 SHA-256、尺寸和像素 RMS；任一不可访问或不一致即退出码 1。禁止复用并发上传时错配的 path/短链映射。
+  **先按 sha256 反查本地图**（命中即证明这张就是本地某张，并能指出错配到哪一张），未命中再按同下标比像素 RMS，
+  在 `--rms-threshold`（默认 3.0）内视为重编码通过；下载失败或内容已变才退出码 1。禁止复用并发上传时错配的 path/短链映射。
+- `scripts/erp_upload.py`：**ERP 官方图片上传通道（2026-11-19 破解）**——`getUploadPolicy` 正确 body
+  `{"fileUploadTypeEnum":"PIC"}`（旧"curl 直调 500 只有浏览器能通"= 缺该参数的 NPE，见 pitfalls 第十四章）
+  → OSS 表单直传 → 官方公网直链，自带 GET 回读 SHA-256 核验。发布用途的图一律用它，不再依赖 aka 短链。
+- `scripts/aidge_http.py`：**阿里云 Aidge 纯标准库客户端（2026-11-19）**——POP V3 签名（ACS3-HMAC-SHA256），
+  零第三方依赖（SDK 安装被代理+Py3.14 轮子问题拖死后的替代方案，实测比 SDK 路线快 1 小时）。
+  真实 Action 名与产品页标签不同：抠图=`ImageMatting`、消除=`ImageRemove`、识别=`ImageRecognition`、
+  图翻=`ImageTranslationPro`（全表可拉 `api.aliyun.com/meta/v1/products/Aidge/versions/2026-04-28/api-docs.json`）。
+  凭证 `.env` 的 `ALIBABA_CLOUD_ACCESS_KEY_ID/SECRET`（RAM 用户 aidge-image-fix）。
+- `scripts/image_fix.py`：**L1/L2 修图管道（2026-11-19）**——probe（元素识别补 seen_text 证据+过杀预警）→
+  fix（ImageRemove 元素模式/Position 补刀、ImageTranslationPro、ImageMatting → 下载 → erp_upload 转存 → uri_map）→
+  finalize（复检校验）。用法与五条款见 Step 4.3。实测围裙 3 张过杀主图救回（成本 ¥0.16 内，免费额度覆盖）。
+- `tests/`：**离线测试套件（2026-11-13 新增）**——`python3 tests/run.py` 一条命令跑完（66 项，约 3 秒，不联网、不需要 token）。
+  覆盖 i18n 迁移等价性、图片三通道/过期判定/覆盖率硬闸、SKU 身份校验、公网图哈希匹配、已删子命令回归。
 - `scripts/selection_intake.py`：**选品取证自动化（2026-11-12 新增）**——`pool` 多关键词批量拉 FastMoss 并按出单率分档、
   `image` 取 1688 详情页字段（成本/最高 SKU 价/库存/起订量/重量/发货城市）并拼 contact sheet、
   `seed` 按 `select_gate.TEMPLATE_HEADER` 生成候选骨架。**只抄事实，判断列一律留空给人工/多模态**。

@@ -22,7 +22,7 @@
 | 发布记录 | POST | /item/distribute/queryLogs | `{toPlatformList:["tiktok"],fromPlatformList:["1688"],startTime,endTime}` | 时间窗≤31天 |
 | 类目树 | POST | /item/distribute/categoryTree | `{platform:"tiktok"}` | 编辑弹窗加载 |
 | 品牌列表 | POST | /item/crossBorder/platformCollect/getBrandList | | |
-| 图片上传凭证 | POST | /item/file/getUploadPolicy | 浏览器里自动调通，curl直调500 | **实际不需要**——外链URL可直接填main_images保存 |
+| **图片上传凭证** ✅ | POST | /item/file/getUploadPolicy | `{"fileUploadTypeEnum":"PIC"}`（枚举 PIC/VIDEO，**唯一必填**） | **2026-11-19 破解旧"curl直调500"结论**：500 根因是 body 缺该参数（后端 NPE 被包成 errorCode 500），不是鉴权/浏览器专属。返回 `{dir,host,ossAccessKeyId,policy,signature,expire}` → POST host 表单直传(key=dir+文件名)→204/200→公网URL=host+"/"+key。CLI: erp_upload.py |
 | 发布额度 | GET | /trade/crossItemDistrib/quotaQuery | | 发布成功后会 +1，可作侧证 |
 | 汇率 | POST | /item/exchangeRate/getList | | 2026-11-11：1 USD=6.67111 CNY=33.65 THB |
 
@@ -63,7 +63,8 @@ post("/item/crossBorder/edit", body)   # → {"data":null,"success":true} 或 {}
 写出问题后只能 `ttl-del` + `ttl-claim` 重建（会丢图片/类目/价格设置）。
 
 **图片替换**：改动写 `itemModel.tikTokItemModel.productCreateRequestV2.main_images[].uri`，
-用 aka.doubaocdn.com 外链直接填即可（无需 getUploadPolicy）。
+发布用途一律用 `scripts/erp_upload.py` 上传后的官方 OSS 直链（getUploadPolicy 已破解，见接口表；
+aka.doubaocdn 外链能保存但发布被平台拒图）。
 CLI 用 `prep_publish.py --images "<url1>,<url2>,..."`（数量必须与主图数一致）；
 `erp_client.py ttl-save` 的 body 仍是旧结构，**已标禁用**。
 
@@ -147,7 +148,14 @@ CLI 用 `prep_publish.py --images "<url1>,<url2>,..."`（数量必须与主图�
 ## 待补
 
 1. ~~认领接口body~~：**已破解 2026-10-29**（`numIids`+`targetShops` 嵌套结构）；破解通道=CDP document_start 注入 hook（JS 层拦截被前端原生引用绕过，故须页面脚本执行前注入）。**但现在更推荐读前端 chunk 逆向，成本低得多（见 erp-pitfalls 第一章）**
-2. ~~getUploadPolicy/OSS上传~~：不需要——外链URL直接填main_images保存即可（已验证）
+2. ~~getUploadPolicy/OSS上传~~：**已破解 2026-11-19**——旧"curl直调500、只有浏览器能通"结论是**误判**：
+   body 传 `{"fileUploadTypeEnum":"PIC"}` 即 200。500 根因=缺这个唯一必填参数（后端 NPE→统一包成 errorCode 500），
+   与鉴权无关（同一 token 其他接口全通）、与浏览器无关。OSS 表单直传 curl 亦通（204/200，公网 GET 回读 hash 一致）。
+   证据链：前端 `app.d55ef933.js` OSSStore `getOSSData(kind)` → `ItemFileGetUploadPolicyApi({fileUploadTypeEnum:a})`，
+   枚举仅 "PIC"/"VIDEO"（chunk77 CrossFastUploadTiktokCollection 内调用点）。CLI: `scripts/erp_upload.py`。
+   ⚠️ 注意 `dir` 已含尾斜杠，拼 key 时**不要再加 /**（双斜杠 key 会导致上传 204 但 GET 404——实测踩过）。
+   价值：替代 aka.doubaocdn 短链（该短链 302→application/json 已被平台拒图，见 pitfalls 13.4），
+   得到 ERP 官方 OSS 直链，无需再依赖外链。
 3. ~~translate接口~~：不需要——认领时ERP自动翻译标题，图片翻译用我们自己的流水线
 4. ~~发布接口body~~：**已破解 2026-10-29**；2026-11-12 修正 weight/dims 与 categoryIds 口径
 5. ~~删除接口~~：**已破解 2026-10-29**（batchOps + opsType:3）

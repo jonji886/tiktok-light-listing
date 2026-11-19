@@ -326,11 +326,18 @@ ERP 的 `getDetail` 只服务**待完善商品**。商品一旦被保存完善�
 
 结论很通用：**要抓首屏就发出的请求，唯一可靠的位置是 document_start。**
 
-### 8.4 图片不必走 OSS 上传
+### 8.4 图片上传：getUploadPolicy 的 500 是参数问题，不是浏览器专属（2026-11-19 已破解）
 
-`getUploadPolicy` 拿到的凭证 curl 直调报 500，看起来绕不过去。实测发现 `main_images[].uri` 直接填**任意可访问的外链 URL** 就能保存生效——ERP 不做来源校验。
+旧结论「curl 直调 500，只有浏览器能通」是**误判**：`/item/file/getUploadPolicy` 唯一必填参数是
+`fileUploadTypeEnum`（枚举 `PIC`/`VIDEO`），传 `{}` 或猜测字段名会被后端 NPE 统一包成 `errorCode:500`。
+带对参数后 curl 直接 200，返回 `{dir,host,ossAccessKeyId,policy,signature,expire}`，
+再按标准 OSS 表单直传（key/policy/Signature/file POST 到 host）即可，204/200，公网 URL = host+"/"+key，
+GET 回读 SHA-256 与本地一致。逆向证据：主包 `OSSStore.getOSSData(kind)` → `ItemFileGetUploadPolicyApi({fileUploadTypeEnum:a})`。
+CLI：`scripts/erp_upload.py`（自动取凭证→直传→回读核验）。
 
-少一个上传环节，整条流水线少一次失败点。
+两个坑：① `dir` 已含尾斜杠，多拼一个 `/` 会得到双斜杠 key——OSS 返回 204 但对象 GET 404（实测踩过）；
+② 外链兜底（aka.doubaocdn 短链）已被 pitfalls 13.4 证实**不可发布**（302→application/json 平台拒图），
+官方 OSS 直链才是可用的上传通道。ERP 对外链不做来源校验这点仍成立，但"能保存"≠"能发布"。
 
 ### 8.5 「跨境电商专用」漏进详情页，病根不在主图，在 `description`
 

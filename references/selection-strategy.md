@@ -385,7 +385,9 @@ VN shelf markup **1.515**（净利 12%，扣点合计 **22.00%** —— 含新�
 
 ### 4.4 数据源 2：FastMoss（L2，**已打通，走 ERP 后端透传，免 token 免订阅**）
 
-**不需要买 FastMoss，也不需要开 LinkFox**：`erpg.kuaidizs.cn` 的后端已直连 FastMoss，前端只是转发（✅ 2026-11-11 实测）。
+**不需要买 FastMoss**：`erpg.kuaidizs.cn` 的后端已直连 FastMoss，前端只是转发（✅ 2026-11-11 实测）。
+LinkFox 连接器（2026-11-18 接入）是**可选补充通道**，用于 ERP 透传拿不到的能力：1688 找货预筛、
+以图搜同款换发货地、竞品规格名/内容信号；主评分仍走 ERP 透传，口径不与 LinkFox 混用。
 
 ```bash
 python3 scripts/kdzs_fastmoss.py --region TH --usd-min 2 --usd-max 8 --max-creator 100 --min-video 10 --top 40
@@ -416,7 +418,12 @@ python3 scripts/kdzs_fastmoss.py --live-fx        # 用 ERP 实时汇率覆盖�
 | `ctime` | 上架时间（判断是新品窗口还是红海尾期） |
 
 **已知局限**：
-- 直连 `fastmoss/productSearch` 或 `echotik/listProduct`（绕开 ERP）会 **402**，别去试
+- ~~直连 `fastmoss/productSearch` 或 `echotik/listProduct`（绕开 ERP）会 402，别去试~~
+  **【2026-11-18 作废】**：LinkFox 连接器已接入，直调三接口均 `errcode:200`
+  （`fastmoss/productSearch` / `echotik/listProduct` / `echotik/batchProductDetail`）。
+  但数据为第三方快照（`THIRD_PARTY_ONLY`），同一商品两源销量差近一倍（如 VN 压缩袋
+  `1736063102162208569`：FastMoss 2999 vs EchoTik 6002），**主分值仍以 ERP 透传为准**，
+  LinkFox 仅用于找货预筛 / 同款换发货地 / 规格名参考。详见 `scripts/linkfox_sourcing.py`。
 - 销量/GMV 都是估算建模，**只能用于排序，不能算钱**
 - 没有"搜索量"字段，需求侧仍以官方后台为准
 - ⚠️ **销量榜会系统性埋掉本 skill 最想要的品**（2026-11-12 实测）：按 `day7_units_sold` 拉 TH 全量

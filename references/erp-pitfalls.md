@@ -441,3 +441,62 @@ ERP 把 JWT 放在 `sessionStorage.qnquerystring`，接口鉴权头同名。
 - 认领每批 ≤3；写前先按 `offer_id` 精确查重，公共采集箱的 `total` 可能混入其他站点/历史候选，不能替代本批清单匹配；回执为空也必须回读；接口 `success` 只代表进队列，不等于平台在售。
 - 旧 `ttl-save` body 有清空商品数据风险，继续禁用；新编辑器必须先校验目标 sellerId、店铺名和来源 offer，默认 dry-run，保存后回读。
 - 本地门禁通过只代表本地负载合格；认领后仍须在真实 ERP 详情上重跑图片、价格、发布前闸门。
+
+### 13.4 VN 发布回执新增阻断（2026-11-13 实测）
+- **短链图片不可发布**：`aka.doubaocdn.com/s/...` 先 302 到字节签名直链，跳转响应 `Content-Type: application/json`，ERP/TikTok 取图返回「上传图片失败: 无效的参数」。必须解析到最终 `byteimg.com` 直链，逐张下载并与本地正式图哈希一致；`prepublish_guard.py` 已把残留 aka 短链列为阻断。
+- **包裹长/宽/高必填**：VN 前置校验返回 `[12052018] 包裹长度是必需的`、`[12052019] 包裹宽度是必需的`、`[12052020] 包裹高度是必需的`。缺真实包裹尺寸时禁止默认 `10×10×10` 或按产品尺寸猜测补位；`prepublish_guard.py` 对 `package_dimensions` 缺 length/width/height 直接阻断。
+- **`[12052585] 您的存款金额不足`**：这是店铺保证金/账户资金状态，不是标题、图片、SKU 或类目问题。需人工到 TikTok 卖家后台「资产/财务 → 保证金」核验余额并充值；商品闸门不能绕过。
+- 探针失败只代表该条提交被前置校验拒绝；`success:true`、空对象、processing 或草稿状态 0 都不等于在售。继续批量发布前，必须先解决账号资金与真实包裹尺寸两类阻断。
+
+## 第十四章 getUploadPolicy 的「500」假象（2026-11-19 破解）
+
+**旧结论**：「getUploadPolicy curl 直调返回 500，只有浏览器里能通」→ **误判，已推翻**。
+
+**第一性原理定位过程**：
+1. 同一 token、同一 header，其他接口全通 → 排除鉴权层。
+2. 复现发现 500 是**应用层错误**：HTTP 状态实际 200，响应体 `{"data":null,"errorCode":500,"success":false}`——是后端业务异常统一包装，不是网关/反爬。
+3. 读前端 chunk（`erp/1.5.1/js/app.d55ef933.js` gunzip 后搜 `getUploadPolicy`，再顺 `OSSStore.getOSSData` → chunk77 `CrossFastUploadTiktokCollection.1edb87b5.js` 找调用点），拿到 ground truth：
+   - `ItemFileGetUploadPolicyApi(a)` 唯一调用形态：`{fileUploadTypeEnum:"PIC"|"VIDEO"}`
+   - 此前尝试的 `{}` / `{platform:...}` / `{fileName:...}` 全部缺该参数 → 后端枚举解引用 NPE → errorCode 500。
+   - 「浏览器能通」只是因为浏览器里前端组件替我们把这个参数填上了。
+4. 实测 `{"fileUploadTypeEnum":"PIC"}` → `success:true`，返回 `{dir,host,ossAccessKeyId,policy,signature,expire}`。
+
+**OSS 表单直传（curl 亦通）**：POST `host`，multipart 字段 `key`(=dir+文件名)/`OSSAccessKeyId`/`policy`/`Signature`/`file`，返回 204（默认）或 200（带 `success_action_status=200`）。policy conditions 实测：`content-length-range 0–209715200`、`starts-with $key <dir>`。
+
+**两个实测踩坑**：
+- ⚠️ **`dir` 已含尾斜杠**：`kdzs-erp/pic/user/5693231/2026/11/`，再拼 `/` 得双斜杠 key——OSS 返回 204（POST 成功）但对象 GET 404 NoSuchKey。**204 ≠ 可访问，必须回读**（与第四章「工具成功≠事实成立」同理）。
+- ⚠️ `host` 是 `-vpc` 域名（`kdzs-jxc-vpc.oss-cn-zhangjiakou.aliyuncs.com`），实测**公网可直接 GET**（非桶策略拒绝），去 `-vpc` 反而 403（私有桶），不要自作聪明改写域名。
+
+**对流水线的意义**：erp_upload.py 给出官方 OSS 直链，替代 aka.doubaocdn 短链（13.4 证实短链发布被拒）。外链"能保存"从来不等于"能发布"，旧「图片不必走 OSS 上传」章节已改写。
+
+**CLI**：`python3 scripts/erp_upload.py <file...>`（取凭证→直传→GET 回读 SHA-256 核验，一条龙）；`--verify <url> <local>` 单独核验。
+
+## 第十五章 Aidge 修图管道接入实测坑（2026-11-19）
+
+**Action 名与产品页标签不一致**：产品文档写 SmartMatting/SmartInpainting，真实 API 是
+`ImageMatting`/`ImageRemove`（误名报 404 InvalidAction.NotFound）。全量契约拉
+`api.aliyun.com/meta/v1/products/Aidge/versions/2026-04-28/api-docs.json`，别信转述。
+
+**参数实测坑**：
+1. `ImageMatting.BackGroundType` 只收 `WHITE_BACKGROUND|TRANSPARENT`，文档示例 `COLOR` 报 InvalidParameter。
+2. `ImageRemove.Mask` 是 **RLE 编辑器编码**——传 `[[x1,y1,x2,y2]]` 矩形不报错但**被静默忽略**（输出=输入）。
+   矩形定向擦除走 `Position` 参数（`[x1,y1,x2,y2]`，像素坐标，实测生效）。优先级 UserImage>UserText>Position>Mask>元素模式。
+3. 元素模式 `NonObjectRemoveElements=[1,2,3,4]` 只删**非主体**文字/水印；商品上的布标（如 FASHION 标签）
+   属主体正确保留——与 TikTok「压印在商品上的文字除外」规则天然一致，这是它优于通用 OCR 擦除的地方。
+4. `ImageTranslationPro.TargetLanguage` 传不支持的码报 InvalidParameter（ms 马来语实测可用；脚本自动回退 en 并标注）。
+
+**SDK 安装死路（勿重试）**：全局代理(127.0.0.1:53005)把 pip 到国内镜像的流量绕出国 + Python 3.14 无
+cryptography 预编译轮子 → 装 20+ 分钟不结束。正确解法：`aidge_http.py` 纯标准库 V3 签名，或
+`python3.13 venv + NO_PROXY='*' + mirrors.aliyun.com`。
+
+**结果图生命周期**：Aidge 产物在 `dashscope-*.oss-*.aliyuncs.com` 签名链，实测 Expires≈30 天（非文档摘要的 7 天）。
+外部生命周期不可依赖 → image_fix 一律立即下载转存 erp_upload（ERP OSS），临时链禁止进 uri_map。
+
+**wan2.7-image 修图否决（A/B 实测）**：同图对照——文字图标一次全清（能力够），但整图重绘：
+帆布织纹变细变匀、色调偏暖、800→1024 重采样、金属扣形变。"更好看但非实物"命中
+「图片须真实反映收到商品」合规线；质检需逐区域比对原图，人力成本远超 ¥0.025→¥0.20 差价。
+仅保留给未来 AI 场景图。调用本身通：DashScope compatible endpoint 同步返图，千问 Key 直接可用。
+
+**ImageMatting 抠图裁切风险**：首图抠图会把挂架/场景等非商品元素一并抠掉（围裙 main_01 实测），
+且输出比例可能变方。浅灰/纯色背景的图本就合规（东南亚站口径=纯色背景、白色仅"推荐"），
+不必强行白底化——先目视抠图产物再决定是否入 uri_map。
