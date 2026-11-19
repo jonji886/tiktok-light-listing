@@ -164,6 +164,53 @@ def cmd_update_desc(a):
               "平台侧是否同步仍需回 TikTok 后台确认，不要在此刻下结论")
 
 
+def cmd_update_images(a):
+    """在售品主图替换（2026-11-19 新增，围裙 1→5 场景）。
+    --urls 逗号分隔的公网直链（须 prepublish 同一纪律：非 aka 短链、已回读核验）。
+    实测路径：ERP updatePlatformItem 换 mainImages[].uri 外链 → 平台重转存。
+    已知缓存：ERP 详情数分钟才见新值（与 update-desc 同源教训），勿即时判败。"""
+    urls = [u.strip() for u in a.urls.split(",") if u.strip()]
+    if not urls:
+        sys.exit("[site] --urls 为空")
+    for u in urls:
+        if not u.startswith("https://"):
+            sys.exit(f"[site] 主图必须 https 直链: {u}")
+        if "aka.doubaocdn.com" in u:
+            sys.exit(f"[site] aka 短链平台取图必败（pitfalls 13.4）: {u}")
+    _, d = get_detail(a.num_iid, a.seller)   # d 即 tiktokDetailInfo 本体（update-desc 同源）
+    old = d.get("mainImages") or []
+    proto = dict(old[0]) if old else {}
+    new_imgs = []
+    for u in urls:
+        m = dict(proto)
+        m["uri"] = u
+        for k in ("thumbUrls", "imagesId", "id"):
+            m.pop(k, None)  # 平台旧图私有字段清掉，重转存由平台侧做
+        new_imgs.append(m)
+    print(f"[site] 主图 {len(old)} → {len(new_imgs)} 张")
+    body_d = copy.deepcopy(d)
+    body_d.pop("replicatedProducts", None)          # 同 update-desc：否则 Missing SKU details
+    body_d.pop("multiCountrySkuSalesConfig", None)
+    body_d["mainImages"] = new_imgs
+    body = {"sellerId": a.seller, "platform": "tiktok",
+            "numIid": str(a.num_iid), "tiktokDetailInfo": body_d}
+    if a.out:
+        open(a.out, "w", encoding="utf-8").write(json.dumps(body, ensure_ascii=False, indent=2))
+        print(f"[site] body → {a.out}")
+    if not a.save:
+        print("[site] dry-run：未提交。确认后加 --save")
+        return
+    res = post("/item/item/updatePlatformItem", body)
+    print(f"[site] 保存响应: {json.dumps(res, ensure_ascii=False)[:400]}")
+    time.sleep(3)
+    _, after = get_detail(a.num_iid, a.seller)
+    n2 = len(after.get("mainImages") or [])
+    print(f"[site] 立即回读 mainImages={n2} 张")
+    if n2 != len(new_imgs):
+        print("[site] ⚠ ERP 详情缓存数分钟（update-desc 同款教训）：稍后重跑 detail 复核；"
+              "平台侧以 TikTok 后台为准，不要在此刻下结论")
+
+
 def main():
     ap = argparse.ArgumentParser(description="TikTok 站点商品（在售）客户端")
     sub = ap.add_subparsers(dest="cmd", required=True)
@@ -189,9 +236,16 @@ def main():
     p.add_argument("--out", help="把 body 落盘")
     p.add_argument("--save", action="store_true")
 
+    p = sub.add_parser("update-images", help="换在售品主图，默认 dry-run，--save 才写（2026-11-19）")
+    p.add_argument("--num-iid", required=True)
+    p.add_argument("--urls", required=True, help="逗号分隔 https 公网直链（禁 aka 短链，先回读核验）")
+    p.add_argument("--seller", default=DEFAULT_SELLER)
+    p.add_argument("--out", help="把 body 落盘")
+    p.add_argument("--save", action="store_true")
+
     a = ap.parse_args()
     {"list": cmd_list, "detail": cmd_detail, "log": cmd_log,
-     "update-desc": cmd_update_desc}[a.cmd](a)
+     "update-desc": cmd_update_desc, "update-images": cmd_update_images}[a.cmd](a)
 
 
 if __name__ == "__main__":
