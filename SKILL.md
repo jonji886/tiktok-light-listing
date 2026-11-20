@@ -258,6 +258,13 @@ python3 scripts/opportunity_to_sourcing.py --channel aibuy
 ```
   - 实测（2026-11-19）：`search` 与 `search-image` 双通道均通（各 20 条）；今日 6 卡片 → 3 REJECT、2 无检索输入、1 candidate 出 5 条候选。
   - 实测（2026-11-20 切换日）：`dld/productSearch` 与 `alibaba1688/imageSearch` 实调均通（20 条/次，errcode=200）；plan→read 端到端在真实 signals 上跑通（16 行候选，含 data_source/ship_city_raw/consign_price_cny 新列；未落盘的行如实标 SEARCH_FAIL(linkfox)+fallback 提示，不崩不猜）。
+  - 实测（2026-11-20 第二品闭环，机会卡片路线第 2 单）：卡片「Ready Stock apron…」→ intake candidate → 词检索 rank4 `683331773332`（¥8.2-9.5/义乌帝诺/1件包邮 VERIFIED/48h揽收100%）→ select_gate 过 → 发布 success，
+    平台侧在售 numIid=1738670773360624727。**新坑两条**：
+    ① **vpc 域换链图 404 极快**——main_01 擦字产物 1 小时内 404（main_04 同批存活），首品带 vpc 图发布成功属侥幸；
+      **发布主图唯一可靠域 = cbu01 原链**，擦字图永远不进发布序列。
+    ② **主图供给必须选品期预检**（hero_main_images 教训第 3 次验证）：本品只有 3 张干净 cbu01 主图，
+      到发布闸才暴露，被迫 `prepublish_guard --allow-few-mains`（3 干净 > 5 带脏，显式降级留痕，T+7 曝光差即换源补图）。
+      词/图检索候选标题带「跨境/亚马逊」的品，主图常直接印 **amazon logo**（914257511246 实测）——红线在图不在标题，intake 抓不到，必须目视。
   - **通道纪律（2026-11-20，三通道版）**：输出行带 `data_source`（bailian|linkfox|aibuy），**三源销量口径全不同**
     （bailian `pay_ord_cnt_30d`=30天成交单数 / linkfox `salesQuantity`=周期件数 / aibuy `monthSold`），
     同一批次只按一个口径排序，**禁止混源比较**；失败不跨通道自动补位（防静默混源），read 失败行 next_step 明示重试通道。
@@ -878,6 +885,10 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
    提报后回「我的提报」页核对审核状态，获批的在 `backflow.py traffic --opportunity-apply true` 记日期。
    这是不开达人佣金时**唯一能主动拿到的免费推流**，而旧版只把商品机会中心当"选品信号源"读，从来没把它当"流量入口"用。
    **零单期顺序纪律：先提报现有品拿量 → 再谈铺新品**；两者冲突时提报优先（铺新品有 1/6 命中率成本，提报是确定性收益）。
+   **提报前置检查（2026-11-20 实测，VERIFIED）**：关联提报走「机会详情→绑定现有商品→选同三级类目近30天在售品→添加关键词→提交」，
+   第2步会**逐品校验标题违禁词**，任一被勾品命中（如首品标题里的 "Amazon" 竞品平台词）→ 提交按钮禁用、整单发不出去。
+   → 提报前先跑 `prepublish_guard`/目视标题去违禁词；被拦的品**先改标题再提报**，不要硬提。
+   实测闭环：apron chef 机会 → 绑定 Apron Kanvas(173863601339888) → 审核通过1、激励=获得商城页曝光（提报记录页 VERIFIED）。
 
 **T+0 免费流量三件套（2026-11-18 新增，官方优先级：销售加速 > 早鸟价 > 广告）**：
 旧版只写在 `references/selection-strategy.md` §8.3，没有任何检查项 —— 7 款零入池时这三项一个没做。

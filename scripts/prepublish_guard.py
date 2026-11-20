@@ -106,7 +106,7 @@ def desc_paragraphs(desc):
     return max(n_text, brs + 1 if brs and n_text else 0)
 
 
-def check_one(tid, detail_path, list_rows, allow_short_desc=False):
+def check_one(tid, detail_path, list_rows, allow_short_desc=False, allow_few_mains=False):
     issues = []   # 阻断
     warns = []    # 提醒，不阻断
     stats = {}
@@ -166,7 +166,7 @@ def check_one(tid, detail_path, list_rows, allow_short_desc=False):
     stats["main_images"] = len(imgs)
     if not imgs:
         issues.append("main_images = 0（min_clean_main_images 硬闸）")
-    elif len(imgs) < MIN_MAIN_PUBLISH:
+    elif len(imgs) < MIN_MAIN_PUBLISH and not allow_few_mains:
         # 2026-11-19 提级：1 张也能过旧闸是围裙「有曝光没人点」的直接根因。
         # 补足路径 = image_fix.py（擦字/翻译保图）或 SKU 图/详情图降级复用；凑不出即换货源。
         issues.append(f"主图仅 {len(imgs)} 张 < {MIN_MAIN_PUBLISH}（官方建议≥5；"
@@ -242,6 +242,9 @@ def main():
     ap.add_argument("--detail", action="append", default=[], help="直接指定 detail json（可多次）")
     ap.add_argument("--refresh", action="store_true",
                     help="先重新 ttl-detail 落盘再检查（edit 之后必加，否则读旧快照）")
+    ap.add_argument("--allow-few-mains", action="store_true",
+                    help="主图 <5 张降级为提醒（仅当全部主图均通过 image_gate L3_keep+probe、"
+                         "凑不出第 4/5 张干净 cbu01 图时使用；T+7 曝光差即补图换源）")
     ap.add_argument("--allow-short-desc", action="store_true",
                     help="把描述质量（≥500字符/≥2段）从阻断降级为提醒，需用户明确同意")
     ap.add_argument("--json", action="store_true", help="输出 JSON")
@@ -273,7 +276,7 @@ def main():
 
     results, failed = [], 0
     for tid, p in paths:
-        issues, warns, stats = check_one(tid, p, rows, a.allow_short_desc)
+        issues, warns, stats = check_one(tid, p, rows, a.allow_short_desc, a.allow_few_mains)
         ok = not issues
         failed += 0 if ok else 1
         results.append({"id": tid, "ok": ok, "issues": issues, "warns": warns, "stats": stats})
