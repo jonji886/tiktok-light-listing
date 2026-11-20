@@ -788,7 +788,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     s = sub.add_parser("sync", help="从已发布记录生成回流排期")
-    s.add_argument("--region", default="", help="只同步某站点（TH/VN）")
+    s.add_argument("--region", default="", help="只同步某站点（MY/TH/VN）")
     s.add_argument("--allow-no-date", action="store_true",
                    help="日志无 success 时间时以今天为发布日（会算错时点，慎用）")
 

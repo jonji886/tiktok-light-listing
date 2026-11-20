@@ -1,0 +1,200 @@
+# 商品机会中心（/product/opportunity）信号判读配置
+# 版本：2026-11-19（MY 主攻站改造时新增；配套 scripts/opportunity_intake.py）
+#
+# 数据口径警示（2026-11-19 浏览器实测 + 官方 Seller University 文档，写在最前面）：
+#   1. 「基于市场趋势的热门商品」= 外部平台（URL sub_tabs=shp_top_products，指向 Shopee 类榜单，
+#      INFERRED）热销但 TikTok 供给不足的品。卡片上的「3.2k+ 销量」是**外部平台销量**，
+#      不是 TikTok 站内已验证需求 → 只能当方向信号，不能当铺货清单。
+#   2. 「无竞争对手」有两种成因：真缺口 / 该品在 TikTok 根本卖不动（低客单消耗品、
+#      内容形态不适配）。机会详情页趋势图若为**平直线**（实测 Winstar 垃圾袋 30 天
+#      成交件数纹丝不动 3.2K），大概率是外部快照而非平台内动态，需求真伪必须回
+#      FastMoss 站内数据复核。
+#   3. 机会详情里 市场GMV/库存可用性/可用商品数/商家总数 显示 "--"（实测纸尿裤袋）
+#      = 平台无 TikTok 侧数据 → 该信号自动降级 direction_only，禁止直接铺。
+#   4. 品牌品（WATSONS/Winstar 等）出现在机会列表 = 平台请你跟卖品牌货，
+#      撞 selection.yaml redlines.brand_ip，一律 reject 不商量。
+
+# ── 品牌红线词表（标题命中即 reject；小写比对）──
+# 只收录"确认是品牌"的词。判不准的走 manual_review 而不是自动 reject。
+known_brands:
+  - watsons
+  - winstar
+  - kirei kirei
+  - flash
+  - marigold
+  - 3m
+  - ikea
+  - unicharm
+  - softly
+  - petko
+  - aikebababy
+  - laoguanjia
+  - kleenso
+  - boomjoy
+  - logeski
+  - scentify
+  - tineco
+  - inout
+  - cozy
+  - hooga
+
+# 品牌启发式：标题首词或独立大写词（≥4 字母、非全大写通用词、不在通用词白名单）
+# 命中 → 标 brand_suspect 转 direction_only + 人工复核，不直接 reject（降误杀）。
+brand_heuristic:
+  min_len: 4
+  # 全大写也不算品牌的通用营销词
+  generic_upper: [ID, SET, PCS, PC, CM, MM, ML, KG, G, NEW, HOT, COD, SSM, DIY, LED, UV, ABS, PVC, PP, PE, TPU, XXL, XL, XS, MY, SG, TH, VN, PH, 1S, 2S, 3S, 5S, 10S,
+    CHEAPEST, FOOD, DESICCANT, SILICA, OXYGEN, ABSORBER, PENYERAP, STRONG, STICKY, PREMIUM, CARTON, QUALITY, MULTI, SURFACE, SERIES, BLACK, WHITE, HOTEL, STAR, PURE, GIFT, DELUXE, DISPOSABLE, FLUORESCENT, FREE, SHEETS, PUMP, BIG, LIMITED, EDITION, ORIGINAL, AUTHENTIC, READY, STOCK, SALE, PROMO, BEST, TOP, SLOW, RISING, ANTI, BACTERIAL, ANTIBACTERIAL, KILLER, REPELLENT, REPEL, INSECT, MOSQUITO, MOLD, MILDEW, RUST, ODOR, STAIN, STAINS, GREASE, OIL, WATERPROOF, NONSLIP, NONSLIP]
+
+# 通用词白名单（马来语/英语常见品类词，出现不算品牌）
+generic_terms:
+  - katun
+  - katoen
+  - plastik
+  - sampah
+  - beg
+  - bag
+  - roll
+  - refill
+  - set
+  - multi
+  - pocket
+  - apron
+  - chef
+  - kitchen
+  - aksara
+  - rumah
+  - stone
+  - pumice
+  - masking
+  - film
+  - tape
+  - painting
+  - protection
+  - plastic
+  - drop
+  - cloth
+  - dust
+  - cover
+  - sheet
+  - ready
+  - stock
+  - hotel
+  - cafe
+  - cooking
+  - western
+  - restaurant
+  - waiter
+  - work
+  - portable
+  - baby
+  - diaper
+  - disposal
+  - outdoor
+  - travel
+  - odor
+  - seal
+  - disposable
+  - scented
+  - fragrance
+  - handle
+  - everyday
+  - wangi
+  - penutup
+  - cat
+  - half
+  - for
+  - with
+  - and
+  - the
+
+# ── 类目一致性（机会详情「类目」字段须落家居用品树）──
+# MY 站类目为马来语；命中任一词根视为家居树候选，否则 cross_category reject。
+category_home_hints:
+  - bekalan rumah
+  - rumah
+  - dapur
+  - kitchen
+  - household
+  - home
+  - penyimpanan
+  - pembersihan
+  - bilik
+  - beg sampah
+  - apron
+  - alat
+
+# ── 价格带校验 ──
+# 参考价区间（本币）换算 USD 后与 pricing.yaml 的 price_band_usd 比对：
+#   区间上限 < 带下限 → price_below_band reject（挂价压不进带内 = 无利可图）
+#   区间下限 > 带上限 → price_above_band reject（超出主流客单，转化存疑）
+#   其余 → 带内可继续，但**机会价只是市场参考**，最终定价仍走 pricing_calc
+price_check:
+  enabled: true
+  # 本币符号 → 站点（机会页参考价前缀）
+  currency_prefix:
+    "RM": MY
+    "฿": TH
+    "THB": TH
+    "₫": VN
+    "VND": VN
+
+# ── 食品/保健红线（selection.yaml redlines.food_health_medical，2026-11-19 代码化）──
+food_terms:
+  - snack
+  - 零食
+  - 冰棒
+  - 冰棍
+  - 儿童食品
+  - candy
+  - edible
+  - drink
+  - beverage
+  - coffee
+  - tea bag
+
+# ── 液体/膏体/化工红线（selection.yaml redlines.liquid_chemical 代码化，2026-11-19）──
+# 词根按独立词匹配；先过 exclusions（washing machine 是设备、washing cloth 是织物，不是液体品）
+liquid_terms:
+  - liquid
+  - gel
+  - beads
+  - pod
+  - pods
+  - spray
+  - detergent
+  - detergen
+  - shampoo
+  - soap
+  - perfume
+  - cuka
+  - pencuci
+  - pelembut
+  - 洗洁精
+  - 洗衣液
+  - 凝珠
+  - 喷雾
+  - 消毒液
+  - 除味剂
+  - alcohol
+  - oil
+  - penyembur
+  - pewangi
+# 2026-11-19 收紧：删掉 cleaner/cleanser/fragrance/pewangi——
+#   "cleaning brush/tank cleaner cube" 是工具与固体片，"scented/fragrance garbage bag" 是带香固体袋，
+#   都不是液体品；液体语境已由 liquid/gel/spray/pencuci 等具体词根覆盖，宽词只会误杀。
+liquid_exclusions:
+  - washing machine
+  - washing cloth
+  - washing towel
+  - cleaner cube
+  - cleaning tablet
+  - laundry bag
+  - washing brush
+  - pencuci mesin
+  - toilet cleaner tanpa berus
+  - silica gel
+
+# ── 需求过滤（与 selection.yaml demand_filter 对齐）──
+demand_filter:
+  opportunity_sales_min: 1000     # 卡片销量近似值下限（"3.2k+" → 3200）

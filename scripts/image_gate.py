@@ -374,6 +374,7 @@ def cmd_scan(args, cfg):
             channels[u].add(ch)
 
     images = []
+    content_dup = {}
     for i, url in enumerate(order, 1):
         digest = hashlib.sha1(url.encode("utf-8")).hexdigest()[:12]
         dest = out_dir / f"{digest}{image_ext(url)}"
@@ -387,6 +388,15 @@ def cmd_scan(args, cfg):
                     state = "ok"
                 except Exception as e:
                     state = f"error: {type(e).__name__}: {str(e)[:80]}"
+        # 内容哈希（678 教训：main_05 与 sku_22 URL 不同但字节相同，URL 去重抓不到，
+        # 换图后平台 3/4 位同 hash 浪费主图位）
+        csha = ""
+        if state in ("ok", "cached") and dest.exists():
+            csha = hashlib.sha256(dest.read_bytes()).hexdigest()
+            if csha in content_dup:
+                content_dup[csha].append(url)
+            else:
+                content_dup[csha] = [url]
         hints = []
         if URL_QR_HINT.search(url):
             hints.append("URL 疑似二维码/微信素材（仅提示，非判定）")
@@ -406,16 +416,25 @@ def cmd_scan(args, cfg):
             "local_path": str(dest),
             "download": state,
             "bytes": size,
+            "content_sha256": csha,
+            "content_dupe_of": (content_dup.get(csha, [url])[0] if csha and len(content_dup.get(csha, [])) > 1 and content_dup[csha][0] != url else None),
             "heuristic_flags": hints,
             "verdict": "pending",
             "seen_text": "",
             "confidence": None,
             "note": "",
         })
+    # 内容重复提示（678：main_05 与 sku_22 同字节不同 URL，换主图时占两个主图位实际只有 4 张唯一图）
+    dup_groups = [urls for urls in content_dup.values() if len(urls) > 1]
+    for im in images:
+        grp = content_dup.get(im.get("content_sha256")) or []
+        if len(grp) > 1:
+            im["heuristic_flags"].append(
+                "内容与 %s 相同（URL 不同）——换主图时勿同时选，会占位重复" %
+                ",".join(os.path.basename(g)[:10] for g in grp if g != im["url"]))
 
     review = {
-        "item_id": item_id,
-        "source_detail": str(Path(args.detail).resolve()),
+        "item_id": item_id,        "source_detail": str(Path(args.detail).resolve()),
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "how_to_judge": (
             "逐张打开 local_file（图片目录下的文件名；local_path 搬家后会失效）看图，"
@@ -453,6 +472,37 @@ def cmd_scan(args, cfg):
 
 
 # ── apply ──
+def main_gate_violations(images, keep, uri_map):
+    """主图判定硬闸（2026-11-19 678 教训）。返回违规说明列表；空=放行。
+    只强制 main 通道（发布 5 张硬闸），desc 通道维持宽松。三道：
+      ① L3_keep 必须有 probe 证据（image_fix.py probe，¥0.02/张）——治「没跑探针就标干净」
+      ② probe 识别到中文(rec_text 含 CJK) → 不得 L3_keep（英文装饰字放行，避免误伤 main_01）
+      ③ 换链后最终 URL 不得落在 TikTok 拉不到的域（发布必「参数无效」）
+    """
+    bad_hosts = ("dashscope", "kdzs-jxc-vpc")
+    img_by_url = {x["url"]: x for x in images if x.get("url")}
+    viol = []
+    for u in keep:
+        im = img_by_url.get(u) or {}
+        if "main" not in (im.get("channels") or []):
+            continue
+        iid = im.get("id", "?")
+        if im.get("verdict") == "L3_keep":
+            ev = im.get("evidence") or {}
+            if "rec_text" not in ev:
+                viol.append(f"{iid}: L3_keep 但无 probe 证据——主图先跑 "
+                            "`image_fix.py probe --review <此文件> --only L3_keep`")
+            else:
+                cjk_rt = [t for t in (ev.get("rec_text") or []) if CJK.search(t)]
+                if cjk_rt:
+                    viol.append(f"{iid}: L3_keep 但探针识别到中文 {cjk_rt[:4]}"
+                                "→ 改 L1_inpaint/L2_localize，或从 desc/sku 换一张探针无中文的方形≥600 图")
+        if any(h in uri_map.get(u, u) for h in bad_hosts):
+            viol.append(f"{iid}: 换链后 URL 落在 TikTok 拉不到的域（发布必「参数无效」）"
+                        "——发布用图必须 cbu01.alicdn.com 原链")
+    return viol
+
+
 def cmd_apply(args, cfg):
     d = read_json(args.detail)
     ri, ttm, v2 = get_v2(d)
@@ -490,6 +540,13 @@ def cmd_apply(args, cfg):
 
     if CJK.search(localized):
         sys.exit("[gate] localized_text / --desc-text 含中文，闸门拒绝（目标语言须为泰文/越南文）")
+
+    # ── 主图判定硬闸（2026-11-19 678 教训：目视拼缩略图把带中文横幅的 main_02/03 填成 L3_keep，
+    #    上架后详情页仍是中文，被用户抓到。拼图缩略太小，靠目视必然漏判 → 主图必须机器证据）──
+    main_viol = main_gate_violations(images, keep, uri_map)
+    if main_viol:
+        sys.exit("[gate] 主图判定硬闸拦截（678 教训，防详情页中文/水印漏判）:\n  - " +
+                 "\n  - ".join(main_viol))
 
     # 主图：删 L0，其余按 uri_map 换 URL
     new_main = []

@@ -1,5 +1,5 @@
-# TikTok Shop 铺货选品参数（TH/VN 家居类目）
-# 版本：2026-11-11（一件代发模式重构）
+# TikTok Shop 铺货选品参数（MY/TH/VN 家居类目；2026-11-19 起主攻 MY，TH/VN 暂缓）
+# 版本：2026-11-19（新增 MY 段）；基线 2026-11-11（一件代发模式重构）
 # 基线：TikTok Shop 官方新商方法论 + 东南亚家居实测 + 1688/妙手官方费率口径
 # 与本文件强耦合的：config/pricing.yaml（成本与加价系数）、scripts/pricing_calc.py（价格带校验）
 # 改完必须跑：python3 scripts/pricing_calc.py --check
@@ -22,7 +22,12 @@ fulfillment:
   transit_soft_days: 2                # 黄档：2 天。需 24h 发货 + 次日达 + 书面确认，无任何缓冲，周末/爆仓即超
   transit_red_days: 3                 # 红档：≥3 天必超时，直接换发货地或剔除
   hard_deadline: 3                    # 链路总耗时上限 = 3 自然日（含周末），见 strategy 2.2
-  seller_ships_48h_proof: platform_compensation_or_chat  # 本批接受 1688「晚发必赔」书面服务条款或客服书面确认；普通标签不算
+  seller_ships_48h_proof: off  # 2026-11-20 13:18 用户指示：暂不启用 48h 强拦截（机验档也不启用），不考虑阻断。
+  # off = 全部降级为 WARN 可见、不阻断 collect。机验档能力已就绪（代码+bailian 数据链路都在），
+  # 启用方式：改 machine_or_chat（晚发必赔=Y 直通 / 揽收率≥0.95 放行+WARN / 皆无回退人工书面）。
+  # 揽收率 0.0 = UNKNOWN（与无数据不可区分，2026-11-20 实测），不判 FAIL。
+  # 另一档：platform_compensation_or_chat=纯人工书面（2026-11-19 前的旧行为）。
+  # 重估触发：起量、或出延迟发货/LDR 事故时改回 machine_or_chat（机验优先，不再依赖人工要书面）。
   forwarder_same_day_delivery: required  # 货代当天送仓（16:00 前到仓当日送，之后顺延次日）
 
 # ── 地域收敛（选品先行、货代做约束）──
@@ -58,6 +63,26 @@ industry_belt:
 # ⚠ 2026-11-11b 全部重算：物流从"固定 10 元"改为"按重量 ¥0.0198/g"，
 #   同时补入 TH 电商增长服务费 8.03%、汇率改用 ERP 实时值 → 采购价上限整体下移
 #   数据来源：python3 scripts/pricing_calc.py --limits（本文所有上下限均由此反推，勿手填）
+
+# ── 马来西亚站（2026-11-19 新增；当前主攻站）──
+# 上限全部 pricing_calc.py --limits --site MY 实算（免佣期 markup 1.295、扣点 10.78%）
+MY:
+  currency: "MYR"
+  # 价格带以 pricing.yaml 为准（免佣期 $2.2–8.0；到期回 $3.5–8.0）
+  # 依据：FastMoss MY 家居实拉 n=380 中位 $3.32、P75 $5.29（2026-11-18）
+  price_band_usd: [2.2, 8.0]
+  cost_floor_cny: 4.1                 # $2.2/150g/12%净利 实算 4.1
+  cost_ceil_cny: 34.1                 # $8/150g 实算（免佣期红利；到期后必须重算，预计降至 ~22）
+  chargeable_weight_max_g: 400
+  size_vol_gate: true
+  size_max_cm: [20, 15, 8]
+  note: "免佣期（入驻+120天，以后台为准）是 MY 最大红利：扣点仅 10.78%，头程比 TH 便宜 63%。
+    到期后 cost_ceil 断崖式下跌，pricing.yaml MY 段注释有切换步骤。
+    ⚠ 商品机会中心（/product/opportunity?shop_region=MY）「基于市场趋势的热门商品」tab
+    的数据是**外部平台销量**（sub_tabs=shp_top_products，INFERRED 指向 Shopee 榜单），
+    不是 TikTok 站内需求；判读规则已代码化 scripts/opportunity_intake.py，
+    口径说明见 config/opportunity_intake.yaml 头部注释——先跑脚本再进人工。"
+
 TH:
   currency: "THB"
   # 2026-11-12 修正：下限 5.0 → 3.5。实测 TH 跨境家居 TOP300（n=48）价格中位 $3.37、81% <$5

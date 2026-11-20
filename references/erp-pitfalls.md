@@ -528,3 +528,38 @@ cryptography 预编译轮子 → 装 20+ 分钟不结束。正确解法：`aidge
 - 写入时只需 `uri`=公网直链，私有字段（thumbUrls/imagesId）清掉，平台自己转存
 - ERP 详情缓存数分钟（update-desc 同款）：提交后 mainImages 仍显旧值，勿即时判败；
   实测 2-3 分钟后回读才是新值（垃圾袋首查 3 张、复查 5 张）
+
+## 补记（2026-11-19 MY 首品闭环）
+- **backflow sync 读的是 `erp_data/tiktok_list.csv`（顶层文件）**，而 `erp_client.py ttl-list --out X` 落的是 `X/tiktok_list.csv`（目录内）。
+  用 `--out erp_data/ttl_list_my.csv` 跑完再 sync，新发的品不会入回流表（实测"新增 0"假象）。
+  正确姿势：`ttl-list --region MY` 不带 --out（默认落 erp_data/tiktok_list.csv），或 sync 前手动 cp。
+- **1688 授权过期不影响 collect/claim/publish 链路**（实测授权显示已过期仍全链路成功）；只影响 selection_intake 抓 1688 详情页图片。
+- **ERP 马来语自动翻译可用但质量不可控**：标题会混入 "laris Amazon"（畅销 Amazon）这类竞品平台词，发布前目视，ms.csv 按需用 i18n 替换。
+
+## 补记2（2026-11-19 晚，MY 批量批）：ERP OSS 图链不能进 TikTok 发布
+- **实测**：`erp_upload.py` 产物 `kdzs-jxc-vpc.oss-cn-zhangjiakou...` 换进 main_images 后 ttl-publish 报
+  「主图上传失败：TikTok商店 上传图片失败: 参数无效」——TikTok 服务器拉不到 VPC 域名。
+  且**同 key 20 分钟内 200→404 NoSuchKey**（脚本内回读核验通过≠链接持久可用，bucket 有极短生命周期）。
+- **对照**：830 品用 cbu01.alicdn.com（1688 CDN，真公网）发布成功。
+- **结论**：`image_fix.py` 的 uri_map 换链通道只适合 ERP 内部消费；**发布用途的图必须来自 TikTok 可拉的公网域**
+  （cbu01.alicdn.com / Aidge dashscope 签名链 Expires≈30 天且 TikTok 发布时会转存）。
+  带水印的 1688 图 → 优先换同款干净货源，其次 Aidge 擦水印后用 dashscope 原链直接进 uri（不经 ERP OSS 转存）。
+- **ttl-publish 新增 `--force`**：审核驳回后修完数据重发同一 ttl_id，默认 filterAlreadyPublish 会静默跳过
+  （logs 无新行、计数不动的假成功，实测浪费 20 分钟排查）。
+
+## 补记3（2026-11-19 晚，678 中文主图事故）：目视拼缩略图判主图 = 漏判，已上机器硬闸
+- **事故**：678 马桶刷 main_02/03 带「灰色/蓝色三件套+马桶刷*1硅胶刷*1缝隙刷*1」中文横幅，
+  我在 260px 缩略拼图上看走眼填了 L3_keep，上架后详情页中文被用户抓到。
+- **修复（已上线）**：`image_gate.py apply` 新增 `main_gate_violations` 硬闸，只强制 main 通道：
+  ① L3_keep 无 probe 证据 → 拒绝（先跑 `image_fix.py probe --only L3_keep`，¥0.02/张）
+  ② probe rec_text 含中文 → 拒绝（英文装饰字放行，不误伤 main_01 型）
+  ③ uri_map 换链后 URL 落 dashscope/kdzs-jxc-vpc 域 → 拒绝（TikTok 拉不到，713 实测）
+  tests/test_main_gate_cjk.py 8 项钉死。**本批 678/830/674 已补跑 probe 全量核验**。
+- **连带发现**：main_05 与 sku_22 URL 不同但字节相同（1688 同店复用素材），URL 去重抓不到；
+  换图后平台 3/4 位同 hash 浪费主图位。scan 已加 content_sha256 去重提示。
+  678 实际唯一干净主图只有 4 张（第 5 位重复）——该品暂维持现状，下批换源时补。
+- **830 main_04**：探针见「CHANEL」= 场景道具香水瓶（COCO 瓶身），非中文非营销字，
+  平台审核已通过在售，保留观察；若后续被 IP 投诉按 L1 擦除。
+- **在售品改图通道（VERIFIED 第二次）**：`site_goods.py update-images --num-iid --seller <店铺>
+  --urls <cbu01逗号分隔> --save` → 平台重转存 tos CDN；**ERP 缓存 2-3 分钟**，立即回读可能混旧值，
+  必须延迟复查（本次首查 3/4 位同 hash 即缓存混合假象，复查仍同 → 实为源图内容重复）。

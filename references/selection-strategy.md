@@ -418,12 +418,12 @@ python3 scripts/kdzs_fastmoss.py --live-fx        # 用 ERP 实时汇率覆盖�
 | `ctime` | 上架时间（判断是新品窗口还是红海尾期） |
 
 **已知局限**：
-- ~~直连 `fastmoss/productSearch` 或 `echotik/listProduct`（绕开 ERP）会 402，别去试~~
-  **【2026-11-18 作废】**：LinkFox 连接器已接入，直调三接口均 `errcode:200`
-  （`fastmoss/productSearch` / `echotik/listProduct` / `echotik/batchProductDetail`）。
-  但数据为第三方快照（`THIRD_PARTY_ONLY`），同一商品两源销量差近一倍（如 VN 压缩袋
-  `1736063102162208569`：FastMoss 2999 vs EchoTik 6002），**主分值仍以 ERP 透传为准**，
-  LinkFox 仅用于找货预筛 / 同款换发货地 / 规格名参考。详见 `scripts/linkfox_sourcing.py`。
+- ⛔ **LinkFox 的 TikTok 数据直连（`fastmoss/productSearch` / `echotik/listProduct` / `echotik/batchProductDetail`）已于 2026-11-20 停用**：
+  接口本身 2026-11-18 实测可通（`errcode:200`），但数据为第三方快照（`THIRD_PARTY_ONLY`），
+  同一商品两源销量差近一倍（如 VN 压缩袋 `1736063102162208569`：FastMoss 2999 vs EchoTik 6002）。
+  **TikTok 需求数据只走 ERP 后端透传**（`scripts/kdzs_fastmoss.py`），禁止把 LinkFox 快照混入评分维度。
+  LinkFox 在本 skill 仅用于 1688 找货（`dld/productSearch` / `alibaba1688/imageSearch` / `alibaba1688/sku`）
+  与 TH 外观专利预检。历史记录留档，不作为现行通道。
 - 销量/GMV 都是估算建模，**只能用于排序，不能算钱**
 - 没有"搜索量"字段，需求侧仍以官方后台为准
 - ⚠️ **销量榜会系统性埋掉本 skill 最想要的品**（2026-11-12 实测）：按 `day7_units_sold` 拉 TH 全量
@@ -636,6 +636,11 @@ TikTok 是内容场。官方文档明确：内容场选品要"视觉冲击力 + 
 | 注意 | 佛教国家，图案避宗教元素；跨境店对本土店有 ~17.7% 结构性价格劣势 | 对"划算/实用"更敏感；榜单可能被低价赠品链接刷量污染 |
 | 实测（2026-11-12，跨境家居 TOP300） | n=48，价中位 **$3.37**，7日销中位 **2,364**，达人出单率中位 **75.5%**（<5% 的仅 8.3%） | n=37，价中位 **$3.85**，7日销中位 **3,223**，达人出单率中位 **67.8%**（<5% 的 8.1%） |
 
+> **⛔ 本章结论已被覆盖（2026-11-19 用户决定）**：主攻站改为 **MY（马来西亚）**，TH/VN 转入存量维护（在售链接只回流不投新品）。
+> MY 的结构性优势：免佣期扣点仅 10.78%（TH 26.24%/VN 22%）、跨境头程比 TH 便宜约 63%、
+> FastMoss MY 家居 n=380 价中位 $3.32；已知待验证：ERP 马来语自动翻译 UNKNOWN、免佣到期日未核（详见 pricing.yaml MY 段）。
+> 下表与"破零期主攻 VN"结论保留作历史依据，执行时以 SKILL.md Overview 与 `config/selection.yaml → MY` 为准。
+>
 > **站点选择结论（2026-11-12 修订，推翻上一版的"先做 TH"）**：
 > 上一版依据是官方后台「低竞争机会 20 条 vs 11 条」——那是单日、小样本的类目计数，权重不该高于销量与价格结构。
 > 换成实拉样本后：VN 的 7 日销中位高 36%、客单价高 14%、达人出单率低 7.8pt（货架场空间更大），
@@ -745,7 +750,7 @@ TikTok 是内容场。官方文档明确：内容场选品要"视觉冲击力 + 
 | `region` | TH / VN |
 | `score` | 四维综合分 |
 | `score_detail` | `fulfillment/content/margin/competition` 各维分 |
-| `content_source` | `fastmoss` / `echotik` / `proxy`（proxy 时分数上限 6） |
+| `content_source` | `fastmoss`（ERP 透传唯一源）/ `proxy`（proxy 时分数上限 6）；`echotik` 为 2026-11-20 前的历史值，新批次禁用 |
 | `competition_source` | `tiktok_onsite` / `proxy`（proxy 时上限 7） |
 | `ship_city` | 1688 实际发货城市（聚簇用；省太粗，会放过 2 天时效差） |
 | `forwarder_city` | 走哪个城市的货代仓（东莞市/义乌市/广州市/泉州市/金华市） |

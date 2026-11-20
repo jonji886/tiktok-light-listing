@@ -29,6 +29,12 @@
       --out erp_data/selection_intake
   python3 scripts/selection_intake.py image --from-csv erp_data/aibuy_search.csv --region VN
 
+  # 2.5) OAuth sku 补数（2026-11-20 新增，官方接口替代详情页）：
+  python3 scripts/linkfox_oauth.py scan --batch erp_data/selection_intake/prefill.json
+  #   → Agent 按 erp_data/linkfox/oauth_tasks.json 走 MCP alibaba1688/sku 落盘 →
+  python3 scripts/linkfox_oauth.py apply --batch erp_data/selection_intake/prefill.json
+  #   回填 成本/最高SKU价/库存/规格图/尺寸文案（缺才填、不覆盖详情页值、禁止猜 MOQ）
+
   # 3) 生成候选骨架（证据列留空，闸门会逐条告诉你要补什么）
   python3 scripts/selection_intake.py seed --batch erp_data/selection_intake/prefill.json \
       --out erp_data/selection_candidates.csv --append
@@ -325,6 +331,13 @@ def fetch_offer(oid, cookie=None, timeout=20):
 
     unit_weight = to_float(freight.get("unitWeight"))
     weight_g = int(round(unit_weight * 1000)) if unit_weight else None
+    # 「商品件重尺」表（pieceWeightScale）——2026-11-20 针线盒实测发现：unitWeight=0 时
+    # 每 SKU 克重常藏在这里（weight 列单位=克）。取最大值=最高 SKU 计费口径，不猜。
+    if weight_g is None:
+        pws = grab_json(text, "pieceWeightScaleInfo") or []
+        wmax = max((to_float(x.get("weight")) or 0 for x in pws if isinstance(x, dict)), default=0)
+        if wmax > 0:
+            weight_g = int(wmax)
 
     return {
         "offer_id": str(oid),
@@ -563,14 +576,27 @@ def read_offers(args):
             if not ocol:
                 sys.exit("[intake] CSV 里找不到 offerId 列，实际列名：%s" % cols)
             for row in rd:
+                # 通道标记：opportunity_sourcing.csv 的 data_source 列（bailian|linkfox|aibuy）；旧表无此列按 aibuy
+                ch = (row.get("data_source") or "").strip().lower()
+                if ch not in ("bailian", "linkfox", "aibuy"):
+                    ch = "aibuy"
                 add(
                     row.get(ocol),
-                    title=(row.get("标题") or row.get("title") or "").strip() or None,
-                    cost_cny=to_float(row.get("起批价") or row.get("cost_cny")),
-                    min_order_qty=to_float(row.get("起订量") or row.get("min_order_qty")),
-                    image=(row.get("图片") or row.get("image") or "").strip() or None,
-                    seller=(row.get("供应商") or row.get("seller") or "").strip() or None,
-                    source="aibuy",
+                    title=(row.get("标题") or row.get("title") or row.get("offer_title") or "").strip() or None,
+                    cost_cny=to_float(row.get("起批价") or row.get("cost_cny") or row.get("start_price_cny")),
+                    min_order_qty=to_float(row.get("起订量") or row.get("min_order_qty") or row.get("begin_qty")),
+                    image=(row.get("图片") or row.get("image") or row.get("image_url") or "").strip() or None,
+                    seller=(row.get("供应商") or row.get("seller") or row.get("company") or "").strip() or None,
+                    # 发货地证据（2026-11-20）：linkfox sendGoodsAddressText / aibuy companyCity 原样列，
+                    # 归一化成城市后进 ship_city——详情页被风控时这是唯一城市证据，来源标进 reason。
+                    # bailian 无城市字段 → 空，靠 linkfox/详情页补。
+                    ship_city_evidence=city_from_location(
+                        (row.get("ship_city_raw") or "").strip()) or None,
+                    ship_city_src=ch,
+                    # 官方履约标签（2026-11-20，仅 bailian 行有值）→ 透传给 seed 的机验列
+                    late_ship_compensate=(row.get("late_ship_compensate") or "").strip(),
+                    pickup_24h_rate=(row.get("pickup_24h_rate") or "").strip(),
+                    source=ch,
                 )
 
     seen, out = set(), []
@@ -598,12 +624,28 @@ def merge_offer(rec, detail):
     if not item.get("images"):
         item["images"] = [rec["image"]] if rec.get("image") else []
     item["seller"] = item.get("seller") or rec.get("seller")
+    # 发货城市证据链：详情页为准；详情页缺失时用检索通道带回的发货地
+    # （linkfox sendGoodsAddressText / aibuy companyCity=企业注册地，口径较松，reason 里注明来源）
+    if not item.get("ship_city") and rec.get("ship_city_evidence"):
+        item["ship_city"] = rec["ship_city_evidence"]
+        item["ship_city_source"] = rec.get("ship_city_src") or rec.get("source") or "?"
+    # 官方履约标签（bailian 通道独有）透传——seed 侧据此自动填 48h 机验列
+    if rec.get("late_ship_compensate"):
+        item["late_ship_compensate"] = rec["late_ship_compensate"]
+    if rec.get("pickup_24h_rate") != "" and rec.get("pickup_24h_rate") is not None:
+        item["pickup_24h_rate"] = rec["pickup_24h_rate"]
     for k in ("stock", "weight_g", "ship_city", "location", "labels",
               "logistics_text", "page_says_48h", "support_dropship",
               "marketing_free_postage", "free_end_amount", "cat_id_1688"):
         item.setdefault(k, None if k not in ("labels",) else [])
-    item["data_source"] = "detail" if detail else (
-        "aibuy" if (rec.get("source") == "aibuy" and rec.get("image")) else "ids_only")
+    if detail:
+        item["data_source"] = "detail"
+    elif rec.get("source") in ("linkfox", "bailian"):
+        item["data_source"] = rec.get("source")
+    elif rec.get("source") == "aibuy" and rec.get("image"):
+        item["data_source"] = "aibuy"
+    else:
+        item["data_source"] = "ids_only"
     return item
 
 
@@ -655,6 +697,8 @@ def cmd_image(args):
             "detail": "detail.1688.com 页面解析（offerImgList/orderParam/tradeModel/"
                       "skuInfoMap/freightInfo），需可访问或提供 Cookie",
             "aibuy": "遨虾 search CSV（offerId/主图/起批价/起订量），无风控但只有 1 张图",
+            "linkfox": "LinkFox MCP 检索 CSV（offerId/主图/起批价/起订量/发货地原样），"
+                       "第三方快照 THIRD_PARTY_ONLY，只有 1 张图",
         },
         "detail_success": detail_ok,
         "items": records,
@@ -666,10 +710,11 @@ def cmd_image(args):
           % (prefill, detail_ok, len(records) + len(failed), len(failed)))
 
     if detail_ok == 0:
-        print("[image] ⚠ 全部走降级源：1688 详情页不可访问（IP 级风控）。"
-              "要拿全 5 张主图/库存/重量，把浏览器里 detail.1688.com 的 Cookie "
-              "存到 scripts/ali_cookie.txt 或传 --cookie；否则 clean_main_images "
-              "只能靠遨虾单图 + 人工补证")
+        print("[image] ⚠ 详情页全部未通（IP 级风控或未开 detail）。"
+              "推荐补救顺序（2026-11-20）：① `linkfox_oauth.py scan→MCP sku 取数→apply`"
+              "——成本/最高SKU价/库存/规格图/尺寸文案走**官方 OAuth 接口**补齐，"
+              "无需详情页与 Cookie；② 仍缺的 重量/多图主图组/发货地 再详情页"
+              "（浏览器 Cookie 存 scripts/ali_cookie.txt 或传 --cookie，且只逐品单点抓，勿批量连打）")
 
     if not args.no_sheet and records:
         res = build_sheets(prefill, records, out_dir)
@@ -716,8 +761,8 @@ def cmd_seed(args):
             if it.get(key) is not None:
                 proof_bits.append("%s=%s" % (label, it[key]))
         proof = "；".join(proof_bits)
-        if it.get("data_source") != "detail":
-            proof = (proof + "；" if proof else "") + "遨虾源无包邮/时效字段，需人工核"
+        if it.get("data_source") in ("aibuy", "linkfox"):
+            proof = (proof + "；" if proof else "") + "检索降级源无包邮/时效字段，需人工核"
         rows.append({
             "offer_id": it["offer_id"],
             "offer_url": it.get("offer_url"),
@@ -736,16 +781,35 @@ def cmd_seed(args):
             "free_shipping": "",                     # 真包邮需人工判（满件包邮是假包邮）
             "free_shipping_proof": proof,
             "weight_g": "" if it.get("weight_g") is None else it["weight_g"],
-            "dims_cm": "",                           # 详情参数表里读，或量实物
+            # OAuth sku 回填的 dims_parsed 自动带过来（规格值文案解析，reason 注明非详情参数表），
+            # 人工/详情页值优先——已填过就不覆盖（seed 是追加/覆盖由 --overwrite 控制，这里是行级新值）
+            "dims_cm": it.get("dims_parsed") or "",
             "redline_check": "",                     # 人工过红线
             "ship_city": it.get("ship_city") or "",
             "forwarder_city": "",
+            # 官方履约标签透传（bailian 行有值；gate 的 machine_or_chat 档直接吃这两列）
+            "late_ship_compensate": it.get("late_ship_compensate") or "",
+            "pickup_24h_rate": "" if it.get("pickup_24h_rate") in (None, "") else it.get("pickup_24h_rate"),
             "reason": "auto抄录[%s]成本/库存/MOQ/重量/发货城市；待人工：干净主图数、详情可重建、"
                       "48h书面确认、真包邮、货代天数、红线"
                       % it.get("data_source", "?"),
         })
-        if it.get("data_source") == "aibuy":
-            rows[-1]["reason"] += "；仅遨虾单图，主图证据不足3张需补"
+        if it.get("data_source") in ("aibuy", "linkfox", "bailian"):
+            rows[-1]["reason"] += "；仅检索降级源单图，主图证据不足3张需补"
+        # OAuth sku 回填痕迹（2026-11-20）：价格/库存升级为官方实时数；dims 来自规格文案解析
+        if it.get("max_sku_source") == "oauth_sku":
+            bits = ["SKU价/库存=alibaba1688/sku官方实时数"]
+            if it.get("sku_spec_count"):
+                bits.append("规格%d组合(%s)" % (it["sku_spec_count"], ",".join(it.get("sku_spec_names") or [])))
+            if it.get("sku_images"):
+                bits.append("规格图%d张(非主图组)" % len(it["sku_images"]))
+            if it.get("dims_parsed"):
+                bits.append("dims_cm 来自规格值解析，抛重前与详情页/实物核对")
+            rows[-1]["reason"] += "；" + "；".join(bits)
+        # 发货城市证据链来源（2026-11-20）：详情页拿不到城市时，用检索通道字段，
+        # 口径注明——linkfox=sendGoodsAddressText(发货地)、aibuy=companyCity(企业注册地，较松)
+        if it.get("ship_city") and it.get("ship_city_source"):
+            rows[-1]["reason"] += "；ship_city 来自检索通道(%s)，非详情页核实，货代聚簇前抽查" % it["ship_city_source"]
         if notes:
             rows[-1]["reason"] += "；" + "；".join(notes)
 
@@ -773,7 +837,7 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p1 = sub.add_parser("pool", help="批量关键词池拉取并预筛")
-    p1.add_argument("--region", required=True, help="站点：TH/VN/...")
+    p1.add_argument("--region", required=True, help="站点：MY/TH/VN/...")
     p1.add_argument("--keywords", default="", help="逗号分隔关键词（当地语言）")
     p1.add_argument("--keywords-file", default="", help="每行一个关键词，# 起注释")
     p1.add_argument("--usd-min", type=float, default=None)
@@ -789,7 +853,7 @@ def main():
     p2.add_argument("--ids", default="", help="逗号分隔 1688 offerId")
     p2.add_argument("--ids-file", default="", help="每行一个 offerId")
     p2.add_argument("--from-csv", default="", help="从 CSV 的 offer_id 列读（如遨虾 search 结果）")
-    p2.add_argument("--region", default="VN")
+    p2.add_argument("--region", default="MY")   # 2026-11-19 主攻 MY
     p2.add_argument("--out", default="")
     p2.add_argument("--cookie", default="", help="1688 Cookie 串（或存 scripts/ali_cookie.txt）")
     p2.add_argument("--no-detail", action="store_true",

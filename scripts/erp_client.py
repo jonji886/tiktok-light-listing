@@ -306,7 +306,9 @@ def cmd_ttl_publish(args):
         "weight": args.weight, "weightSet": 1,
         "packageLength": args.dims[0], "packageWidth": args.dims[1],
         "packageHeight": args.dims[2], "packageSet": 1,
-        "filterAlreadyPublish": True, "forbiddenWordDetectMode": 0,
+        # 2026-11-19：审核驳回后修完数据要重发同一 ttl_id，默认过滤器会静默跳过（logs 无新行、计数不动），
+        # 必须 --force 关掉 filterAlreadyPublish 才真正重新提交
+        "filterAlreadyPublish": not getattr(args, "force", False), "forbiddenWordDetectMode": 0,
         "priceLimitEnable": False, "priceLimitMultiple": "1",
         "useTiktokMultiCountryConfig": False,
         "tiktokOverflowConfig": {
@@ -433,9 +435,10 @@ def main():
     pi = sub.add_parser("items"); pi.add_argument("--page", type=int, default=1); pi.add_argument("--size", type=int, default=50); pi.add_argument("--ids", default=""); pi.add_argument("--out", default="")
     pl = sub.add_parser("ttl-list"); pl.add_argument("--page", type=int, default=1); pl.add_argument("--size", type=int, default=50); pl.add_argument("--region", default=""); pl.add_argument("--status", type=int, default=None); pl.add_argument("--out", default="")
     pd = sub.add_parser("ttl-detail"); pd.add_argument("--id", required=True); pd.add_argument("--out", default="")
-    pcl = sub.add_parser("ttl-claim"); pcl.add_argument("--ids", required=True); pcl.add_argument("--region", default="TH"); pcl.add_argument("--seller", default=""); pcl.add_argument("--out", default="")
+    # 2026-11-19：默认站点改 MY（主攻站）。认领弹窗默认选中 PH 店的坑仍在——显式传 --region 最稳
+    pcl = sub.add_parser("ttl-claim"); pcl.add_argument("--ids", required=True); pcl.add_argument("--region", default="MY"); pcl.add_argument("--seller", default=""); pcl.add_argument("--out", default="")
     ptr = sub.add_parser("ttl-translate"); ptr.add_argument("--id", required=True); ptr.add_argument("--lang", default="th")
-    pp = sub.add_parser("ttl-publish"); pp.add_argument("--ids", required=True)
+    pp = sub.add_parser("ttl-publish"); pp.add_argument("--ids", required=True); pp.add_argument("--force", action="store_true", help="已发布/被驳回的 ttl_id 重新提交（关 filterAlreadyPublish）")
     pp.add_argument("--weight", type=float, default=1.0, help="包裹重量 KG（默认1，轻小件建议按实重填）")
     pp.add_argument("--dims", default="10x10x10", help="包裹尺寸 cm，格式 长x宽x高")
     pp.add_argument("--dry-run", action="store_true", help="只打印发布参数，不提交")
@@ -443,7 +446,7 @@ def main():
     pdl = sub.add_parser("ttl-del"); pdl.add_argument("--ids", required=True); pdl.add_argument("--out", default="")
     plg = sub.add_parser("logs"); plg.add_argument("--months", type=int, default=1); plg.add_argument("--out", default="")
     ps = sub.add_parser("shops"); ps.add_argument("--platform", default="tiktok"); ps.add_argument("--out", default="")
-    pq = sub.add_parser("quota"); pq.add_argument("--region", default="", help="TH/VN，留空列全部"); pq.add_argument("--out", default="")
+    pq = sub.add_parser("quota"); pq.add_argument("--region", default="", help="MY/TH/VN，留空列全部"); pq.add_argument("--out", default="")
 
     for sp in (pi,pl,plg,ps,pc,pcl,pp,pdl,pq):
         sp.add_argument("--token", default="")

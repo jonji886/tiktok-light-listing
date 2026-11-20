@@ -90,7 +90,7 @@ DEFAULTS = {
     "chargeable_weight_max_g": 400,
     "max_transit_days": 1,
     "true_free_shipping": "required",
-    "seller_ships_48h_proof": "required",
+    "seller_ships_48h_proof": "off",  # 2026-11-20 用户指示暂不阻断；机验档 machine_or_chat 能力已就绪待启用
     # 价格竞争力闸（P0-1）：挂价上限相对「站内同款中位价」的倍数
     "market_price_tolerance": 1.05,
     "market_price_min_sample": 5,
@@ -122,7 +122,7 @@ TEMPLATE_HEADER = [
     "market_median_price_usd", "market_price_source", "market_price_n",
     "market_price_sampled_at",
     "ship_city", "forwarder_city", "domestic_shipping_cny", "markup",
-    "seller_48h_proof_text", "reason",
+    "seller_48h_proof_text", "late_ship_compensate", "pickup_24h_rate", "reason",
 ]
 
 
@@ -342,10 +342,36 @@ def judge(row, idx, thr, price_cfg_all, home_ids, market_gate=False,
                       "（红/黄档不进 collect，先换发货地）")
 
     seller_proof_text = str(row.get("seller_48h_proof_text") or "").strip()
-    if fbool(row.get("seller_48h_proof")) is not True:
-        issues.append("NO_48H_PROOF: 缺供应商 48h 发货有效书面证据")
-    elif thr["seller_ships_48h_proof"] == "platform_compensation_or_chat":
-        if not seller_proof_text or not any(k in seller_proof_text for k in ("晚发必赔", "延必赔", "客服书面")):
+    # 48h 证据闸（2026-11-20 升级：机验档优先）。三档模式：
+    #   off                              = 只 WARN 不阻断（2026-11-19 临时态，保留可回退）
+    #   platform_compensation_or_chat    = 只认人工书面（旧行为）
+    #   machine_or_chat（新默认）        = 百炼官方标签「晚发必赔=Y」机验通过 → 免人工书面；
+    #       揽收率≥95% 但无赔付承诺 → 放行+WARN；两者皆缺/无 bailian 数据 → 回退人工书面要求。
+    # 依据：晚发必赔=供应商向平台投保的自动赔付承诺，证据等级高于客服口头确认（wiki.1688 分销白皮书）；
+    # TikTok 侧 LDR≥4% 即警告限单，履约红线第一权重。
+    # ⚠ 揽收率 0.0 与"无数据"不可区分（2026-11-20 实测：30天零成交新品必为 0.0）→ 一律按 UNKNOWN，不判 FAIL。
+    lsc = str(row.get("late_ship_compensate") or "").strip().upper()
+    p24 = fnum(row.get("pickup_24h_rate"))
+    p24_known = p24 is not None and p24 > 0
+    mode48 = thr["seller_ships_48h_proof"]
+    if mode48 == "off":
+        if fbool(row.get("seller_48h_proof")) is not True and lsc != "Y":
+            warns.append("48H_PROOF_SKIPPED(拦截已关闭): 无 48h 书面证据；出延迟发货事故立即改回阻断")
+    elif mode48 == "machine_or_chat":
+        if lsc == "Y":
+            pass  # 官方机验通过（bailian serviceTags.is_late_ship_compensate）
+        elif p24_known and p24 >= 0.95:
+            warns.append("48H_MACHINE_SOFT: 24h揽收率 %.2f≥0.95 但无晚发必赔；放行但履约兜底缺失，"
+                         "爆单前补书面确认或换供应商" % p24)
+        elif fbool(row.get("seller_48h_proof")) is not True:
+            issues.append("NO_48H_PROOF: 无晚发必赔标签(bailian 未覆盖或=N)且无人工书面——"
+                          "跑 bailian 通道取 is_late_ship_compensate，或客服书面确认填 seller_48h_proof")
+        elif not seller_proof_text or not any(k in seller_proof_text for k in ("晚发必赔", "延必赔", "客服书面")):
+            issues.append("NO_48H_PROOF_TEXT: seller_48h_proof_text 需记录晚发必赔书面条款或客服书面确认")
+    else:  # platform_compensation_or_chat（纯人工档，旧行为）
+        if fbool(row.get("seller_48h_proof")) is not True:
+            issues.append("NO_48H_PROOF: 缺供应商 48h 发货有效书面证据")
+        elif not seller_proof_text or not any(k in seller_proof_text for k in ("晚发必赔", "延必赔", "客服书面")):
             issues.append("NO_48H_PROOF_TEXT: seller_48h_proof_text 需记录晚发必赔书面条款或客服书面确认")
 
     # 国内运费：required=必须真包邮；cost_in_price=允许把逐品页面运费计入成本
@@ -469,7 +495,10 @@ def judge(row, idx, thr, price_cfg_all, home_ids, market_gate=False,
                          "家居树内仍可发品（✅ 是优先方向，不是准入资格，不阻断）")
 
     if not str(row.get("ship_city") or "").strip() or not str(row.get("forwarder_city") or "").strip():
-        warns.append("ship_city/forwarder_city 未填齐，地域聚簇与货代覆盖无法复核（strategy 2.0）")
+        warns.append("ship_city/forwarder_city 未填齐，地域聚簇与货代覆盖无法复核（strategy 2.0）。"
+                     "ship_city 证据链（2026-11-20）：详情页 location → linkfox sendGoodsAddressText"
+                     "（opportunity_sourcing.csv 的 ship_city_raw 列，seed 已自动带）→ aibuy companyCity"
+                     "（注册地口径，较松）→ 全空才人工抄；聚簇按城市粒度，省级不算填齐")
 
     if "pass" not in str(row.get("redline_check") or "").lower():
         issues.append("REDLINE_UNCHECKED: redline_check 不含 pass（strategy 5.1 十条红线须逐条核查留痕）")

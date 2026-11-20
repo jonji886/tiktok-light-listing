@@ -255,7 +255,8 @@ def check_fastmoss():
         add(group, "类目树（免鉴权）", "FAIL",
             "不再免鉴权或接口变更 → 选品 L2 层（FastMoss 单品批量）失效：%s" % note)
 
-    body = {"keywords": None, "filter": {"region": "TH", "shopType": 2},
+    # 2026-11-19：主攻站点改为 MY，探活跟着主站点走（接口对任一站点可用即代表通道通）
+    body = {"keywords": None, "filter": {"region": "MY", "shopType": 2},
             "orderby": [{"field": "day7_units_sold", "order": "desc"}],
             "page": 1, "pagesize": 2}
     ok, payload, note = http_post(ERP_API + "/item/fastmoss/product/search", body)

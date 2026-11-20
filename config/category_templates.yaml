@@ -1,0 +1,28 @@
+# 类目模板表（category_template.py record 可自动追加/更新；手写纪律见文件头注释）
+templates:
+  收纳盒:
+    erp_category_id: "600621"
+    erp_category_id_tree: "600001,851848,600621"
+    erp_category_name_tree: "家居用品,家居收纳用品,收纳盒"
+    weight_g: "300"
+    dims_cm: "12x12x6"
+    forwarder_city: "金华市"
+    ship_transit_days: "1"
+    desc_text_file: "erp_data/desc_templates/desc_my_收纳盒.txt"
+    keywords_ms: "kotak simpanan"
+    aliases: "收纳,储物,simpanan,针线盒,缝纫套装"
+    source: "measured"
+    notes: "2026-11-20 磁吸针线盒实测沉淀（ttl_id=1573354985664102400 发布 success）。本档实为小型桌面收纳盒口径（方款 300g/12x12x6 实测申报通过）；大件收纳（>1kg 或任一边>30cm）不适用，回改档位或新建模板。"
+  围裙:
+    erp_category_id: "600427"
+    erp_category_id_tree: "600001,852232,600427"
+    erp_category_name_tree: "家居用品,家居护理用品,围裙"
+    weight_g: "150"
+    dims_cm: "30x25x3"
+    forwarder_city: "金华市"
+    ship_transit_days: "1"
+    desc_text_file: "erp_data/desc_templates/desc_my_围裙.txt"
+    keywords_ms: "apron dapur"
+    source: "measured"
+    notes: "record 自 ttl_id=1573021951366418432 (2026-11-19 MY首品已发布)"
+    aliases: "围裙,apron"

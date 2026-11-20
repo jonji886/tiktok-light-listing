@@ -1,18 +1,25 @@
 ---
 name: tiktok-light-listing
-description: "TikTok Shop 跨境店铺货（快递助手ERP跨境版，一件代发模式）：选品(免token拉FastMoss单品数据→官方商品机会中心/榜单取需求信号→1688找货→红线与供应链门槛→履约/内容力/实净利/站内竞争四维评分+价格带校验出清单)→1688链接采集→公共采集箱→认领到TikTok站点店铺(TH/VN)→二次编辑(批量公式改价/图片擦文字翻译/首图白底/修SKU规格名与库存)→发布→四路验证→记录统计→T+7/T+20数据回流。全链路接口化，仅人工接管登录与货代确认。已跑通真实闭环(2026-11-12 泰国店在售)。仅适用于 erp.kuaidizs.cn + JingShanShop-TH/VN 两个店铺，店铺主营类目为家居用品(选品仅限该类目)。不做其他ERP/其他平台。"
+description: "TikTok Shop 跨境店铺货（快递助手ERP跨境版，一件代发模式）：选品(免token拉FastMoss单品数据→官方商品机会中心信号先过opportunity_intake.py判读闸门/榜单取需求信号→1688找货→红线与供应链门槛→履约/内容力/实净利/站内竞争四维评分+价格带校验出清单)→1688链接采集→公共采集箱→认领到TikTok站点店铺(主攻MY，TH/VN暂缓)→二次编辑(批量公式改价/图片擦文字翻译/首图白底/修SKU规格名与库存)→发布→四路验证→记录统计→T+7/T+20数据回流。全链路接口化，仅人工接管登录与货代确认。已跑通真实闭环(2026-11-12 泰国店在售；2026-11-19 MY 首品经机会中心路线 20 分钟到在售)。仅适用于 erp.kuaidizs.cn + JingShanShop-MY/TH/VN 三个店铺(2026-11-19起主攻MY，TH/VN存量维护不投新品)，店铺主营类目为家居用品(选品仅限该类目)。不做其他ERP/其他平台。"
 ---
 
 # TikTok Shop 跨境铺货（选品 → 1688采集 → 认领 → 编辑图片/翻译/定价 → 发布）
 
 ## Overview
 
-在快递助手ERP跨境版内，把1688货源铺到 TikTok Shop 东南亚店（店铺 TH + VN 均已开，**破零期主攻 VN**，理由见 strategy 第七章），店铺主营类目为**家居用品**。
+在快递助手ERP跨境版内，把1688货源铺到 TikTok Shop 东南亚店（店铺 TH/VN/MY 均已开，**2026-11-19 用户决定：主攻 MY（马来西亚），TH/VN 暂缓**——TH/VN 存量在售链接只做维护与数据回流，不再投入新品；strategy 第七章的"破零期主攻 VN"结论已被此决定覆盖）。店铺主营类目为**家居用品**。
+MY 站已知点状态（2026-11-19 首品闭环后更新）：
+① **ERP 马来语自动翻译 = VERIFIED 可用**（首品认领后标题自动马来语化，如 "Apron separuh panjang laris Amazon..."；SKU 规格名"颜色"自动译 "Warna"）。
+   ⚠ 但自动译文质量不可控（首品标题混入 "laris Amazon" 竞品平台词、"celemek kerja rumah" 与 "apron" 混用）——
+   发布前必须目视标题，必要时用 `i18n.py` 查表替换；`config/i18n/ms.csv` 从"空表待验证"转为"按需积累替换词条"。
+   详情图英文文字（POCKETS/STRAP 等）在 MY 可直接保留（英语通用），只删中文图。
+② MY 免佣期到期日仍未核（后台为准，到期连锁改 `pricing.yaml`，见其 MY 段注释）。
+③ 1688 授权过期**不影响 collect/claim/publish**（2026-11-19 实测：授权显示已过期仍全链路成功）——仅影响 selection_intake 抓详情页图片。
 
 链路分6段：
-0. **选品**：FastMoss 单品数据（免token）+ 官方后台取需求信号 → 1688 找货 → 红线+供应链门槛 → 四维评分+价格带校验 → **按发货城市聚簇 + 查货代覆盖（TIKTOK 标签）** → 出候选清单
+0. **选品**：FastMoss 单品数据（免token）+ 官方后台取需求信号（**2026-11-20 优先级重排：P0=热门关键词收割 `opportunity_keywords.py`（周常，喂标题词根+pool 两表）、P0=在售品提报关联（每3天，流量入口）> P1=机会卡片路线（抄卡片→`opportunity_intake.py` 判读→`opportunity_to_sourcing.py` 1688 相似款，见 0.2④）**）→ 1688 找货 → 红线+供应链门槛 → 四维评分+价格带校验 → **按发货城市聚簇 + 查货代覆盖（TIKTOK 标签）** → 出候选清单
 1. **采集**：1688 offerId → ERP公共采集箱（复用旧接口）
-2. **认领**：公共采集箱 → 认领到指定TikTok站点店铺（TH/VN）
+2. **认领**：公共采集箱 → 认领到指定TikTok站点店铺（MY 主攻；TH/VN 存量）
 3. **编辑**：TikTok采集箱里逐品二次编辑——标题已自动翻译，图片要处理（擦广告字/翻译功能字/首图白底），SKU 规格名与库存要过平台校验，价格用**批量公式改价**
 4. **发布**：提交到TikTok发布队列（附真实重量/尺寸）→ **四路验证**
 5. **统计**：发布记录回查 + T+7/T+20 真实曝光/点击/履约数据回流
@@ -28,12 +35,34 @@ description: "TikTok Shop 跨境店铺货（快递助手ERP跨境版，一件代
 **本版已达成（2026-11-12 首单闭环，可作为标准剧本）**：真空压缩袋经全接口链路铺到 **JingShanShop-TH**，
 TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 认领 → `set_price` 公式改价 → `fix_sku` 修规格名/库存
 → `ttl-publish` → **四路验证**（ERP 日志 / 采集箱状态 / 铺货配额 / 店铺后台在售数）。
+
+**MY 标准剧本 v2（2026-11-20 提效改造后；同类目模板品目标 ≤15 分钟/品）**：
+
+> v2 的实质：把「每品现场决策」压成「模板一次固化、每品直接套用」。
+> 三大新工具 = 类目模板表（消灭查类目/定重量档/写描述 ≈12 分）+ 款型主图预检（消灭图片闸门中途换款 ≈8 分）
+> + ttl_edit 一次到位（4 次手写 edit → 1 次）。首品走 v1 全流程，发布成功后 `category_template.py record` 沉淀模板。
+
+机会卡片抄录 → `opportunity_intake.py` 判读 → `opportunity_to_sourcing.py`（三通道 bailian|linkfox|aibuy）→
+`selection_intake.py image --no-detail`（成本/库存走 OAuth，详情页只补重量/主图组）→
+**`linkfox_oauth.py scan → MCP sku 落盘 → apply`**（价格三源裁决已固化：详情页值与 OAuth 差>30% 自动覆盖+留痕）→
+**`hero_main_images.py`（款型主图供给预检——选品期就定款型，禁止留到图片闸门中途换款）** →
+`select_gate.py` 硬闸 → `erp_client.py collect → ttl-claim` →
+**`category_template.py match`（命中模板）→ `ttl_edit.py --template <名> --keep-prefix <款型SKU前缀> --save`**
+（一次 edit 到位：类目/重量/尺寸/SKU精简/公式定价/主图/描述渲染，默认 dry-run）→
+`image_gate.py scan → apply --save`（模板品描述走 `category_template render`，占位未填=拒绝）→
+`prepublish_guard → price_gate`（子集隔离，历史脏草稿会拖累全量退出码）→ `erp_client.py ttl-publish --weight/--dims` →
+四路验证 → `backflow.py sync`（**先 `ttl-list --region MY` 不带 --out 落顶层 CSV 再 sync**，否则假新增0）。
+
+**首品（无模板）仍走 v1**：多模态逐张判定 + 手写 edit 分步——发布成功后必跑
+`python3 scripts/category_template.py record --ttl-id <id> --name <模板名> --aliases <词根>` 沉淀，
+同类目第二件起走 v2。48h 证据拦截当前为 `off`（2026-11-20 13:18 用户指示），见「MY 首品闭环新增硬规则」第 1 条。
+
 **凡是接口相关的坑，先查 `references/erp-pitfalls.md`**（body 结构、错误码、逆向方法、浏览器边界全在里面）。
 
 ## 适用范围
 
-- **适用**：erp.kuaidizs.cn + JingShanShop-TH(7494877320827733079) + JingShanShop-VN(8686823118786298967)
-- **不适用**：其他ERP、TikTok自运营店、其他站点(PH/SG/MY后续再加)、Shopee/Lazada
+- **适用**：erp.kuaidizs.cn + **JingShanShop-MY(8686823118786233431，2026-11-19 起主攻)** + JingShanShop-TH(7494877320827733079，存量维护) + JingShanShop-VN(8686823118786298967，存量维护)
+- **不适用**：其他ERP、TikTok自运营店、其他站点(PH/SG后续再加)、Shopee/Lazada
 
 ## 动作分层
 
@@ -47,7 +76,8 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
 - 接口为未公开内部接口：**报错先读 `失败原因`/`errorMessage` 原文，按 `references/erp-pitfalls.md` 的码表定位**，
   不要用同一份数据重试；确认是接口不可用时再回退浏览器操作
 - 所有写操作(claim/edit/publish/del)仅对用户明确点名的清单执行；改价、修 SKU 一律先 `--dry-run`
-- **标题/描述/规格名译名只查表**：`config/i18n/<lang>.csv`（`VN→vi.csv`、`TH→th.csv`），
+- **标题/描述/规格名译名只查表**：`config/i18n/<lang>.csv`（`VN→vi.csv`、`TH→th.csv`、`MY→ms.csv`——
+  MY 自动翻译已 VERIFIED 可用但质量不可控（首品混入 "laris Amazon"），ms.csv 按需积累替换词条、发布前目视标题），
   入口 `scripts/i18n.py`。加新品 = 加一行，不改代码；查不到返回 `None`，由调用方转人工或阻断。
   **禁止按 SKU 序号套模板**（2026-11-13 删除的旧实现会轮流贴「粉/蓝/灰/黑/白/绿」，与真实颜色无关）。
 - **拿不到数据就写"拿不到"，不要用旧快照或推测值补位**
@@ -91,6 +121,25 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
 3. **本地负载先审计**：`listing_payload_audit.py` 核站点、图片数、越南语文本、单件 SKU、库存/价格、源序号和重量；本地通过后，真实 ERP 详情上仍须重跑既有闸门。
 4. **旧数据不得复用**：排除多件套、液体胶水/免钉胶、无关杆件；按本批真实 SKU 重算成本与售价，旧 SKU 成本/客单价作废；杭州页面运费不等于货代仓运费。
 5. **写操作先查重再分批**：认领每批 ≤3，按 offerId 精确查重；回执为空必须回读；`success` 不等于平台在售。旧 `ttl-save` 继续禁用。
+
+### MY 首品闭环新增硬规则（2026-11-19，全文见 replay-log 第五批）
+
+1. **48h 强拦截当前关闭**（`selection.yaml → seller_ships_48h_proof: off`；2026-11-20 13:18 用户指示"暂不考虑 48h 阻断"）：
+   collect 不阻断，缺证据降级 WARN `48H_PROOF_SKIPPED` 仍可见。
+   **机验档能力已就绪待启用**（代码与 bailian 数据链路都在）：改 `machine_or_chat` 后——
+   候选来自 `--channel bailian` 且官方标签 `late_ship_compensate=Y` 直接过闸（免人工书面）；
+   揽收率≥0.95 无赔付=放行+WARN；两者皆无=回退人工书面要求。
+   ⚠ `pickup_24h_rate=0.0` 一律按 UNKNOWN（实测与无数据不可区分，勿判 FAIL 误杀新供应商）。
+   纯人工档 `platform_compensation_or_chat` 亦保留（2026-11-19 前旧行为）。
+   重估触发：起量、或出延迟发货/LDR 事故→改 machine_or_chat。
+2. **删详情图前先读图**：重量/尺寸红线数据常藏在「包装信息」中文图里（本品 95g/23×16×1cm 即从 desc_06 提取后才 L0_drop）——
+   多模态判定时让模型顺带抄参数表，别只填 verdict。
+3. **全大写 ≠ 品牌**：KATUN 实为马来语"棉布"（KBBI 词典）。品牌判定=known_brands 名单+词典核实；
+   启发式只认全大写词，title-case 品牌靠名单兜。
+4. **1688 授权过期不中断铺货批次**：collect/claim/publish 实测不受影响，仅详情页抓图受阻。
+5. **ERP 自动价破带是常态**：认领价（本品 RM8.62 < 带下限）必须走 `price_gate → batch_prep 公式改价 → 复检` 后再 publish，禁止手填。
+6. **backflow sync 前先确认 `erp_data/tiktok_list.csv`（顶层）是本批数据**：`--out` 落目录内会让 sync"新增 0"假象漏排期。
+7. **机会中心路线效率基准 ~20min/品**（抄卡片5+判读秒+检索1+抄录2+看图3+描述2+改价2+发布验证3）。
 
 ## 这批数据的三个硬提示（2026-11-12 后台回执，别违反）
 
@@ -146,33 +195,90 @@ python3 scripts/erp_token_grab.py --save --check    # 从 Chrome Session Storage
   - **参数必须嵌在 `filter` 里**（`region`、`shopType:2`=跨境店、`priceRange:{min,max}`、`creatorCountRange:{max}`），
     分页用 `page`/`pagesize`，排序字段是 **snake_case**（`day7_units_sold`/`creator_count`/`day7_gmv`…），不是驼峰。
   - CLI：`python3 scripts/kdzs_fastmoss.py --region TH --usd-min 3 --usd-max 8 --max-creator 100 --min-video 10 --top 40`
-    / `--categories` 看类目树 / `--live-fx` 拉实时汇率。
-  - **多词批量池（推荐，2026-11-12 新增）**：`python3 scripts/selection_intake.py pool --region TH \
-    --keywords-file erp_data/keywords_th.txt --usd-min 3.5 --usd-max 8 --max-creator 100 --min-video 10`
+    / `--categories` 看类目树 / `--live-fx` 拉实时汇率。（2026-11-19 起 `--region` 默认 MY；TH/VN 存量期不再拉新池）
+  - **多词批量池（推荐，2026-11-12 新增）**：`python3 scripts/selection_intake.py pool --region MY \
+    --keywords-file erp_data/keywords_my.txt --usd-min 2.2 --usd-max 8 --max-creator 100 --min-video 10`
+    ⚠ pool 词文件用**马来语品长词**（FastMoss 实测中文词命中 0；另建 `erp_data/keywords_my.txt`，
+    不要把标题词根表 `config/keywords/my.txt` 直接喂给 pool——词根粒度太粗，拉不出发可拍的品）。
     → 逐词拉取、去重、按 `creatorOrderRate` 分 `ideal/shelf/mixed` 档并剔除纯达人驱动，落 `selection_pool.csv`。
     实测 3 个泰语词 24+46+34 条去重到 91 条、入池 71 条；换成 18 词就是几百条，不用再人工抄榜单。
-  - ⚠️ **不需要**买 FastMoss 订阅：ERP 后端透传是主通道（免 token）。**LinkFox 直连通道 2026-11-18 复测已打通**
-    （`fastmoss/productSearch`、`echotik/listProduct`、`echotik/batchProductDetail` 均 `errcode:200`），
-    旧的"直连均 402、别去试"结论**已过期作废**；但 LinkFox 数据为第三方快照（`THIRD_PARTY_ONLY`），
-    与 ERP 透传口径可能不一致（同一商品销量两源差近一倍），**两者不要混用同一评分维度**，
-    且必须用当地语言长尾词（中文词命中 0）。取数脚本见 `scripts/linkfox_sourcing.py`。
+  - ⛔ **不需要**买 FastMoss 订阅：ERP 后端透传是 **TikTok 需求数据的唯一通道**（免 token）。
+    **LinkFox 的 TikTok 数据直连（`fastmoss/productSearch` / `echotik/listProduct` / `echotik/batchProductDetail`）自 2026-11-20 起停用**：
+    不再新增调用、不作为任何评分维度输入。理由：数据为第三方快照（`THIRD_PARTY_ONLY`），
+    与 ERP 透传口径不一致（同一商品销量两源差近一倍，如 VN 压缩袋 `1736063102162208569`：
+    FastMoss 2999 vs EchoTik 6002），混源会污染 `creatorOrderRate`/销量排序；ERP 透传同源、免费、字段齐全。
+    **LinkFox 在本 skill 中仅保留 1688 找货**（`dld/productSearch` / `alibaba1688/imageSearch` / `alibaba1688/sku` OAuth）
+    与 **TH 外观专利预检**（`ruiguan/detectionPatentDesign`）。
+    ⚠️ 关键词仍必须用当地语言长尾词（中文词命中 0）。
   - **判读优先看 `creatorOrderRate`（达人出单率）而不是周销排行**：出单率 = 0 说明销量几乎全靠自然搜索/货架场，
     这正是「不开达人佣金」的新人最该抢的品；出单率 100% 说明全靠达人带货，你不开佣金就拿不到这个量（详见 strategy 4.7）。
   - 降级仍保留：接口不可用时按 `content.proxy_mode` 打分，上限 6 分，标注 `content_source: proxy`。**不得因缺数据给假高分。**
 
-**② L1 官方后台（浏览器，深度复核需求真伪）**：商品机会中心 `/product/opportunity?tab=product`（"无竞争对手"标签、销量近似值）、`?tab=trending_keywords`（未满足需求/热搜商品）、`?tab=low_competition_category`（在售0-5款+有搜索量）；关键词榜单 `/compass/search-analytics/keyword-rank`（稀缺/热门词，兼作标题词库）。抄录当地语言词 → 翻回中文品类词。
+**② L1 官方后台（浏览器，深度复核需求真伪）**：商品机会中心（MY 站 URL 带 `shop_region=MY`）**优先级按 2026-11-20 重排：P0=热门关键词收割（周常）、P0=提报关联（每3天，见 T+0 纪律2）、P1=高潜力商品卡片（每周方向池）、P2=低竞争类目**。三 tab 使用规则：
+
+| 优先级 | tab | 数据本质 | 正确用法 | 禁止用法 |
+|---|---|---|---|---|
+| **P0（三 tab 中唯一直接打"入池/被搜到"瓶颈的）** | 热门关键词 | **TikTok 站内搜索词**（真实需求信号） | 按搜索次数排序抄前 2-3 页进 `erp_data/opportunity_keywords_my.csv`（`--init-template` 出模板，volume 记档位原文+copied_at）→ `python3 scripts/opportunity_keywords.py --csv ... --site my`（dry-run 看拆根计划）→ `--apply` 同时更新**两张表**：词根表 `config/keywords/my.txt`（供 `listing_quality_gate.py` 标题命中校验）+ 整串表 `erp_data/keywords_my.txt`（供 pool 拉 FastMoss 候选）→ 重跑 `listing_quality_gate.py --site MY --summary` 看在售款标题缺口 → 缺口款按 T+7 规则只改标题补词。修饰词表 `config/keywords/modifiers_my.txt` 排除 tahan lasak/murah 类修饰语不拆根 | 只抄单词不记搜索量档位；把修饰词当独立品类词；把词根表直接喂 pool（粒度太粗） |
+| **P1** | 高潜力商品→「基于市场趋势的热门商品」(`sub_tabs=shp_top_products`) | **外部平台热销榜**（URL 参数指向 Shopee 类榜单，INFERRED），卡片"3.2k+ 销量"是**外部销量不是 TikTok 需求**；"无竞争对手"= 平台侧供给缺口 | **只当方向池**：浏览器抄录卡片字段进 `erp_data/opportunity_signals.csv`，跑 `python3 scripts/opportunity_intake.py --csv ...` 出 reject/direction_only/candidate 三档；candidate 才值得进 1688 找货。单卡命中概率实测 1/6，广度仍靠 FastMoss 词池 | ⛔ 照单铺货。实测 6 卡片里 3 个是品牌跟卖陷阱（WATSONS/Winstar）、1 个价格带压不进（RM0.55 起）、趋势图 30 天平直线=无站内动态证据 |
+| **P2** | 低竞争类目 | 类目级缺口（在售 0-5 款+有搜索量） | 类目词根进选品方向池，与官方重点类目表交叉 | 当单品清单用 |
+
+- **机会详情弹窗四项站内指标（市场GMV/库存可用性/可用商品数/商家总数）显示 "--" = 平台无 TikTok 侧数据**（实测纸尿裤袋全空）→ CSV 里 `tiktok_metrics=no`，脚本自动降级 direction_only。
+- **提报/添加同款有流量扶持奖励**（官方文档 VERIFIED：获批品进商城搜索、推荐流、直播商品池优先曝光）——
+  对新人零单店，**这是机会页最大的直接收益，且与"选品"无关**：
+  ① 已在售品 → 相关机会词/卡片走「我的提报」关联提报（每 3 天纪律，见 T+0 纪律 2）；
+  ② 提报的品必须是自己在售/即将在售的品，**不是照抄机会卡片**；官方要求子类目/品牌型号/款式主功能三对齐，
+  对不齐会被拒（提报记录页可查拒绝原因，被拒的改品后重新提报）。
+  2026-11-20 结论（外部多源一致，VERIFIED 妙手/UpSeller/官方学院）：三家 ERP 对商机页口径一致——
+  **线索源不是答案**；"换一家店不一定卖得动"（货叮咚原话），照抄铺货=用外部销量赌 MY 站内需求。
+- 关键词榜单补充源：`/compass/search-analytics/keyword-rank`（稀缺/热门词）。抄录当地语言词 → 翻回中文品类词。
 
 **③ 遨虾榜单（免登录，仅方向信号）**：本 skill 已内置 `scripts/aibuy_rank_client.py`（复制自 shopee-light-listing，
-权威源与哈希登记在 `config/dependency_contract.json`），`--platform TikTok_XS --site TH/VN` 拉热销/飙升/新品榜（类目选 Home Supplies 等）。
+权威源与哈希登记在 `config/dependency_contract.json`），`--platform TikTok_XS --site MY`（TH/VN 存量期不拉）拉热销/飙升/新品榜（类目选 Home Supplies 等）。
   - ⚠️ **`opprank` 榜单只有 14 个字段（标题/下游价/1688同款数/同款中位价/类目/图/rankId），没有销量、没有评价数、没有达人数**。它只能给方向，不能支撑需求打分。
 
+**④ 机会中心选品路线（2026-11-19 用户确认新增，正式路线）**：「商品机会 → 1688 相似款 → 铺货」三段式，
+把 ② 的信号直接变成候选，链路已胶水化：
+```bash
+# 1) 浏览器抄录卡片（标题/销量/参考价/类目/站内指标是否有数/图URL/中文品类词）
+python3 scripts/opportunity_intake.py --init-template      # 出 erp_data/opportunity_signals.csv
+#    （抄录列 image_url / search_keyword 由 opportunity_to_sourcing 约定，模板外手工加列）
+# 2) 判读 + 检索编排（内部复用 intake.judge；reject 行自动跳过，不浪费检索配额）
+python3 scripts/opportunity_to_sourcing.py --dry-run       # 先看计划
+# 2a) 主通道 LinkFox（MCP，凭证由 WorkBuddy 注入，无 mtop token 过期问题）——两段式：
+python3 scripts/opportunity_to_sourcing.py --linkfox plan   # 判读后出 erp_data/linkfox/sourcing_tasks.json
+#     → Agent 逐任务调 LinkFox MCP proxy_call（toolName=arguments 见任务文件），响应**原样**落盘 save_to 路径
+#     （alibaba1688/imageSearch 或 dld/productSearch，积分计费；禁止脚本直连网关，硬约束同 linkfox_sourcing.py）
+python3 scripts/opportunity_to_sourcing.py --linkfox read    # 读落盘 → erp_data/opportunity_sourcing.csv
+# 2b) 百炼官方通道（2026-11-20 新增，脚本直连、¥0.058/次、无需 MCP 落盘两段式）：
+python3 scripts/opportunity_to_sourcing.py --channel bailian    # 一步出候选，带晚发必赔/揽收率机验列
+#     凭证=skill .env 的 DASHSCOPE_API_KEY；无城市/多图字段 → 城市证据仍走 linkfox/详情页
+# 2c) fallback 遨虾（免积分，mtop 逆向、token 会过期；仅在 LinkFox 积分不可用时用）：
+python3 scripts/opportunity_to_sourcing.py --channel aibuy
+# 3) 逐行执行输出里的 next_step：selection_intake.py image 抄 1688 字段 → 回填判断 → select_gate 硬闸
+```
+  - 实测（2026-11-19）：`search` 与 `search-image` 双通道均通（各 20 条）；今日 6 卡片 → 3 REJECT、2 无检索输入、1 candidate 出 5 条候选。
+  - 实测（2026-11-20 切换日）：`dld/productSearch` 与 `alibaba1688/imageSearch` 实调均通（20 条/次，errcode=200）；plan→read 端到端在真实 signals 上跑通（16 行候选，含 data_source/ship_city_raw/consign_price_cny 新列；未落盘的行如实标 SEARCH_FAIL(linkfox)+fallback 提示，不崩不猜）。
+  - **通道纪律（2026-11-20，三通道版）**：输出行带 `data_source`（bailian|linkfox|aibuy），**三源销量口径全不同**
+    （bailian `pay_ord_cnt_30d`=30天成交单数 / linkfox `salesQuantity`=周期件数 / aibuy `monthSold`），
+    同一批次只按一个口径排序，**禁止混源比较**；失败不跨通道自动补位（防静默混源），read 失败行 next_step 明示重试通道。
+  - **三条纪律**：a) 检索结果排序只是预排（linkfox 默认保留检索原序=`--rank-by source`，`sales` 才按 salesQuantity 重排；aibuy 按 monthSold 降序），**同款判定归人工/多模态**（aibuy 原话"禁止盲取第一条"）；
+    b) 1688 月销是**供给侧热度**，不代表 MY 需求——真实需求验证只认 T+7 回流；
+    c) 机会品**不享受任何跳闸特权**，与 FastMoss 路线同过 `select_gate.py`（白跑 6 品的教训）。
+  - 与 FastMoss 主路线的分工：FastMoss 仍是**广度主来源**（站内真实销量+内容力字段全）；
+    本路线是**官方供给缺口信号源**，每周回看一次即可，单卡命中概率实测 1/6，别指望它是主力。
+
 #### 0.3 1688 找货（按站点成本边界筛，不是无脑搜）
-- 用遨虾 `search --keyword <中文品类词>` 或 `search-image` 拿 offerId；接口失效时浏览器进 1688 跨境专供（需用户接管登录）。
+- **主通道（2026-11-20 起）= LinkFox MCP**：`dld/productSearch`（中文品类词，可加 `proxyRights:"4360897"` 一件代发包邮 / `sendTime:"24,48"` 时效筛选）与 `alibaba1688/imageSearch`（卡片/竞品主图 URL，`filters:["isOnePsale","shipIn48Hours"]`）拿 offerId——凭证 WorkBuddy 注入，无 mtop token 过期问题；imageSearch 带 `sendGoodsAddressText`（发货地）与 `consignPrice`（代发价），词搜带 `company`+`deliveryTime`。**数据为第三方快照（THIRD_PARTY_ONLY），积分计费**。
+- **官方通道（2026-11-20 新增）= 百炼「1688智能选品」MCP**（`--channel bailian`，脚本直连、¥0.058/次、官方数据）：
+  唯一带 `晚发必赔/24h揽收率/30天成交单数` 平台级履约标签的通道，select_gate 的 `machine_or_chat` 档直接吃它；
+  但**无发货城市/无多图/无重量** → 城市证据仍走 LinkFox imageSearch 或详情页。
+- fallback 顺序：主检索 bailian 或 linkfox 按需求选（要履约标签→bailian，要城市→linkfox，都要→bailian 出候选+linkfox 补城市）
+  → LinkFox 积分不可用 → 遨虾 `--channel aibuy`（免积分，token 会过期属预期）→ 浏览器进 1688 跨境专供（需用户接管登录）。
   - ⚠️ 原生 1688 搜索 URL 的关键词必须 **GBK percent-encoding**（UTF-8 会搜出完全无关的品）；带「深度思考」AI 模块的结果页滚动必超时，改用更长更具体的词（「衣物压缩袋」而非「压缩袋」）。详见 `references/erp-pitfalls.md` 第五章。
-- **先算成本再挑品**：`python3 scripts/pricing_calc.py --cost <采购价> --scheme shelf --pieces 1 --site TH`，返回 `in_band`。
+- **先算成本再挑品**：`python3 scripts/pricing_calc.py --cost <采购价> --scheme shelf --pieces 1 --site MY`，返回 `in_band`。
   ⚠️ **`--pieces` 一律填 1**（2026-11-12 第二批纠正，见 4.4）：一件代发不做 2 件套，下方「2 件套」数字仅定价模型备查。
   本节凡出现「组合装 / 2件套 / 同店可搭配 SKU」的条件均为 $5 下限时代残留，**不作选品依据**。
-- 采购价上限（150g / shelf，`--limits` 实算）：TH 单件 **22.4** / 2件套单件等效 **9.4**；VN 单件 **16.7** / 2件套 **6.6**。重量上去上限迅速下降（TH 400g 单件仅 17.4）。**超上限 = 换品，不要硬调 markup。**
+- 采购价上限（150g / shelf，`--limits` 实算）：**MY 单件 34.1**（免佣期红利；到期必须重算）；TH 单件 22.4、VN 单件 16.7（存量维护参考）。重量上去上限缓降（MY 400g 单件仍 32.2，头程便宜 63% 所致）。**超上限 = 换品，不要硬调 markup。**
 - 供应链门槛全部要过（见 strategy 5.2）：跨境专供 / 一件代发 / **无隐形起订量** / 库存≥200 / **承诺48h发货（要客服书面确认）** / **快递到货代仓 ≤1 天** / 非预售非定制 / 主图可复用 / **无中文干净消费者向主图 ≥3 张 + 详情图可重建**（`selection.yaml` → `supplier_gates.clean_consumer_images_min`；
   全脏的货源在 1688 找货阶段就换掉，别等铺进采集箱才发现；**且修复后须能凑 ≥5 张**，见 `clean_images_after_fix_min`） / **实重 ≤400g 且抛重 ≤400g**
   （对应体积 ≤2400cm³，约 20×15×8cm）/ **真包邮（`true_free_shipping: required`，硬门槛）**：
@@ -320,9 +426,9 @@ python3 scripts/erp_client.py ttl-claim --ids <货源ID或numIid逗号分隔> --
 - 实测：单条/批量（4 个同发）均 success:true；认领后 ttl-list 立即可见，标题自动泰文化、类目自动匹配、带 IS_REQUIRED_FIELDS 异常（正常草稿态）
 
 **浏览器认领（保留为备选路径，7+次验证稳定）**：
-公共采集箱勾选 → 批量认领 → 下拉选 Tiktok → 弹窗选店铺 JingShanShop-TH/VN → 确定 → 认领成功弹窗
+公共采集箱勾选 → 批量认领 → 下拉选 Tiktok → 弹窗选店铺 JingShanShop-MY（当前主攻；TH/VN 存量）→ 确定 → 认领成功弹窗
 
-**认领陷阱**：认领弹窗默认选中 JingShanShop-PH，必须手动选 TH/VN；免责声明弹窗需先处理；已删除记录的货源重新认领可能不产生新记录（公共采集箱认领标记残留）。
+**认领陷阱**：认领弹窗默认选中 JingShanShop-PH，必须手动选目标店（当前 MY）；免责声明弹窗需先处理；已删除记录的货源重新认领可能不产生新记录（公共采集箱认领标记残留）。
 
 **接口删除（2026-10-29 破解，写操作）**：`POST /item/crossBorder/platformCollect/batchOps`，body=`{"idList":["<ttl_id>"],"platform":"tiktok","opsType":3}`（**opsType 枚举：1=类目 / 2=售价 / 3=删除 / 4=备注**，同一接口复用）。CLI：
 ```bash
@@ -403,6 +509,12 @@ SKU 图是买家**选规格时第一眼看到**的图，且实测全部指向 `c
 `image_gate.py` **不假装能看图**：`scan` 只负责下载三通道的图并出待判定清单，
 判定由模型回填 `review.json` 的 `verdict`。`config/image_gate.yaml` 里的 B2B 词表
 只是 `verify` 阶段的**文本残留兜底**，不是判定规则。
+
+**主图必须加机器证据（2026-11-19 678 事故）**：目视拼缩略图判主图必漏——678 把带中文横幅
+「灰色/蓝色三件套」的 main_02/03 在 260px 拼图上看走眼填了 L3_keep，上架后详情页中文被用户抓到。
+现 `apply` 内置 `main_gate_violations` 硬闸（只强制 main 通道）：L3_keep 必须有 `image_fix.py probe`
+证据且 rec_text 无中文，换链 URL 不得落 dashscope/kdzs-jxc-vpc 域。**流程固化：scan → 目视判 verdict
+→ `probe --only L3_keep`（¥0.02/张补证据）→ apply**。tests/test_main_gate_cjk.py 8 项钉死。
 
 | 级别 | 判定 | 处置 |
 |---|---|---|
@@ -498,8 +610,9 @@ python3 scripts/pricing_calc.py --check     # 校验 markup 与费率是否吻�
 
 | 站点 | 货架场 shelf（affiliate 0） | 达人场 creator（affiliate 20%，净利 15%） |
 |---|---|---|
-| TH | **1.62** ✅ 净利 12%（破零冲量；起量后回调 2.05 / 25%） | 2.58 ⏸ 停用 |
-| VN | **1.515** ✅ 净利 12% + **免交易手续费窗口**（扣点 22%，非 28%） | 2.326 ⏸ 停用 |
+| **MY（主攻）** | **1.295** ✅ 净利 12%，**免佣期扣点仅 10.78%**（到期切 1.556，见 pricing.yaml MY 段） | 1.844 ⏸ 停用 |
+| TH | **1.62** ✅ 净利 12%（存量维护；起量后回调 2.05 / 25%） | 2.58 ⏸ 停用 |
+| VN | **1.515** ✅ 净利 12% + **免交易手续费窗口**（扣点 22%，非 28%；存量维护） | 2.326 ⏸ 停用 |
 
 > ⚠ VN 的 1.515 只在「入驻后 90 天免交易手续费」期内成立（本店约剩 60 天）。
 > 窗口一结束扣点回到 28%，markup 必须改 1.75（仍 12% 净利）；到期前一天就要改，否则每单少算 6%。
@@ -759,9 +872,12 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
 
 **T+0～T+2 两条纪律（旧版完全没有，是"铺了没曝光"的常见原因）**：
 1. **上架后 48 小时内不要改标题/主图**——改动会触发重新收录，等于把刚拿到的初始曝光清零。
-2. **每 3 天回后台「商品 → 商品机会」提报关联**：把「热门搜索」和「精选搜索」里与你的品相关的词全部关联提报，
-   平台推这些词时会顺带推你的商品。这是不开达人佣金时**唯一能主动拿到的免费推流**，
-   而旧版只把商品机会中心当"选品信号源"读，从来没把它当"流量入口"用。
+2. **每 3 天回后台「商品 → 商品机会」提报关联（P0 动作，优先级高于铺新品）**：把「高潜力商品」「热门关键词」
+   里与**已在售品**相关的词/卡片全部关联提报（商品机会页 → 找到匹配在售品的机会 → 「选择商品」提报，
+   或卡片「添加同款商品」对齐子类目/品牌/款式三条件），平台推这些词时会顺带推你的商品；
+   提报后回「我的提报」页核对审核状态，获批的在 `backflow.py traffic --opportunity-apply true` 记日期。
+   这是不开达人佣金时**唯一能主动拿到的免费推流**，而旧版只把商品机会中心当"选品信号源"读，从来没把它当"流量入口"用。
+   **零单期顺序纪律：先提报现有品拿量 → 再谈铺新品**；两者冲突时提报优先（铺新品有 1/6 命中率成本，提报是确定性收益）。
 
 **T+0 免费流量三件套（2026-11-18 新增，官方优先级：销售加速 > 早鸟价 > 广告）**：
 旧版只写在 `references/selection-strategy.md` §8.3，没有任何检查项 —— 7 款零入池时这三项一个没做。
@@ -811,9 +927,10 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
 - `config/selection.yaml`：选品参数（履约红线/门槛/四维权重/需求过滤/竞争与内容力口径/单量分层/铺货节奏）
 - `scripts/pricing_calc.py`：售价计算与价格带校验（`--cost` 算售价 / `--limits` 反推采购价上限 / `--check` 自检）。纯标准库，配置改完必跑 `--check`。
 - `scripts/kdzs_fastmoss.py`：FastMoss 选品数据（**免 token**，ERP 后端透传；`--categories` / `--live-fx`）
-- `scripts/linkfox_sourcing.py`（2026-11-18 新增）：LinkFox 取数**本地加工器**（不联网）——
-  `screen` 找货预筛（代发/48h/起订量/体验分）、`same-source` 同款跨供应商（`--enrich` 补公司）、
-  `spec-terms` 竞品规格名提取。吃 MCP 落盘 JSON（见 `erp_data/linkfox/README.md`），产出仍须过 `select_gate.py`。
+- `scripts/linkfox_sourcing.py`（2026-11-18 新增）：LinkFox **1688 找货**取数**本地加工器**（不联网）——
+  `screen` 找货预筛（代发/48h/起订量/体验分）、`same-source` 同款跨供应商（`--enrich` 补公司）。
+  吃 MCP 落盘 JSON（见 `erp_data/linkfox/README.md`），产出仍须过 `select_gate.py`。
+  ⛔ `spec-terms`（EchoTik 竞品规格名）已于 2026-11-20 停用，代码留档但不再调用——TikTok 数据统一走 ERP 透传。
 - `scripts/erp_client.py`：采集/认领/删除/发布/日志 主客户端（`ttl-publish` 支持 `--weight/--dims/--dry-run`；`ttl-save` 已标禁用）
 - `scripts/erp_token_grab.py`：从 Chrome LevelDB 自动捞 JWT（`--save --check`），不用手工复制
 - `erp_data/README.md`：**落盘目录约定**——顶层只放有效资产（`case_category_tree.json` 查类目 ID、`tiktok_shops.json` 拿 sellerId），
@@ -836,7 +953,25 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
   `--all` / `--ids` / `--site` / `--strict` / `--json` / `--summary`（落 `erp_data/card_quality.csv`）；
   `--keywords-template --site VN` 出热搜词表骨架（`config/keywords/{th,vn}.txt`，需填真实后台词）。
   只保证「能被搜到、有人点」，与 `image_gate`（干净）/ `prepublish_guard`（能发布）互补，三者都要过。
-- `config/keywords/{th,vn}.txt`：当地热搜词根表——拉丁语系按词边界、泰语按子串匹配，<3 字符的词不参与（误命中）。
+- `config/keywords/{my,th,vn}.txt`：当地热搜词根表——拉丁语系按词边界、泰语按子串匹配，<3 字符的词不参与（误命中）。
+  `my.txt` 首版含 7 个官方 VERIFIED 词根（2026-11-19 商品机会→热门关键词 tab 实测）+ 种子词，逐周回后台扩充。
+- `scripts/opportunity_keywords.py`：**热门关键词收割器（2026-11-20 新增）**——浏览器抄录的机会页关键词 CSV →
+  一次同步**两张表**：`config/keywords/my.txt`（词根，供 listing_quality_gate 标题校验）+
+  `erp_data/keywords_my.txt`（官方原词整串，供 pool）。修饰词表 `config/keywords/modifiers_my.txt` 排除
+  tahan lasak/murah 类修饰语不拆根；计量单位（pcs/50）自动过滤；`--apply` 幂等；`--audit` 查两表覆盖缺口。
+  周常动作（P0）：抄词 → dry-run → apply → git diff 复核 → 重跑 listing_quality_gate。
+- `scripts/opportunity_intake.py`：**商品机会判读闸门（2026-11-19 新增，纯本地只读）**——吃机会卡片抄录 CSV，
+  按品牌红线/价格带/类目一致/站内数据四项判 reject/direction_only/candidate。规则配置 `config/opportunity_intake.yaml`
+  （known_brands / generic_terms / 参考价币种 / 需求下限，含数据口径警示注释）。`--title ... --site MY` 单品快查。
+  candidate ≠ 可采集，仍需 select_gate；专治「照单铺机会品踩品牌/低价坑」。
+- `scripts/opportunity_to_sourcing.py`：**机会卡片 → 1688 候选编排（2026-11-19 新增；2026-11-20 三通道：bailian|linkfox|aibuy）**——内部复用 intake 判读，
+  对非 reject 行检索 1688：**默认 `--channel linkfox`**（`--linkfox plan` 出 `erp_data/linkfox/sourcing_tasks.json` 取数清单 →
+  Agent 经 MCP proxy_call 原样落盘 `erp_data/linkfox/mcp/*.json` → `--linkfox read` 产候选，脚本自身零网络，守 LinkFox"只能经 MCP"硬约束）；
+  `--channel aibuy` 为免积分 fallback（子进程调 aibuy_rank_client.py，复用限速与 mtop 握手）。
+  offerId 去重，linkfox 默认保留检索原序（`--rank-by sales` 才按 salesQuantity 重排），aibuy 按 monthSold 降序 topN；
+  输出新增 `image_url / ship_city_raw / consign_price_cny / data_source` 列（seed 侧 selection_intake 消费：
+  详情页城市缺失时用 ship_city_raw 归一化补 ship_city 并在 reason 注明来源口径）。`--dry-run` 只看计划。
+  同款判定归人工；检索全失败退出码 3（linkfox=落盘缺失，aibuy=mtop 被风控），失败行不自动跨通道补位。
 - `scripts/backflow.py` 的 `index` / `index-due` / `index-stats`：**入池体检（2026-11-18 新增，P0）**——
   上架满 48h 强制做一次「陌生账号搜词 + 7 天曝光」判定，逾期 `index-due` 退出码 1 催办，
   结果落 `erp_data/index_check.csv`（与 `backflow.csv` 的 T+7 数据回流分开）。判据从出单改为入池率。
@@ -881,16 +1016,44 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
 - `scripts/image_fix.py`：**L1/L2 修图管道（2026-11-19）**——probe（元素识别补 seen_text 证据+过杀预警）→
   fix（ImageRemove 元素模式/Position 补刀、ImageTranslationPro、ImageMatting → 下载 → erp_upload 转存 → uri_map）→
   finalize（复检校验）。用法与五条款见 Step 4.3。实测围裙 3 张过杀主图救回（成本 ¥0.16 内，免费额度覆盖）。
-- `tests/`：**离线测试套件（2026-11-13 新增）**——`python3 tests/run.py` 一条命令跑完（66 项，约 3 秒，不联网、不需要 token）。
+- `scripts/category_template.py`：**类目模板表工具（2026-11-20 P0-1，对标店小秘「产品模板」）**——
+  `config/category_templates.yaml` 存 类目→ERP类目ID/树/重量档/尺寸/货代城市/描述模板文件；
+  `match`（候选标题词根命中）/ `record`（**从已发布成功 ttl_id 自动沉淀模板**，类目树 DFS 反查祖先链+AVAILABLE 校验，
+  非 AVAILABLE 拒绝入库）/ `render`（描述占位填充，**未填占位=拒绝**，≥500字符/≥2段质量闸内置）。
+  消灭每品重复的「查类目/定重量档/写描述/定城市」≈12 分钟。
+- `scripts/ttl_edit.py`：**待发布记录一次 edit 到位（2026-11-20 P0，固化当日 4 次手写 edit）**——
+  模板套用+SKU 款型精简（--keep-prefix seller_sku 前缀）+按各自 source_price 公式定价（出带即拒）+
+  主图（**非 cbu01 域直接拒绝**，713 实测 kdzs/dashscope TikTok 拉不到）+描述渲染，默认 dry-run --save 才写。
+- `scripts/hero_main_images.py`：**款型级主图供给预检（2026-11-20 P0-2）**——选品期按款型统计可用主图
+  （通用干净 main 图 + 本款专属 SKU 图，**款型专属图不得计入他款通用供给**——针线盒中途换款 8 分钟教训）；
+  供给<5 的款型 FAIL 并给处置顺序（换货源>剔除，禁止修图换链凑数）。针线盒反事实验证：方款 6 PASS、椭圆/圆款 0 FAIL。
+- `scripts/linkfox_oauth.py`：**1688 OAuth sku 取数加工器（2026-11-20 新增，纯本地不联网）**——把详情页抓取降级为
+  「只补重量/主图组/发货地」的单点操作。两段式：`scan --batch prefill.json` 列出缺价格/库存字段的 offer →
+  Agent 走 MCP `alibaba1688/sku`（先决 authorizedStores=ACTIVE）原样落盘 `erp_data/linkfox/mcp/sku_<oid>.json` →
+  `apply --batch prefill.json` 回填。纪律：**缺才填、不覆盖详情页值、MOQ 禁止猜（sku 无此字段）、
+  offerId 与落盘不符直接拒绝、重量不填**；顺带解析规格值里的尺寸文案（"长25宽18高14cm"→dims_parsed，
+  seed 自动进 dims_cm 并在 reason 注明来源）、收集规格图（不混入主图组）。数据=用户本人账号 OAuth 官方回包（VERIFIED 级）。
+  ⚠ sku 单次扣费 UNKNOWN，从消耗记录页逐笔核对；授权过期需重走 authorizeUrl（必带 accountName）。
+- `tests/`：**离线测试套件（2026-11-13 新增，持续增长）**——`python3 tests/run.py` 一条命令跑完（161 项，约 3 秒，不联网、不需要 token）。
   覆盖 i18n 迁移等价性、图片三通道/过期判定/覆盖率硬闸、SKU 身份校验、公网图哈希匹配、已删子命令回归。
 - `scripts/selection_intake.py`：**选品取证自动化（2026-11-12 新增）**——`pool` 多关键词批量拉 FastMoss 并按出单率分档、
   `image` 取 1688 详情页字段（成本/最高 SKU 价/库存/起订量/重量/发货城市）并拼 contact sheet、
   `seed` 按 `select_gate.TEMPLATE_HEADER` 生成候选骨架。**只抄事实，判断列一律留空给人工/多模态**。
-  ⚠️ 1688 详情页有 IP 级 baxia 风控：首连可通、连打会锁，降级为遨虾单图并如实标注（Cookie 放 `scripts/ali_cookie.txt`）
+  ⚠️ 1688 详情页有 IP 级 baxia 风控：首连可通、连打会锁，降级为检索通道单图（linkfox|aibuy 按 data_source 如实标注，Cookie 放 `scripts/ali_cookie.txt`）；
+  2026-11-20 起 `--from-csv` 消费 opportunity_sourcing.csv 的新列（image_url/ship_city_raw/company/data_source）：
+  详情页城市缺失时用 ship_city_raw 经 city_from_location 归一化补 ship_city，来源口径写进 reason
 - `scripts/backflow.py`：**数据回流闭环（2026-11-12 新增）**——`sync` 自动排 T+2/T+7/T+20、`due` 报到期待填（退出码 1 = 有逾期）、
   `mark` 抄数值、`judge` 出 kill/培养/放大、`stats` 出分布与清单。数据仍要人工从后台抄，但**不用再记哪天看哪款**
 - `scripts/health_check.py`：**接口契约 smoke test（2026-11-12 新增，只读）**——跨 skill 依赖哈希与上游漂移、
   ERP 鉴权、FastMoss 免鉴权、铺货配额可读性、**前端版本指纹（变版即 WARN）**、定价自洽、数据列契约。
   `--skip-net` 可离线跑。**开工前先跑它**，比在铺了半批货之后才发现接口变版便宜得多
+- `scripts/bailian_sourcing.py`：**百炼「1688智能选品」官方 MCP 客户端（2026-11-20 新增）**——提供方=阿里巴巴(中国)，
+  工具 `find_product`（query 文本搜 / imageUrl 图搜同款；**勿把商品ID当 query 传**，实测走文本召回返回无关品）。
+  脚本直连 Streamable HTTP（凭证=skill `.env` 的 DASHSCOPE_API_KEY；LinkFox 的"只能经 MCP"约束**不适用**于此）。
+  计费 ¥0.058/次 + 免费包 1000 credits。核心产出=官方履约标签：`is_late_ship_compensate`（晚发必赔）、
+  `lgt_3m_24h_avg`（24h揽收率，0.0=UNKNOWN）、`pay_ord_cnt_30d`、库存/起批量/复购/开店年数。
+  `probe` 子命令做连通自检；`search`/`search-image` 落 JSON+CSV 到 `erp_data/bailian/`。
 - `scripts/aibuy_rank_client.py` + `config/dependency_contract.json`：**跨 skill 依赖内聚**——遨虾客户端已复制进本 skill
-  （不再运行时依赖 shopee-light-listing），哈希与权威源登记在 contract 文件；`health_check.py` 负责发现漂移
+  （不再运行时依赖 shopee-light-listing），哈希与权威源登记在 contract 文件；`health_check.py` 负责发现漂移。
+  **2026-11-20 角色调整**：找货检索降级为 fallback（免积分备选），主通道切 LinkFox MCP；opprank 榜单（Step 0.2③ 方向信号）仍用它。
+  mtop token 过期/风控报错在预期内——报错看原文、勿重试风暴，找货改走 `--channel linkfox` 两段式即可。

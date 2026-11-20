@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""LinkFox 选品取数加工器（2026-11-18 新增）
+"""LinkFox 选品取数加工器（2026-11-18 新增；2026-11-20 范围收窄）
 
 定位：**纯本地加工器，不联网**。LinkFox 硬约束——所有网关调用只能经 WorkBuddy 的
 MCP proxy_call（凭证由 WorkBuddy 注入），禁止脚本用 curl/urllib/requests 直连。
 所以本脚本吃的是「Agent 通过 MCP 取回后落盘的 JSON」，做的是人不想手算的预筛/归并。
 
-解决的三个痛点（对应 SKILL.md Step 0.3 / 0.0 / 0.4）：
+⛔ 范围收窄（2026-11-20）：TikTok 需求数据统一走 ERP 透传（scripts/kdzs_fastmoss.py），
+   LinkFox 的 fastmoss/echotik 直连已停用。本脚本只保留 1688 找货两个子命令：
   1. screen      找货预筛：1688 供应链硬门槛（代发/48h/起订量1/体验分）从人工抄改为机器筛
   2. same-source 同款换发货地：以图搜图结果聚同款、标记不同供应商（发货地字段多为空 → 不臆断城市）
-  3. spec-terms  竞品规格名提取：EchoTik salePropsInfo → 当地语规格/属性词，供 i18n 词库增量
+  spec-terms（EchoTik 规格名）代码留档但运行时硬停，详见 cmd_spec_terms。
 
 数据来源与真实性纪律：
-  - 输入必须是 MCP 原样落盘的 JSON dld/productSearch / alibaba1688/imageSearch /
-    echotik/batchProductDetail 响应（顶层含 products[] 或 data[]，errcode:200）。
+  - 输入必须是 MCP 原样落盘的 JSON dld/productSearch / alibaba1688/imageSearch
+    响应（顶层含 products[] 或 data[]，errcode:200）。
   - 数据均为第三方快照（THIRD_PARTY_ONLY），不是 1688/TikTok 官方后台；字段缺失=UNKNOWN，
     **绝不推测为 0 或满足条件**。发货地 sendGoodsAddressText 实测多为空，脚本一律留空标注。
   - 只筛候选、不写 ERP、不认定货源；产出必须仍过 select_gate.py 才算可采集。
@@ -25,15 +26,11 @@ MCP proxy_call（凭证由 WorkBuddy 注入），禁止脚本用 curl/urllib/req
   # same-source：以图搜图聚同款、跨供应商
   python3 scripts/linkfox_sourcing.py same-source \
       --in erp_data/linkfox/image_1069717571224.json --out erp_data/linkfox/same_source.csv
-  # spec-terms：竞品规格/属性词提取（供 i18n 人工核对后增量）
-  python3 scripts/linkfox_sourcing.py spec-terms \
-      --in erp_data/linkfox/echotik_detail_vn.json --site VN \
-      --out erp_data/linkfox/spec_terms_vn.csv
+  # spec-terms：⛔ 2026-11-20 停用，调用直接退出 2（代码留档）
 
 MCP 取数参数备忘（Agent 侧执行，不写进脚本）：
   dld/productSearch      {"keyWord":"真空压缩袋","pageIndex":1,"pageSize":20}
   alibaba1688/imageSearch{"imageUrl":"<主图URL>","page":1,"pageSize":20}
-  echotik/batchProductDetail {"region":"VN","productIds":["...","..."]}
 退出码：0 成功 / 1 部分跳过（详见 stdout）/ 2 输入或参数问题
 """
 import argparse
@@ -247,12 +244,20 @@ def cmd_same_source(args):
     return 0
 
 
-# ────────────────────────── spec-terms：竞品规格名提取 ──────────────────────────
+# ────────────────────────── spec-terms：已停用（代码留档） ──────────────────────────
 SPEC_FIELDS = ["site", "kind", "prop_name", "prop_value", "product_id", "product_name", "source"]
 
 
 def cmd_spec_terms(args):
-    products, meta = load_payload(args.in_file)
+    # 2026-11-20：TikTok 数据统一走 ERP 透传，EchoTik 快照钩子切断。
+    # 不删除实现是为了留档可追溯；但任何调用都硬停，防止误用混源数据。
+    sys.stderr.write(
+        "[spec-terms] ⛔ 已于 2026-11-20 停用：TikTok 需求数据统一走 ERP 透传"
+        "（scripts/kdzs_fastmoss.py）。EchoTik 为第三方快照且与 ERP 口径不一致"
+        "（同款销量两源差近一倍），禁止作为评分/词表输入。\n"
+    )
+    return 2
+    products, meta = load_payload(args.in_file)  # noqa: F821 - 留档死代码，不可达
     rows = []
     seen = set()
     for p in products:
@@ -317,9 +322,9 @@ def main():
     p2.add_argument("--out", dest="out_file", default=os.path.join(DEFAULT_DIR, "same_source.csv"))
     p2.set_defaults(func=cmd_same_source)
 
-    p3 = sub.add_parser("spec-terms", help="EchoTik 规格名/属性词提取（供 i18n 参考）")
+    p3 = sub.add_parser("spec-terms", help="⛔ 2026-11-20 停用（EchoTik 规格名，TikTok 数据走 ERP 透传）")
     p3.add_argument("--in", dest="in_file", required=True, help="echotik/batchProductDetail 的 MCP 落盘 JSON")
-    p3.add_argument("--site", choices=["TH", "VN"], required=True)
+    p3.add_argument("--site", choices=["MY", "TH", "VN"], required=True)
     p3.add_argument("--out", dest="out_file", default=os.path.join(DEFAULT_DIR, "spec_terms.csv"))
     p3.set_defaults(func=cmd_spec_terms)
 

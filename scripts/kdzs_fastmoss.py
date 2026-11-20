@@ -210,7 +210,7 @@ def enrich(r):
 
 def main():
     ap = argparse.ArgumentParser(description="快递助手ERP · TikTok 选品数据源（免登录）")
-    ap.add_argument("--region", default="TH", help="站点：TH/VN/ID/MY/PH/US...")
+    ap.add_argument("--region", default="MY", help="站点：MY/TH/VN/ID/PH/US...（2026-11-19 起默认 MY=主攻站）")
     ap.add_argument("--usd-min", type=float, default=None, help="价格下限（美元）")
     ap.add_argument("--usd-max", type=float, default=None, help="价格上限（美元）")
     ap.add_argument("--order", default="day7_units_sold", help=f"排序：{sorted(ORDER_FIELDS)}")

@@ -148,7 +148,7 @@ def main():
         if bv:
             print(f"[block] {bv}", file=sys.stderr)
             return 3
-        sites = [a.site] if a.site else ["TH", "VN"]
+        sites = [a.site] if a.site else ["MY", "TH", "VN"]
         for s in sites:
             cfg = merged(cfg_all, s)
             cfg["site"] = s

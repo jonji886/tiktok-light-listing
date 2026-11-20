@@ -54,9 +54,11 @@ MARKET_COLS = ("site", "kind", "local_term", "prop_name", "cn_hint",
                "evidence", "product_id", "source")
 _ACCEPTED_EVIDENCE = {"VERIFIED_BY_TABLE"}   # 只有主表反证的中文提示可当"可信"
 
-# 站点码 ≠ 语言码：VN 站的商品语言是越南语(vi)，TH 站是泰语(th)。
+# 站点码 ≠ 语言码：VN 站的商品语言是越南语(vi)，TH 站是泰语(th)，MY 站是马来语(ms)。
 # 文件按语言码命名，站点到语言的映射只此一处，避免 vn.csv/vi.csv 这种二义。
-LANGS = {"TH": "th", "VN": "vi"}
+# ⚠ MY：config/i18n/ms.csv 为空表（ERP 马来语自动翻译能力 UNKNOWN，未实测），
+#   查不到返回 None 由调用方转人工——这是设计行为，不是 bug。
+LANGS = {"TH": "th", "VN": "vi", "MY": "ms"}
 
 
 def normalize(s):

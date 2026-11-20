@@ -8,6 +8,7 @@
 |---|---|---|
 | `vi.csv` | VN（JingShanShop-VN） | 20 品越南语标题 + 描述 + 69 条规格译名 |
 | `th.csv` | TH（JingShanShop-TH） | 属性名译名（颜色/款式/型号/规格/尺寸） |
+| `ms.csv` | MY（JingShanShop-MY，2026-11-19 主攻站） | **按需积累替换词条**。ERP 马来语自动翻译已 VERIFIED 可用（首品标题/规格名自动马来化），但质量不可控（混入 "laris Amazon" 竞品平台词）；发布前目视标题，需要修正的词按 `kind,key,src,tgt` 加行 |
 | `_market_terms_vi.csv` | VN | **市场用词参考表**：EchoTik 竞品越南语规格原词（2026-11-18） |
 | `_market_terms_th.csv` | TH | **市场用词参考表**：EchoTik 竞品泰语规格原词（2026-11-18） |
 
@@ -17,7 +18,9 @@
 ## 市场用词参考表（与主译名表物理隔离）
 
 2026-11-18 新增，来自 `echotik/batchProductDetail` 的 `salePropsInfo`，经
-`scripts/linkfox_sourcing.py spec-terms` 提取。**两组表用途不同，禁止混用**：
+`scripts/linkfox_sourcing.py spec-terms` 提取。**两组表用途不同，禁止混用**。
+⛔ 2026-11-20 起 `spec-terms` 已停用（TikTok 数据统一走 ERP 透传），这两张表**冻结留档、不再增量**；
+已有词条仍可作人工选词参考，但不得再据此新增行。
 
 | | 主译名表 `vi.csv`/`th.csv` | 市场参考表 `_market_terms_*.csv` |
 |---|---|---|

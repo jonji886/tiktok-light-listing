@@ -1,0 +1,43 @@
+# MY 商品卡热搜词根（一行一个，马来语）。
+# 2026-11-19 建表。来源分层标注（AGENTS.md 真实性约束）：
+#   [官方VERIFIED] = 当日浏览器实测商家后台 商品机会→热门关键词 tab（shop_region=MY，
+#                    按搜索次数排序前 7 条词根拆出）：
+#                    drawstring store plastik sampah 2.8k+ / african net sponge 2.7k+ /
+#                    apron rumah 2.7k+ / plastic sampah tahan lasak 2.6k+ /
+#                    plasticsampah murah 2.6k+ / apron chef 2.6k+ / apron lelaki 2.6k+
+#   [种子]         = 通用家居词，未经官方词表核实，仅作闸门跑通与扩词起点，
+#                    必须用 数据罗盘→关键词榜单 与 商品机会→热门关键词 翻页扩充后才算真实词库。
+# 匹配规则：标题去重音小写后做子串匹配，命中 ≥N 个不同词根才通过。
+# ⚠ 拆词根会丢失组合语义（tahan lasak=耐撕裂、murah=便宜 是修饰词），
+#   判"词根命中"够用；做标题时优先用后台原词整串。
+sampah
+plastik
+beg
+apron
+rumah
+chef
+lelaki
+sponge
+drawstring
+store
+tahan
+murah
+penutup
+filem
+pembersihan
+dapur
+kitchen
+storage
+rak
+penyimpanan
+kotak
+bakul
+bilik mandi
+dinding
+keluli
+wangi
+kuali
+meja
+kerusi
+lantai
+tuala

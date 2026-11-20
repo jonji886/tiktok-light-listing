@@ -85,7 +85,7 @@ def plan_price(cur_lo, cur_hi, cfg, lo_mult, hi_mult):
 def main():
     ap = argparse.ArgumentParser(description="批量预处理：重定价 + 收库存 + 复检")
     ap.add_argument("--csv", default=DEFAULT_CSV)
-    ap.add_argument("--site", choices=["TH", "VN"], required=True)
+    ap.add_argument("--site", choices=["MY", "TH", "VN"], required=True)
     ap.add_argument("--ids", help="点名处理的 ttl_id，逗号分隔（--save 必填）")
     ap.add_argument("--save", action="store_true", help="真正提交写操作")
     ap.add_argument("--lo-mult", type=float, default=1.10,

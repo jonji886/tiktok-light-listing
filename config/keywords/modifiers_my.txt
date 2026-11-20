@@ -1,0 +1,41 @@
+# MY 马来语修饰词表：官方热搜词里出现、但**不拆成品类词根**的词（会污染 listing_quality_gate 命中判定）。
+# 2026-11-20 建表。依据 2026-11-19 实测教训（SKILL.md 0.2②：tahan lasak=耐撕裂、murah=便宜 是修饰语）。
+# ⚠ 只收"纯修饰/促销/泛化"词。lelaki/wanita/rumah 等虽有属性色彩，但已作为 VERIFIED 词根
+#   进入 my.txt（apron lelaki 2.6k+ 本身就是有效搜索词），**不收**，避免与词根表自相矛盾。
+# 一行一个（小写）；多词串整串登记（split_roots 对含空格的串整体排除）。
+tahan lasak
+murah
+termurah
+jimat
+berpatutan
+terlaris
+laris
+best seller
+premium
+berkualiti
+kualiti
+exklusif
+diskon
+diskaun
+promo
+grosir
+borong
+ready stock
+stok siap
+baharu
+original
+ori
+import
+menarik
+mudah
+multifungsi
+serbaguna
+pelbagai
+tebal
+nipis
+besar
+kecil
+anti
+kalis air
+waterproof
+leakproof
