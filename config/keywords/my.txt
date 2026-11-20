@@ -41,3 +41,19 @@ meja
 kerusi
 lantai
 tuala
+
+# ---- 2026-11-20 商品机会→热门关键词 tab 拆根（opportunity_keywords.py --apply，VERIFIED 当日实测）----
+span
+alas
+bilik
+cerut
+cover
+peti
+plastic
+platsic
+sejuk
+tali
+tidur
+
+# ---- 2026-11-20 商品机会→热门关键词 tab 拆根（opportunity_keywords.py --apply，VERIFIED 当日实测）----
+red

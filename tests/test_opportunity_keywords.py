@@ -83,6 +83,7 @@ class TestSyncApply(unittest.TestCase):
 
             class A:
                 site, csv, apply = "my", csvp, True
+                min_freq = 1  # 测试固定全量入库；默认 2 的行为由 test_min_freq_gate 覆盖
 
             ok.cmd_sync(A)
             first_roots = open(os.path.join(kwd, "my.txt"), encoding="utf-8").read()
@@ -98,6 +99,43 @@ class TestSyncApply(unittest.TestCase):
             wp = [w for w in ok.parse_entries(
                 open(os.path.join(pool, "keywords_my.txt"), encoding="utf-8").read().split("\n"))]
             self.assertEqual(len(wp), len(set(wp)))
+
+
+    def test_min_freq_gate(self):
+        """只出现 1 次的词根默认（min_freq=2）不入库；≥2 次入库。"""
+        with tempfile.TemporaryDirectory() as d:
+            kwd, pool = self._fixture(d)
+            orig_paths = ok.paths
+            ok.paths = lambda site: {
+                "roots": os.path.join(kwd, "my.txt"),
+                "pool": os.path.join(pool, "keywords_my.txt"),
+                "modifiers": os.path.join(kwd, "modifiers_my.txt"),
+                "template": os.path.join(pool, "opportunity_keywords_my.csv"),
+            }
+            csvp = os.path.join(d, "kw.csv")
+            with open(csvp, "w", encoding="utf-8") as f:
+                f.write("word,volume,rank,copied_at,note\n"
+                        "apron chef,2.6k+,1,2026-11-20,\n"
+                        "apron kerja,2.7k+,2,2026-11-20,\n"
+                        "span unik sekali,1.5k+,3,2026-11-20,\n")
+
+            class A:
+                site, csv, apply = "my", csvp, True
+                min_freq = 2
+
+            ok.cmd_sync(A)
+            roots = ok.parse_entries(open(os.path.join(kwd, "my.txt"), encoding="utf-8").read().split("\n"))
+            ok.paths = orig_paths
+            self.assertIn("apron", roots)     # 已在表（fixture 预置）
+            self.assertNotIn("chef", roots)   # 仅 apron chef 一次 → 频次1，不入库
+            self.assertNotIn("kerja", roots)  # 同上
+            self.assertNotIn("unik", roots)   # 同上
+
+    def test_stopwords_never_roots(self):
+        mods = ok.load_modifiers("my")
+        _t, roots = ok.split_roots("apron untuk mesin rumput dan plastik", mods)
+        self.assertNotIn("untuk", roots)
+        self.assertNotIn("dan", roots)
 
 
 if __name__ == "__main__":

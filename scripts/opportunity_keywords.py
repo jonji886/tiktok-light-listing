@@ -47,6 +47,10 @@ POOL_DIR = os.path.join(ROOT, "erp_data")
 
 MIN_ROOT_LEN = 3  # 与 listing_quality_gate.MIN_WORD_LEN 对齐：短词会在别的词里误命中
 UNIT_STOP = {"pcs", "pc", "set", "sets", "kg", "gr", "ml", "cm", "mm", "inch", "box", "pcs/set"}
+# 马来语/英语虚词：任何标题都会带，进词根表等于闸门失效（命中3根的判据被白送）
+STOPWORDS = {"dan", "untuk", "dengan", "tidak", "yang", "atau", "ini", "itu", "dan/atau",
+             "a", "an", "the", "of", "and", "for", "with", "large", "small", "new"}
+DEFAULT_MIN_FREQ = 2  # 词根在本批 CSV 出现 ≥2 次才进表（单次=场景词，留人工复核区）
 
 
 def paths(site):
@@ -125,7 +129,7 @@ def split_roots(word, modifiers):
         p = re.sub(r"[^a-z0-9\u00c0-\u024f\u4e00-\u9fff]", "", p)
         if len(p) < MIN_ROOT_LEN:
             continue
-        if p.isdigit() or p in UNIT_STOP:
+        if p.isdigit() or p in UNIT_STOP or p in STOPWORDS:
             continue
         if p in modifiers:
             continue
@@ -157,8 +161,10 @@ def cmd_sync(args):
     existing_roots = set(parse_entries(read_lines(P["roots"])))
     existing_pool = set(parse_entries(read_lines(P["pool"])))
 
-    new_pool, new_roots, mod_hits = [], [], []
-    seen_pool, seen_roots = set(), set()
+    new_pool, mod_hits = [], []
+    seen_pool = set()
+    from collections import Counter
+    freq = Counter()
     for r in rows:
         w = r["word"].lower()
         toks, roots = split_roots(w, modifiers)
@@ -171,20 +177,25 @@ def cmd_sync(args):
                     and " " in t and t not in modifiers:
                 seen_pool.add(t)
                 new_pool.append((dict(r, word=t), [t]))
-        for rt in roots:
-            if rt not in existing_roots and rt not in seen_roots:
-                seen_roots.add(rt)
-                new_roots.append(rt)
+        for rt in set(roots):  # 同一行重复词只计一次
+            freq[rt] += 1
             if rt in modifiers:
                 mod_hits.append(rt)
+    min_freq = getattr(args, "min_freq", DEFAULT_MIN_FREQ) or 1
+    new_roots = [rt for rt, _n in sorted(freq.items(), key=lambda kv: (-kv[1], kv[0]))
+                 if rt not in existing_roots and freq[rt] >= min_freq]
+    review_roots = [rt for rt, _n in sorted(freq.items(), key=lambda kv: (-kv[1], kv[0]))
+                    if rt not in existing_roots and freq[rt] < min_freq]
 
     print("来源 CSV：%s（有效 %d 行，copied_at 覆盖 %s）"
           % (args.csv, len(rows), ",".join(sorted({r["copied_at"] for r in rows}))))
     print("整串表 %s：现有 %d，新增 %d" % (P["pool"], len(existing_pool), len(new_pool)))
     for r, toks in new_pool:
         print("  + %s  [%s]  拆根→ %s" % (r["word"], r["volume"], " ".join(toks)))
-    print("词根表 %s：现有 %d，新增 %d" % (P["roots"], len(existing_roots), len(new_roots)))
-    print("  新增词根: %s" % (" ".join(new_roots) if new_roots else "（无）"))
+    print("词根表 %s：现有 %d，新增 %d（本批出现 ≥%d 次）" % (P["roots"], len(existing_roots), len(new_roots), min_freq))
+    print("  新增词根: %s" % (" ".join("%s×%d" % (rt, freq[rt]) for rt in new_roots) if new_roots else "（无）"))
+    if review_roots:
+        print("  [待复核·仅出现1次，未入库] %s" % " ".join(review_roots))
     if mod_hits:
         print("  [提示] 命中修饰词表已排除: %s" % " ".join(sorted(set(mod_hits))))
 
@@ -230,6 +241,8 @@ def main():
     ap.add_argument("--site", default="my", help="站点（my/th/vn），默认 my")
     ap.add_argument("--csv", help="抄录 CSV 路径（sync 用）")
     ap.add_argument("--apply", action="store_true", help="真正写盘（默认 dry-run）")
+    ap.add_argument("--min-freq", type=int, default=DEFAULT_MIN_FREQ, dest="min_freq",
+                    help="词根进表的本批最低出现次数（默认 %d；1=全部进表）" % DEFAULT_MIN_FREQ)
     ap.add_argument("--audit", action="store_true", help="两表覆盖审计")
     a = ap.parse_args()
     if a.init_tpl:
