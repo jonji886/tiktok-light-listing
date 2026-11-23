@@ -154,12 +154,14 @@ supplier_gates:
   # → 取到 offerId 后必须先拉 1688 主图目视过闸，才能进 Step 1 采集。
   # 注意别和发布闸门 image_gate.yaml 的 min_clean_main_images:1 混用，这里要求 3 张。
   clean_consumer_images_min: 3        # 无中文/无B2B字样的消费者向主图 ≥3 张（按整图删后的余量估）
-  # ── 图片供给预测闸（2026-11-19 新增，围裙 5→1 教训的前置化）──
+  # ── 图片供给预测闸（2026-11-19 新增，围裙 5→1 教训的前置化；2026-11-23 口径收紧）──
   # 发布硬闸已提级 min_publish_main_images=5：任何货源最终必须凑出 5 张干净主图，
-  # 凑不出=发布被拦+全流程白跑。选品时就按「修复预算」预测供给：
-  #   clean_main_images_after_fix = L3_keep 张数 + 探针判可修的 L1/L2 张数 + 可提升的干净 SKU/详情图张数
-  # ≥5 → 绿灯直接进；<5 → 该货源只有两种去路：确认能低成本补到 5（AI 生成/换源同款）或放弃。
-  # 依据：5 品批次 83% 主图被判删、修复救回率 ~3:4（围裙实测），纯删不修的货源发布必挂。
+  # 凑不出=发布被拦+全流程白跑。选品时 `--pieces` 一律 1；见 SKILL 4.4 / strategy 3.3 / pitfalls 9.5。
+  # ⚠ 口径收紧（683 换源 2 次，2026-11-20 晚实测）：clean_main_images_after_fix **只认 cbu01 原链**。
+  #   旧口径计入「image_fix 修图救回的 L1/L2」是错的——修图产物落 kdzs-vpc 域，
+  #   ttl_edit --mains-file 白名单拒收，且 vpc 链实测 1 小时内 404（main_01 重擦后仍死）。
+  #   新口径 = L3_keep 的 cbu01 主图 + 可降级复用的干净 cbu01 SKU/详情图。
+  #   唯一入口 = scripts/hero_main_images.py 款型级预检（P0-2 已建但 683 批次没跑=纪律缺口）。
   clean_images_after_fix_min: 5
   desc_rebuildable: true              # 详情长图允许整图删后用当地语言文本+干净图重建；全脏且无可重建图 = 换货源
   # ⛔ 以下 3 行是 $5 下限时代的残留，仅定价模型备查，**不得据此铺货**（2026-11-12 第二批纠正）：

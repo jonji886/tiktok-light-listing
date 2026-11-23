@@ -224,6 +224,12 @@ def main():
         return 0
     r = _post(EDIT, body, None)
     print("[ttl_edit] edit 提交: %s" % json.dumps(r, ensure_ascii=False)[:150])
+    # P3 顺序纪律（2026-11-23）：edit 会改写 detail → 旧 review 判定表整批作废
+    # （683 批次实测：apply 时报"21/24 判定已失效"，重扫重判多花 5 分钟）。
+    # 正确顺序 = mains/desc **全部定稿**（本脚本 --save）之后，才进 image_gate scan→判定→apply。
+    print("[ttl_edit] ⚠ 本商品 detail 已被改写：此前所有 image_gate review.json 判定作废。"
+          "\n    若后面还要走图片闸门：现在才是 scan 的正确时机（顺序=mains/desc定稿→scan→判定→apply，"
+          "scan 之后不要再 --save 本脚本，否则又得重判）。")
     return 0
 
 

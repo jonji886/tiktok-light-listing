@@ -50,6 +50,10 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
 **`category_template.py match`（命中模板）→ `ttl_edit.py --template <名> --keep-prefix <款型SKU前缀> --save`**
 （一次 edit 到位：类目/重量/尺寸/SKU精简/公式定价/主图/描述渲染，默认 dry-run）→
 `image_gate.py scan → apply --save`（模板品描述走 `category_template render`，占位未填=拒绝）→
+**⚠ 顺序铁律：`scan` 必须在 `ttl_edit --save` 之后、且此后不再 `ttl_edit --save`**——edit 改写 detail
+会让旧 review 判定整批作废（683 实测 apply 时报"21/24 失效"重扫重判）。mains/desc 定稿 → scan → 判定 → apply，
+不得回环（`image_gate apply --save` 自身也会写回 detail，但它的 cleaned_detail 正是由这份 review 生成的，
+属链路终点不算回环；此后如再 ttl_edit --save，判定表需重扫）。→
 `prepublish_guard → price_gate`（子集隔离，历史脏草稿会拖累全量退出码）→ `erp_client.py ttl-publish --weight/--dims` →
 四路验证 → `backflow.py sync`（**先 `ttl-list --region MY` 不带 --out 落顶层 CSV 再 sync**，否则假新增0）。
 
@@ -215,6 +219,13 @@ python3 scripts/erp_token_grab.py --save --check    # 从 Chrome Session Storage
   - 降级仍保留：接口不可用时按 `content.proxy_mode` 打分，上限 6 分，标注 `content_source: proxy`。**不得因缺数据给假高分。**
 
 **② L1 官方后台（浏览器，深度复核需求真伪）**：商品机会中心（MY 站 URL 带 `shop_region=MY`）**优先级按 2026-11-20 重排：P0=热门关键词收割（周常）、P0=提报关联（每3天，见 T+0 纪律2）、P1=高潜力商品卡片（每周方向池）、P2=低竞争类目**。三 tab 使用规则：
+
+**GUI 抄录/操作降本守则（2026-11-23 P4 固化，全部来自 11-20 实测踩坑）**：
+1. **有 node_id 就不猜坐标**：先 `dom_cua_get_visible_dom`，按钮/链接/分页一律按 node_id 点（DOM 点击不受滚动偏移影响）；只有复选框等无 a11y 节点才用坐标。11-20 提报弹窗"下一步/返回"用坐标点错 3 次，node_id 一发入魂。
+2. **toggle 控件一次一步**：复选框是 toggle 语义，**禁止把"勾A+勾B+点下一步"打包成一次动作序列**——点偏一格变反选，整包作废回退重做。正确：勾一个 → 截图确认状态 → 再下一个。
+3. **表格抄录=定步长重叠滚动+离线逐判**：每次 `scroll_y` 固定 ≈整屏 80%（留 20% 重叠防漏行），一滚一截，**先截完全部再离线逐屏抄**；不要边滚边记（上下文来回切换最慢）。11-20 漏抄「apron comel」一行就是边滚边记+重叠区没对齐。
+4. **截图超时别死等**：SPA 渲染期 `Page.captureScreenshot`/`Runtime.evaluate` 常 timeout，等 4–6 秒**只重试一次**；再超时改走 `dom_cua_get_visible_dom`（DOM 通道不依赖截图管线，表格文本基本够用），截图只留给需要看图的场景。
+5. **抄完对账尾部**：最后一屏必须拍到分页控件或列表尾（如「共 N 条」/翻页 1/1），行数对不上立刻补滚，不进下一步。
 
 | 优先级 | tab | 数据本质 | 正确用法 | 禁止用法 |
 |---|---|---|---|---|
@@ -885,9 +896,11 @@ TikTok 商家后台商品分析 → 回填到 `erp_data/backflow.csv`：
    提报后回「我的提报」页核对审核状态，获批的在 `backflow.py traffic --opportunity-apply true` 记日期。
    这是不开达人佣金时**唯一能主动拿到的免费推流**，而旧版只把商品机会中心当"选品信号源"读，从来没把它当"流量入口"用。
    **零单期顺序纪律：先提报现有品拿量 → 再谈铺新品**；两者冲突时提报优先（铺新品有 1/6 命中率成本，提报是确定性收益）。
-   **提报前置检查（2026-11-20 实测，VERIFIED）**：关联提报走「机会详情→绑定现有商品→选同三级类目近30天在售品→添加关键词→提交」，
+   **提报前置检查（2026-11-20 实测 VERIFIED；2026-11-23 工具化）**：关联提报走「机会详情→绑定现有商品→选同三级类目近30天在售品→添加关键词→提交」，
    第2步会**逐品校验标题违禁词**，任一被勾品命中（如首品标题里的 "Amazon" 竞品平台词）→ 提交按钮禁用、整单发不出去。
-   → 提报前先跑 `prepublish_guard`/目视标题去违禁词；被拦的品**先改标题再提报**，不要硬提。
+   → **进 GUI 前先跑 `python3 scripts/report_ready_check.py`**（一条命令输出在售品「可提报 ✓ / 被拦 ✗」两张清单：
+   竞品平台词=词表 `config/banned_platform_words.txt`（连写变体 larisamazon 也抓）+ 汉字残留扫描；
+   `--json` 供编排），弹窗里只勾 ✓ 品；✗ 品先改标题（ERP 注入词按 `config/i18n/ms.csv` 替换）再回来提报，不要硬提。
    实测闭环：apron chef 机会 → 绑定 Apron Kanvas(173863601339888) → 审核通过1、激励=获得商城页曝光（提报记录页 VERIFIED）。
 
 **T+0 免费流量三件套（2026-11-18 新增，官方优先级：销售加速 > 早鸟价 > 广告）**：
@@ -971,6 +984,10 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
   `erp_data/keywords_my.txt`（官方原词整串，供 pool）。修饰词表 `config/keywords/modifiers_my.txt` 排除
   tahan lasak/murah 类修饰语不拆根；计量单位（pcs/50）自动过滤；`--apply` 幂等；`--audit` 查两表覆盖缺口。
   周常动作（P0）：抄词 → dry-run → apply → git diff 复核 → 重跑 listing_quality_gate。
+- `scripts/report_ready_check.py`：**提报前置检查（2026-11-23 新增，纯本地只读）**——进「绑定现有商品」GUI 之前
+  扫在售品标题两类弹窗硬拦：竞品平台词（词表 `config/banned_platform_words.txt`，去非字母子串匹配，
+  抓 laris Amazon/连写变体）+ 汉字残留。输出「可提报 ✓ / 被拦 ✗」清单，弹窗里只勾 ✓ 品；
+  ✗ 品先改标题再提报。`--json` 供编排。治 11-20 靠 6 次截图试错才定位 "Amazon" 被拦的教训。
 - `scripts/opportunity_intake.py`：**商品机会判读闸门（2026-11-19 新增，纯本地只读）**——吃机会卡片抄录 CSV，
   按品牌红线/价格带/类目一致/站内数据四项判 reject/direction_only/candidate。规则配置 `config/opportunity_intake.yaml`
   （known_brands / generic_terms / 参考价币种 / 需求下限，含数据口径警示注释）。`--title ... --site MY` 单品快查。

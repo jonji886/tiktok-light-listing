@@ -31,12 +31,14 @@
   dims_cm             包装长宽高 cm，如 20x15x8；抛重=L×W×H÷6000×1000，与实重取大
   redline_check       红线核查结论，必须含 pass（strategy 5.1 十条红线）
   pieces              必须为 1 或留空（一件代发禁多件装，见 pricing_calc 硬闸）
-图片供给预测列（P0-3，2026-11-19 新增；表头存在即强制，缺列只 WARN）：
-  clean_main_images_after_fix  预测「image_fix 修复 + SKU图/详情图降级复用」后可用主图数。
-    发布硬闸 min_publish_main_images=5（围裙 5→1 教训），选品期就按修复预算预测供给：
-    = L3_keep + 探针判可修的 L1/L2 + 可提升的干净 SKU/详情图。≥5 绿灯；<5 且无补图路径 → 淘汰。
-    证据来源：selection_intake image 拉的 5 张主图 + scripts/image_fix.py probe（¥0.02/张，
-    免费额度 100 张）的 seen_text，不必等采集后整链跑完再判。
+图片供给预测列（P0-3，2026-11-19 新增；**2026-11-23 口径收紧**；表头存在即强制，缺列只 WARN）：
+  clean_main_images_after_fix  「可发布」干净主图数——**只认 cbu01.alicdn.com 原链**：
+    = L3_keep 的 cbu01 主图 + 可降级复用为发布主图的干净 cbu01 SKU/详情图。
+    ⛔ image_fix 修图救回的 L1/L2 **不计入**：产物落 kdzs-vpc/dashscope 域，
+      ttl_edit --mains-file 白名单只收 cbu01，且 vpc 链实测 1 小时内 404（2026-11-20 晚 683 重擦即失效）。
+    发布硬闸 min_publish_main_images=5：此列 <5 = 该货源发布必挂，选品期直接换源，别进采集。
+    证据来源：scripts/hero_main_images.py 款型级预检（唯一正确入口），selection_intake 拉主图 +
+    image_fix probe 只用于识别 L3_keep（探针判干净），不是"修完就能发布"。
 价格竞争力证据列（P0-1，2026-11-18 新增；表头存在即强制，旧清单缺列只 WARN）：
   market_median_price_usd  站内同款中位价（USD，买家实付口径要注明）
   market_price_source      来源：官方价格诊断 / fastmoss:floorPrice / aibuy:opprank
@@ -303,8 +305,11 @@ def judge(row, idx, thr, price_cfg_all, home_ids, market_gate=False,
         issues.append(f"IMG_CLEAN_LT3: 干净消费者向主图 {imgs:g} 张 "
                       f"< {thr['clean_consumer_images_min']} 张（选品线，不是发布线 1 张）")
 
-    # 图片供给预测闸（2026-11-19）：发布硬闸要 5 张，选品期就得预测「修复后凑得出几张」。
-    # 计入口径 = L3_keep + image_fix 可救的 L1/L2 + 可提升为主图的干净 SKU/详情图。
+    # 图片供给预测闸（2026-11-19；**2026-11-23 口径修正**）：发布硬闸要 5 张，选品期就得预测。
+    # ⚠ 修正原因（683 换源 2 次教训）：旧口径把「image_fix 修图救回的 L1/L2」计入供给，
+    #   但修图产物落 kdzs-vpc 域——ttl_edit --mains-file 白名单只收 cbu01，且实测 vpc 链
+    #   1 小时内 404（2026-11-20 晚 main_01 重擦）。**修复救回 = 发布不可用，不得计入**。
+    # 新口径 = 干净 cbu01 原链图（main L3_keep + 款型无关限制已解除：SKU/详情图降级复用仍是正路）。
     # 表头存在才强制（同 MARKET_COLS 渐进策略，旧清单只 WARN）；<5 = 发布必挂，别浪费采集坑位。
     fix_imgs = fnum(row.get("clean_main_images_after_fix"))
     if "clean_main_images_after_fix" in row:
@@ -312,12 +317,13 @@ def judge(row, idx, thr, price_cfg_all, home_ids, market_gate=False,
             miss("clean_main_images_after_fix")
         elif fix_imgs < thr["clean_images_after_fix_min"]:
             issues.append(
-                f"IMG_SUPPLY_LT5: 预测修复后可用主图 {fix_imgs:g} 张 < "
-                f"{thr['clean_images_after_fix_min']}（发布硬闸会拦；补图路径=SKU图/详情图降级复用、"
-                "image_fix 修图救回、或换图源充足的同款供应商）")
+                f"IMG_SUPPLY_LT5: 可发布干净主图（cbu01 原链口径，修复救回不计）仅 {fix_imgs:g} 张 < "
+                f"{thr['clean_images_after_fix_min']}（发布硬闸会拦；补图路径=SKU图/详情图降级复用"
+                "（须 cbu01 原链）、或换图源充足的同款供应商。image_fix 修图救回**不可**用于发布主图）")
     else:
         warns.append("IMG_SUPPLY_UNPREDICTED: 缺 clean_main_images_after_fix 列——"
-                     "发布闸要 5 张主图，选品期先按 image_fix probe 证据预测一次再填")
+                     "发布闸要 5 张主图（只认 cbu01 原链，修图产物落 vpc 域发布必 404），"
+                     "选品期先跑 hero_main_images.py 预检再填")
 
     if fbool(row.get("desc_rebuildable")) is not True:
         issues.append("DESC_NOT_REBUILDABLE: desc_rebuildable 非 true，详情长图无法干净重建")

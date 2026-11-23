@@ -824,8 +824,8 @@ def cmd_seed(args):
     print("[seed] 写入 %d 行 → %s（%s）" % (len(rows), out, "覆盖" if write_header else "追加"))
     print("[seed] 已自动填：cost_cny / max_sku_cost_cny / stock / min_order_qty / weight_g / ship_city / pieces")
     print("[seed] 待人工或多模态填：clean_main_images / desc_rebuildable / "
-          "clean_main_images_after_fix（预测：L3_keep + 可修L1/L2 + 可提升SKU/详情图 ≥5，"
-          "证据=image_fix probe 的 seen_text）/ seller_48h_proof / "
+          "clean_main_images_after_fix（**cbu01 原链口径 ≥5**：L3_keep + 可降级复用的干净 cbu01 SKU/详情图；"
+          "修图救回不算——产物落 vpc 域发布必 404，跑 hero_main_images.py 预检）/ seller_48h_proof / "
           "free_shipping / ship_transit_days / redline_check / dims_cm / forwarder_city")
     print("[seed] 下一步：python3 scripts/select_gate.py --csv %s" % out)
     return 0

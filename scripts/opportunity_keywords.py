@@ -145,6 +145,8 @@ def cmd_init_template(site):
     print("模板已写出：%s" % p)
     print("抄录方法：商家中心 → 商品 → 商品机会 → 热门关键词 tab（shop_region=%s），"
           "按搜索次数排序抄前 2-3 页，volume 记档位原文（如 2.8k+）。" % site.upper())
+    print("降本（SKILL 0.2② 守则）：定步长滚动（每次≈整屏80%留重叠）一滚一截，截完全部再离线逐屏抄；"
+          "最后一屏拍到分页控件对账行数。")
 
 
 def cmd_sync(args):

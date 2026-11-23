@@ -1,0 +1,22 @@
+# 竞品平台词表（TikTok Shop 违禁词类之一）：标题含竞品平台名 → 平台判违规。
+# 2026-11-23 建表。两处实测依据（VERIFIED）：
+#   ① 商品机会「绑定现有商品」提报弹窗逐品校验标题，命中即提交按钮禁用、整单发不出
+#      （2026-11-20 首品 "laris Amazon" 被拦，SKILL.md T+0 纪律 2）；
+#   ② ERP 自动翻译会把 "lari畅销" 译成 "laris Amazon" 注入标题（pitfalls 补记，发布前必须目视）。
+# 一行一个（小写、空格分隔多词为整串）。匹配=标题去非字母后小写子串——
+# 能抓 larisamazon 连写变体；表内全部为纯字母词，无误伤数字词风险。
+# ⚠ 本表不覆盖商标词（nike/disney 等走 opportunity_intake.yaml known_brands）与
+#   汉字检测（走 prepublish_guard CJK 递归扫描）——提报前置检查 report_ready_check.py 会合并三者。
+amazon
+shopee
+shopees
+lazada
+ebay
+aliexpress
+temu
+walmart
+etsy
+alibaba
+taobao
+pinduoduo
+shein

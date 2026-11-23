@@ -112,8 +112,12 @@ def main():
             if info["sku_imgs_bad"]:
                 note += "；本款不可用: %s" % ",".join(info["sku_imgs_bad"][:3])
         else:
+            # ⚠ 保守上限口径（2026-11-23 加注）：无 review 时把该款型全部 SKU 图暂计——
+            # 这是**上限不是预测**，选品期用它做初筛可以，但它会系统性高估
+            # （SKU 图带中文横幅很常见，683 三源实测唯一 0 中文横幅主图组都没出现）。
+            # 正确流程 = 初筛通过后立即拉主图目视/probe 转精确口径，再决定是否进采集。
             supply = len(generic_all) + info["skus"]
-            note = "保守上限口径（无review，全SKU图暂计）%d 张——进闸门后按 L3_keep 重核" % info["skus"]
+            note = "保守**上限**口径（无review，全SKU图暂计）%d 张——会高估，进采集前必须转精确口径" % info["skus"]
         ok = supply >= a.min_main
         any_pass = any_pass or ok
         print("[hero] 款型「%s」SKU%d 可用主图供给=%d(需%d) %s | %s"
