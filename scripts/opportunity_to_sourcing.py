@@ -63,7 +63,7 @@ from opportunity_intake import load_yaml, judge, CONFIG as INTAKE_CONFIG  # noqa
 from pricing_calc import load_config as load_pricing                      # noqa: E402
 from selection_intake import city_from_location                           # noqa: E402
 
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.realpath(os.path.dirname(HERE))  # skill 目录常为 symlink，realpath 防 save_to 分裂（2026-11-24 实测分裂过一次）
 AIBUY = os.path.join(HERE, "aibuy_rank_client.py")
 DEFAULT_CSV = os.path.join(ROOT, "erp_data", "opportunity_signals.csv")
 DEFAULT_OUT = os.path.join(ROOT, "erp_data", "opportunity_sourcing.csv")
@@ -126,7 +126,8 @@ def build_tasks(rows_decided):
 
 
 def load_linkfox_payload(path):
-    """读 MCP 落盘 JSON（校验 errcode），返回 products[]；错误时抛 ValueError(原因)。"""
+    """读 MCP 落盘 JSON（校验 errcode），返回 products[]；错误时抛 ValueError(原因)。
+    落盘推荐用 scripts/mcp_write.py --kind search 生成（瘦表转录，2026-11-25 P0-2）。"""
     if not os.path.exists(path):
         raise ValueError("落盘不存在")
     with open(path, encoding="utf-8") as f:
@@ -399,7 +400,12 @@ def main():
         print("\n".join("[plan] " + l for l in plan))
         print("[tasks] %d 个取数任务 → %s" % (len(tasks), LINKFOX_TASKS))
         print("[tasks] Agent 侧执行：逐任务调 LinkFox MCP proxy_call(toolName, arguments)，"
-              "响应**原样**写入 save_to 路径（顶层含 errcode/products）；全部落盘后重跑 --linkfox read")
+              "把 MCP 返回的 products 转成瘦表 TSV（列: %s），用 "
+              "scripts/mcp_write.py --kind search --save-to <save_to> --task <task_id> --tsv - 落盘；"
+              "全部落盘后重跑 --linkfox read（禁止手抄完整 JSON——2026-11-24 实测转录占取数环节~1/3时间）"
+              % ",".join(["offerId", "title", "price", "consignPrice", "salesQuantity",
+                          "quantityBegin", "company", "imageUrl", "asinUrl",
+                          "sendGoodsAddressText", "levelName", "deliveryTime", "salesOrderCount"]))
         emit(out_rows, a)
         return 0
 

@@ -107,6 +107,14 @@ MARKET_COLS = [
 # 图片供给预测列（2026-11-19）：同样"表头存在即强制"，缺列只 WARN
 SUPPLY_COL = "clean_main_images_after_fix"
 
+# 发布末端三闸前置（2026-11-24 P0 固化，本批 5 品实测教训）：
+#   sku_attr_names_ascii  ERP 认领不译属性名（颜色→发布被 [12052250] 汉字拒），抄录期可判
+#   seller_sku_ascii      货号即 seller_sku，中文货号（立体罩90*30*50）必被汉字闸拦，可判
+#   两列由 linkfox_oauth.py apply 的汉字指纹自动带出（true/false）。
+#   值= false → BLOCK 并给确定性修复命令（ttl_edit --attr-names / --sku-code），
+#   严禁带着中文 SKU 进 collect 再等 prepublish_guard 炸——本批为此多跑 2 轮全量 edit。
+GATE3_COLS = ("sku_attr_names_ascii", "seller_sku_ascii")
+
 REQUIRED_COLS = [
     "offer_id", "region", "cost_cny", "max_sku_cost_cny", "clean_main_images",
     "desc_rebuildable", "stock", "min_order_qty", "ship_transit_days",
@@ -116,6 +124,7 @@ REQUIRED_COLS = [
 
 TEMPLATE_HEADER = [
     "offer_id", "offer_url", "title_zh", "region", "category_id",
+    "sku_attr_names_ascii", "seller_sku_ascii",
     "cost_cny", "max_sku_cost_cny", "pieces",
     "clean_main_images", "desc_rebuildable", "clean_main_images_after_fix",
     "stock", "min_order_qty", "ship_transit_days", "seller_48h_proof",
@@ -477,16 +486,43 @@ def judge(row, idx, thr, price_cfg_all, home_ids, market_gate=False,
         warns.append("未启用价格竞争力闸：候选表缺 %s 列（用 --init-template 生成新表头）"
                      % "/".join(MARKET_COLS))
 
-    # ── 类目（推荐列：给值才硬校验，缺值提醒）──
+    # ── 类目（给值才硬校验；新清单缺值=阻断）──
+    # 2026-11-24 桌布教训：600204 桌布/600203 椅套在「家纺布艺」独立根下、不在家居树内，
+    # 选到必被发布端拦死，且 ERP 会自动错配"节日装饰"制造已认领假象——必须在选品期拦。
     cat = str(row.get("category_id") or "").strip()
     if cat:
         if home_ids is None:
             warns.append(f"类目树文件缺失，无法校验 category_id={cat}")
         elif cat not in home_ids:
             issues.append(f"CATEGORY_NOT_HOME: category_id={cat} 不在家居用品（{HOME_CATEGORY_ROOT}）"
-                          "可用类目树内，跨类目/不可发类目会被下架")
+                          "可用类目树内 → 跨类目红线，选品期即弃（查 case_category_tree.json 换家居树内档位）")
+    elif GATE3_COLS[0] in row:
+        issues.append("CATEGORY_ID_MISSING: 新清单必填 TikTok 家居树内类目ID——ERP 自动匹配≠通过，"
+                      "跨类目在发布端必死；先按产品实质在树里定档（防尘罩700665/收纳袋852744…）")
     else:
-        warns.append("category_id 为空：认领后必须复核 ERP 匹配结果属家居用品 AVAILABLE 类目")
+        warns.append("category_id 为空（旧清单）：认领后必须复核 ERP 匹配结果属家居用品 AVAILABLE 类目")
+
+    # ── SKU 汉字前置闸（2026-11-24，本批 5 品全多跑 2 轮全量 edit 的教训）──
+    # 属性名/seller_sku 含汉字是货源的确定性属性，抄录期 linkfox_oauth apply 已判好；
+    # 带着中文进 collect = 必然在 prepublish [12052250] 炸。列存在即强制：
+    #   空值 = oauth 未跑 → 阻断并命令先补跑（oauth 同时兜住详情页 ≤¥1 假主价）
+    #   false = 含汉字 → 阻断并给确定性修复命令
+    if "sku_attr_names_ascii" in row:
+        v = str(row.get("sku_attr_names_ascii") or "").strip().lower()
+        if v == "":
+            issues.append("CJK_FINGERPRINT_MISSING: 未跑 linkfox_oauth scan→MCP sku→apply，"
+                          "SKU 汉字指纹缺失——collect 前必须补（价格≤1.0 的假主价也由它兜住）")
+        elif v not in ("true", "1", "yes"):
+            issues.append("SKU_ATTR_NAME_CJK: 规格属性名含汉字（颜色/尺寸/规格）→ ERP 不译属性名，"
+                          "发布必被汉字拒。确定性修复：ttl_edit.py --attr-names \"颜色=Warna,尺寸=Saiz,规格=Saiz\"")
+    if "seller_sku_ascii" in row:
+        v = str(row.get("seller_sku_ascii") or "").strip().lower()
+        if v == "":
+            pass  # 同上 MISSING，attr 列那条已报，不重复
+        elif v not in ("true", "1", "yes"):
+            issues.append("SELLER_SKU_CJK: 货号即 seller_sku 且含汉字 → 发布汉字拒。确定性修复："
+                          "oauth apply 已产出 erp_data/sku_code_map.json，"
+                          "ttl_edit.py --sku-code 该文件 一键换码")
 
     # ── 官方 2026 ✅ 重点类目（优先方向，非准入；给信号不阻断）──
     focus_status, focus_hits = "unknown", []

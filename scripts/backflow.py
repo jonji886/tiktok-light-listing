@@ -31,7 +31,7 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.realpath(os.path.dirname(HERE))  # skill 目录常为 symlink（2026-11-24）
 SELECTION_YAML = os.path.join(ROOT, "config", "selection.yaml")
 BACKFLOW = os.path.join(ROOT, "erp_data", "backflow.csv")
 LIST_CSV = os.path.join(ROOT, "erp_data", "tiktok_list.csv")
@@ -237,6 +237,17 @@ def cmd_sync(args):
         days = [2, 7, 20]
 
     published = [r for r in read_rows(LIST_CSV) if str(r.get("状态", "")).strip() == "1"]
+    # 2026-11-24 修复：ttl-list 常带 --out 落到 erp_data/ttl_list_*.json/，只认固定路径
+    # 会静默漏新批次（本日实测"新增 0"、5 条手工补录）。glob 扫全部落盘并按 ttl_id 去重。
+    seen_tid = {str(r.get("ttl_id") or "") for r in published}
+    import glob as _glob
+    for extra in _glob.glob(os.path.join(ROOT, "erp_data", "**", "tiktok_list*.csv"), recursive=True):
+        if os.path.abspath(extra) == os.path.abspath(LIST_CSV):
+            continue
+        for r in read_rows(extra):
+            tid = str(r.get("ttl_id") or "").strip()
+            if tid and tid not in seen_tid and str(r.get("状态", "")).strip() == "1":
+                published.append(r); seen_tid.add(tid)
     if not published:
         print("[sync] %s 里没有状态=1 的已发布记录；先跑 erp_client.py ttl-list" % LIST_CSV)
         return 2

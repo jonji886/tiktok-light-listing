@@ -55,7 +55,7 @@ import urllib.error
 import urllib.request
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.realpath(os.path.dirname(HERE))  # skill 目录常为 symlink，realpath 防落盘路径分裂（2026-11-24）
 SELECTION_YAML = os.path.join(ROOT, "config", "selection.yaml")
 DEFAULT_OUT = os.path.join(ROOT, "erp_data", "selection_intake")
 CAND_CSV = os.path.join(ROOT, "erp_data", "selection_candidates.csv")
@@ -690,6 +690,17 @@ def cmd_image(args):
         time.sleep(args.sleep)
 
     prefill = os.path.join(out_dir, "prefill.json")
+    # 2026-11-24 修复：同 out_dir 二次运行整表覆盖（本批丢过一次 5 品数据）。
+    # 改为按 offer_id 合并：本次运行结果覆盖同 id 旧行，其余保留。
+    old_items, old_payload = [], {}
+    if os.path.exists(prefill):
+        try:
+            old_payload = json.load(open(prefill, encoding="utf-8"))
+            old_items = old_payload.get("items") or []
+        except Exception:
+            old_items = []
+    fresh_ids = {str(r["offer_id"]) for r in records}
+    merged = [r for r in old_items if str(r.get("offer_id")) not in fresh_ids] + records
     payload = {
         "generated_at": time.strftime("%Y-%m-%d %H:%M:%S"),
         "region": args.region,
@@ -701,13 +712,14 @@ def cmd_image(args):
                        "第三方快照 THIRD_PARTY_ONLY，只有 1 张图",
         },
         "detail_success": detail_ok,
-        "items": records,
+        "items": merged,
         "failed": [{"offer_id": o, "error": e} for o, e in failed],
     }
     with open(prefill, "w", encoding="utf-8") as f:
         json.dump(payload, f, ensure_ascii=False, indent=2)
-    print("[image] 抄录结果 %s（详情页成功 %d / 总 %d；失败 %d）"
-          % (prefill, detail_ok, len(records) + len(failed), len(failed)))
+    print("[image] 抄录结果 %s（详情页成功 %d / 总 %d；失败 %d；合并保留旧行 %d，本次覆盖 %d）"
+          % (prefill, detail_ok, len(records) + len(failed), len(failed),
+             len(merged) - len(records), len(records)))
 
     if detail_ok == 0:
         print("[image] ⚠ 详情页全部未通（IP 级风控或未开 detail）。"
@@ -768,7 +780,10 @@ def cmd_seed(args):
             "offer_url": it.get("offer_url"),
             "title_zh": (it.get("title") or "")[:100],
             "region": args.region or payload.get("region"),
-            "category_id": "",                       # 认领后由 ERP 匹配，人工复核
+            "category_id": "",                       # 选品期按产品实质在家居树内定档（2026-11-24 起 select_gate 硬拦空值/跨树）
+            # SKU 汉字指纹（oauth apply 产出；未跑 oauth 时留空=旧口径只 WARN）
+            "sku_attr_names_ascii": "" if it.get("sku_attr_names_ascii") is None else str(it["sku_attr_names_ascii"]).lower(),
+            "seller_sku_ascii": "" if it.get("seller_sku_ascii") is None else str(it["seller_sku_ascii"]).lower(),
             "cost_cny": "" if it.get("cost_cny") is None else "%.2f" % it["cost_cny"],
             "max_sku_cost_cny": "" if it.get("max_sku_cost_cny") is None else "%.2f" % it["max_sku_cost_cny"],
             "pieces": 1,
@@ -815,6 +830,20 @@ def cmd_seed(args):
 
     write_header = (not exists) or args.overwrite
     mode = "w" if write_header else "a"
+    if not write_header:
+        # 表头漂移检查（2026-11-24 确定性修复）：旧 30 列清单追加新 36 列行会整行错位
+        # （本批候选 CSV 就被截断过一次）。不一致直接拒，给迁移命令，不做静默错位写入。
+        with open(out, encoding="utf-8-sig", newline="") as f:
+            old_header = next(csv.reader(f), [])
+        if [h for h in old_header if h] != header:
+            sys.exit("[seed] ✗ 表头漂移：%s 是旧版列结构。\n"
+                     "       迁移=旧行读入按新列重写（新列留空）：\n"
+                     "       python3 -c \"import csv,sys;sys.path.insert(0,'scripts');import select_gate as sg;"
+                     "rows=list(csv.DictReader(open(r'%s',encoding='utf-8-sig')));"
+                     "w=csv.DictWriter(open(r'%s','w',encoding='utf-8-sig',newline=''),"
+                     "fieldnames=sg.TEMPLATE_HEADER,extrasaction='ignore');w.writeheader();w.writerows(rows)\"\n"
+                     "       或直接 --overwrite 重建（旧行手工补的列会丢，先确认无有效数据）"
+                     % (out, out, out))
     with open(out, mode, encoding="utf-8-sig", newline="") as f:
         w = csv.DictWriter(f, fieldnames=header, extrasaction="ignore")
         if write_header:

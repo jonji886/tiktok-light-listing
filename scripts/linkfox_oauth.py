@@ -40,7 +40,7 @@ import shutil
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-ROOT = os.path.dirname(HERE)
+ROOT = os.path.realpath(os.path.dirname(HERE))  # skill 目录常为 symlink，realpath 防落盘路径分裂（2026-11-24）
 DEFAULT_BATCH = os.path.join(ROOT, "erp_data", "selection_intake", "prefill.json")
 TASKS_FILE = os.path.join(ROOT, "erp_data", "linkfox", "oauth_tasks.json")
 MCP_DIR = os.path.join(ROOT, "erp_data", "linkfox", "mcp")
@@ -80,9 +80,21 @@ def load_sku(oid):
 
 
 def need_sku(it):
-    """该 item 是否需要 sku 补数：四个价格/库存字段任一缺失即需要。"""
-    return any(it.get(k) in (None, "", []) for k in
-               ("cost_cny", "max_sku_cost_cny", "stock", "min_order_qty"))
+    """该 item 是否需要 sku 补数：四个价格/库存字段任一缺失即需要。
+    2026-11-24 扩：详情页把 promotionPrice 误读成 ≤¥1 的假主价已累计 3 例
+    （针线盒 1.0 vs 官方 5.9-7.9、本日 5 品全部 cost=1.0）——价格「有值但可疑」
+    与「缺失」同等处理，凡 min/max 采购价 ≤1.0 一律强制走 OAuth 复核，不再事后靠裁决补救。"""
+    if any(it.get(k) in (None, "", []) for k in
+           ("cost_cny", "max_sku_cost_cny", "stock", "min_order_qty")):
+        return True
+    for k in ("cost_cny", "max_sku_cost_cny"):
+        v = it.get(k)
+        try:
+            if v is not None and float(v) <= 1.0:
+                return True
+        except (TypeError, ValueError):
+            pass
+    return False
 
 
 def cmd_scan(args):
@@ -106,7 +118,10 @@ def cmd_scan(args):
     print("[scan] Agent 侧前置：MCP 调 alibaba1688/authorizedStores，确认存在 "
           "status=ACTIVE 且 expired!=true 的账号（无则重新走 authorizeUrl，需带 accountName）")
     print("[scan] 逐任务调 proxy_call(toolName='alibaba1688/sku', arguments={\"offerId\":...})，"
-          "响应原样写 save_to；全部落盘后跑 apply")
+          "把返回的 skuList 转瘦表 TSV（列: price,amountOnSale,attr,skuImageUrl,cargoNumber；"
+          "attr 用 `颜色=黑色|尺寸=45x100` 格式），用 scripts/mcp_write.py --kind sku "
+          "--offer-id <id> --save-to <save_to> --tsv - 落盘；全部落盘后跑 apply"
+          "（禁止手抄完整 JSON，2026-11-25 P0-2）")
     return 0
 
 
@@ -167,6 +182,44 @@ def apply_one(it, skus):
     it["sku_spec_count"] = len(skus)
     if prices:
         it["max_sku_source"] = "oauth_sku"
+
+    # ── SKU 汉字指纹（2026-11-24 P0 固化）──
+    # 本日实测：ERP 认领后只译规格「值」、不译属性「名」（颜色→照抄），seller_sku 又常直接
+    # 是中文规格串（立体罩90*30*50）——三处都是发布末端 prepublish_guard 才炸，5 品全多跑一轮
+    # 全量 edit。这是货源的**确定性属性**，抄录期就能判，故在此落指纹，交给 select_gate 硬拦。
+    cjk = re.compile(r"[\u4e00-\u9fff]")
+    # 以中文原值 attributeName 判定（ERP 不译属性名，valueTrans 是英文也没用——2026-11-24 实测）
+    it["sku_attr_name_ascii"] = not any(cjk.search(n) for n in attr_names)
+    values = []
+    for s in skus:
+        for a in (s.get("attributes") or []):
+            v = str(a.get("value") or "")
+            if v and v not in values:
+                values.append(v)
+    it["sku_values_total"] = len(values)
+    it["sku_values_with_cjk"] = sum(1 for v in values if cjk.search(v))
+    # seller_sku 实测=货号 cargoNumber（2026-11-24 本批 5 品全中）。货号含汉字时
+    # 自动生成 ASCII 码映射 {原货号: 新码}，确定性规则：抽货号内字母数字（去符号），
+    # 不足 4 位退回 skuId 尾 8 位；供 ttl_edit.py --sku-code 直接消费。
+    code_map, used = {}, set()
+    for s in skus:
+        raw = str(s.get("cargoNumber") or "").strip()
+        if not raw or not cjk.search(raw):
+            continue
+        cand = re.sub(r"[^0-9A-Za-z]", "", raw)
+        code = cand if len(cand) >= 4 else ("SKU%s" % str(s.get("skuId") or "")[-8:])
+        base, i = code, 2
+        while code in used:
+            code = "%s_%d" % (base, i); i += 1
+        used.add(code)
+        code_map[raw] = code
+    if code_map:
+        it["sku_ascii_code_map"] = code_map
+    # 两个布尔指纹恒写（select_gate 的 SKU_ATTR_NAME_CJK / SELLER_SKU_CJK 消费）
+    it["sku_attr_names_ascii"] = bool(attr_names) and it["sku_attr_name_ascii"]
+    cargos = [str(s.get("cargoNumber") or "").strip() for s in skus]
+    cargos = [x for x in cargos if x]
+    it["seller_sku_ascii"] = (not cargos) or (not any(cjk.search(x) for x in cargos))
     return changed
 
 
@@ -196,6 +249,21 @@ def cmd_apply(args):
         ok += 1
         print("[apply] %s ← sku 官方数据（回填: %s）" % (oid, ",".join(changed) or "无(已有值不覆盖)"))
 
+    # 汉字码映射汇总（ttl_edit.py --sku-code 直接消费；跨 offer 合并，key 冲突概率=0 因货号唯一）
+    all_map = {}
+    for it in items:
+        all_map.update(it.get("sku_ascii_code_map") or {})
+    if all_map:
+        mp = os.path.join(ROOT, "erp_data", "sku_code_map.json")
+        old = {}
+        if os.path.exists(mp):
+            try:
+                old = json.load(open(mp, encoding="utf-8"))
+            except Exception:
+                old = {}
+        old.update(all_map)
+        json.dump(old, open(mp, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+        print("[apply] seller_sku 换码表 %d 条 → %s（ttl_edit --sku-code 用）" % (len(all_map), mp))
     # source 字典补 oauth 说明，供 seed reason 消费
     payload.setdefault("source", {})["oauth_sku"] = (
         "alibaba1688/sku（用户 1688 账号 OAuth 官方接口，SKU 实时价/库存/规格，"

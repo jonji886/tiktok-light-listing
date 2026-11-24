@@ -75,6 +75,16 @@ def build_body(d, args):
 
     # ── SKU：精简 + 定价 ──
     sp_map = parse_kv(args.source_prices)
+    # getattr 兜底：旧测试/旧调用方手工构造 Namespace 时不传新参数（2026-11-24）
+    sku_map = {}
+    if getattr(args, "sku_map", ""):
+        sku_map = json.load(open(args.sku_map, encoding="utf-8"))
+    sku_code = {}
+    if getattr(args, "sku_code", ""):
+        sku_code = json.load(open(args.sku_code, encoding="utf-8"))
+    attr_names_map = {}
+    if getattr(args, "attr_names", ""):
+        attr_names_map = parse_kv(args.attr_names)
     cfg = pc.merged(pc.load_config(), args.site)
     cfg["site"] = args.site
     kept = []
@@ -117,14 +127,58 @@ def build_body(d, args):
         p["currency"] = tgt["currency"]
         if args.stock:
             s["inventory"] = [{"quantity": int(args.stock)}]
+        # --sku-map：重写规格值为消费者向文案（英文/当地语），按维度顺序对齐。
+        # 只改 value_name 不改 name——name 由 --attr-names 统一改，两者分工明确。
+        if sku_map.get(ssid):
+            vals = sku_map[ssid]
+            for i, v in enumerate(vals):
+                if i < len(s.get("sales_attributes") or []):
+                    s["sales_attributes"][i]["value_name"] = v
+        # --sku-code：汉字货号换 ASCII 码（seller_sku 直接进发布 payload，含汉字必拒 [12052250]）
+        if sku_code.get(ssid):
+            s["seller_sku"] = sku_code[ssid]
         kept.append(s)
     if not kept:
         problems.append("无合格 SKU 可保留")
+        # 自解释（2026-11-25 P2）：keep_prefix 不命中是最高频试错点，直接打印可选值
+        if args.keep_prefix:
+            allss = sorted({str(s.get("seller_sku") or "") for s in v2["skus"]})
+            problems.append("  ↳ 草稿实际 seller_sku 共 %d 个（--keep-prefix 从中选）: %s"
+                            % (len(allss), ", ".join(allss[:40])))
         return None, None, problems
 
     m = copy.deepcopy(v2)
     m["skus"] = kept
     m["category_id"] = str(cid)
+
+    # --attr-names：规格属性名译文（ERP 认领不译 name——2026-11-24 本批 5 品全中，
+    # 不改则 prepublish [12052250] 汉字拒；name 全 SKU 统一改，确定性规则）。
+    if attr_names_map:
+        for s in m["skus"]:
+            for a in (s.get("sales_attributes") or []):
+                nm = str(a.get("name") or "")
+                if nm in attr_names_map:
+                    a["name"] = attr_names_map[nm]
+    # 自解释（2026-11-25 P2）：草稿里含汉字的维度名若没被 --attr-names 覆盖，直接点名
+    _cn_names = sorted({str(a.get("name") or "") for s in m["skus"]
+                        for a in (s.get("sales_attributes") or [])
+                        if re.search(r"[\u4e00-\u9fff]", str(a.get("name") or ""))})
+    if _cn_names:
+        problems.append("维度名仍含汉字 %s —— 补 --attr-names（注意第二维度常叫\"规格\"不是\"尺寸\"）"
+                        % _cn_names)
+
+    # 属性含中文自动清空（2026-11-24 固化：平台曾因 product_attributes 汉字拒发 [12052250]，
+    # 一件代发铺货阶段属性非必要不带——prepublish_guard 同款建议的确定性执行版）
+    pa = m.get("product_attributes") or []
+    if any(re.search(r"[\u4e00-\u9fff]", json.dumps(a, ensure_ascii=False)) for a in pa):
+        m["product_attributes"] = [a for a in pa
+                                   if not re.search(r"[\u4e00-\u9fff]", json.dumps(a, ensure_ascii=False))]
+    if getattr(args, "title", ""):
+        # --title：消费者向当地语标题（含汉字直接拒——发布 payload 汉字零容忍）
+        if re.search(r"[\u4e00-\u9fff]", args.title):
+            problems.append("TITLE_CJK: --title 含汉字，拒绝（标题必须是当地语/英文）")
+            return None, None, problems
+        m["title"] = args.title
 
     # ── 申报重量/尺寸（模板档兜底，新品与模板出入>30% 应回改模板） ──
     wkg = args.weight_g or (tpl or {}).get("weight_g")
@@ -164,8 +218,10 @@ def build_body(d, args):
     else:
         s = ""
     if s:
-        if re.search(r"[\u4e00-\u9fff]", s):
-            problems.append("描述含中文，拒绝")
+        _cjk_hits = re.findall(r"[\u4e00-\u9fff]+", s)
+        if _cjk_hits:
+            problems.append("描述含中文，拒绝。命中词: %s（用 sed/python 清掉再提交）"
+                            % sorted(set(_cjk_hits))[:10])
             return None, None, problems
         parts = [p.strip() for p in re.split(r"\n\s*\n", s) if p.strip()]
         if ct.plain_len(s) < 500 or len(parts) < 2:
@@ -174,11 +230,21 @@ def build_body(d, args):
         m["description"] = "\n".join("<p>%s</p>" % H.escape(p) for p in parts)
 
     ri = d["reqInfo"]; ttm = ri["tikTokItemModel"]
+    eff_title = getattr(args, "title", "") or d.get("title")
+    # 汉字终检（2026-11-24 固化）：把 prepublish_guard 的 [12052250] 拦截前移到提交前。
+    # 扫整个将要上传的 payload：SKU 码/规格名值、属性名、标题、描述、attribute。
+    blob = json.dumps({"skus": m["skus"], "attrs": m.get("product_attributes"),
+                       "title": eff_title, "desc": m.get("description")}, ensure_ascii=False)
+    hits = re.findall(r"[\u4e00-\u9fff]{2,}", blob)
+    if hits:
+        problems.append("PAYLOAD_CJK: 提交体仍含汉字 %s——按提示用 --attr-names/--sku-code/--sku-map "
+                        "清掉，或该品换货源（禁止带病提交等发布端拒）" % hits[:5])
+        return None, m, problems
     body = {"id": str(d.get("id") or args.ttl_id), "platform": "tiktok",
             "sellerId": str(d.get("toSellerId") or ""),
             "currency": d.get("currency") or "MYR",
             "toCategoryId": str(cid), "toCategoryIdTree": tree, "toCategoryNameTree": ntree,
-            "title": d.get("title"),
+            "title": eff_title,
             "itemModel": {**ri, "tikTokItemModel": {**ttm, "productCreateRequestV2": m}}}
     miss = [k for k in ("sellerId", "toCategoryId", "toCategoryIdTree", "toCategoryNameTree", "title")
             if not body.get(k)]
@@ -205,6 +271,14 @@ def main():
     ap.add_argument("--mains-file", default="", help="主图 URL 清单文件（每行一个，须 cbu01）")
     ap.add_argument("--desc-file", default="", help="成品描述纯文本（空行分段）")
     ap.add_argument("--desc-fields", action="append", default=[], help="渲染占位 k=v 多次")
+    # ── 2026-11-24 固化（edit_my5.py 一次性脚本并进主工具；本批 5 品实测的三项末端拦截）──
+    ap.add_argument("--title", default="", help="消费者向当地语标题（MY=马来语，须命中 ≥3 热搜词根）")
+    ap.add_argument("--attr-names", default="",
+                    help='属性名译文 "颜色=Warna,尺寸=Saiz,规格=Saiz"（ERP 不译属性名，不改必被汉字拒）')
+    ap.add_argument("--sku-map", default="",
+                    help="JSON {原seller_sku: [维度值1,值2]}，重写 value_name 为英文/当地语（消费者向）")
+    ap.add_argument("--sku-code", default="",
+                    help="JSON {原货号: ASCII码}（linkfox_oauth apply 自动产出 erp_data/sku_code_map.json）")
     ap.add_argument("--save", action="store_true", help="真正提交（写操作）")
     args = ap.parse_args()
 
