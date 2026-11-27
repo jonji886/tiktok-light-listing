@@ -37,6 +37,10 @@ import urllib.error
 
 BASE = "https://erpg.kuaidizs.cn"
 OTHER_BASE = "https://erp.kuaidizs.cn"  # 同一后端，可互换
+# ERP_ALT_BASE_URL（.env）优先生效；占位/示例值回落默认（2026-11-27 口径修复）
+_alt = (os.environ.get("ERP_ALT_BASE_URL") or "").strip()
+if _alt and "example.com" not in _alt and not _alt.startswith("<"):
+    BASE = _alt
 
 # 本地货币 -> USD 汇率（单位：1 USD = N 本地货币）
 # 数据源：快递助手跨境版 /item/exchangeRate/getList（2026-11-11 20:15 更新）

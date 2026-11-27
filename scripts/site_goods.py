@@ -39,7 +39,13 @@ import time
 import urllib.error
 import urllib.request
 
-BASE = "https://erp.kuaidizs.cn"
+_DEFAULT_BASE = "https://erp.kuaidizs.cn"
+# ERP_BASE_URL 可配（.env）；占位/示例值回落默认，见 erp_client.py 同款口径
+_env_base = (os.environ.get("ERP_BASE_URL") or "").strip()
+BASE = _env_base if _env_base and "example.com" not in _env_base and not _env_base.startswith("<") else _DEFAULT_BASE
+HTTP_TIMEOUT = float(os.environ.get("ERP_HTTP_TIMEOUT") or 30)
+# 站点商品翻页聚合单请求实测慢（全量 blob），读取上限独立配置（2026-11-27 集中管理）
+SITE_TIMEOUT = float(os.environ.get("ERP_SITE_HTTP_TIMEOUT") or 180)
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "erp_token.txt")
 DEFAULT_SELLER = os.environ.get("TH_SELLER_ID", "<TH_SELLER_ID>")  # 存量 TH 店；从 .env 读，仓库不存真实值
 HEADERS = {
@@ -49,24 +55,54 @@ HEADERS = {
 }
 
 
+# 写操作路径：updatePlatformItem 超时 504 时后端可能已执行（pitfalls 实证），
+# 结果未知禁止盲重试，须回读详情确认
+SITE_WRITE_PATHS = ("updatePlatformItem", "itemBatchUpDownShelf")
+
+
 def post(path, body):
+    import agentlog
+    is_write = any(w in path for w in SITE_WRITE_PATHS)
+    action = path.rsplit("/", 1)[-1]
+    t0 = time.time()
     if not os.path.exists(TOKEN_FILE):
         sys.exit("[site] 缺 token 文件：先登录 ERP 并用 erp_token_grab.py 落盘")
     tok = open(TOKEN_FILE, encoding="utf-8").read().strip()
+    agentlog.set_secret(tok)
     req = urllib.request.Request(BASE + path, data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
                                  method="POST")
     for k, v in HEADERS.items():
         req.add_header(k, v)
     req.add_header("qnquerystring", tok)
     try:
-        with urllib.request.urlopen(req, timeout=180) as r:
+        with urllib.request.urlopen(req, timeout=SITE_TIMEOUT) as r:
             raw = r.read().decode("utf-8", "replace")
     except urllib.error.HTTPError as e:
+        # 保持旧行为：ERP 的业务错误体在 HTTPError 里，读出继续解析
         raw = e.read().decode("utf-8", "replace")
+    except Exception as e:
+        info = agentlog.classify(e, is_write=is_write)
+        unk = is_write and info.get("error_type") in ("api_timeout", "network_error",
+                                                      "external_service_error")
+        agentlog.event(action, status="unknown" if unk else "failed",
+                       duration_ms=(time.time() - t0) * 1000,
+                       error=dict(info, error_code=type(e).__name__), tool="site_goods",
+                       meta={"path": path,
+                             "note": "写操作结果未知：nginx 504/超时 ≠ 未执行，必须回读确认" if unk else ""})
+        if unk:
+            sys.exit(f"[site] 写请求异常(结果未知，禁止盲重试) {path}: {e}")
+        sys.exit(f"[site] 网络错误 {path}: {e}")
     try:
-        return json.loads(raw)
+        j = json.loads(raw)
     except Exception:
+        agentlog.event(action, status="failed", duration_ms=(time.time() - t0) * 1000,
+                       error={"error_code": "NON_JSON", "error_type": "data_format_error"},
+                       tool="site_goods", meta={"path": path})
         sys.exit(f"[site] 响应非 JSON {path}: {raw[:200]}")
+    agentlog.event(action, status="success" if j.get("success", True) else "failed",
+                   duration_ms=(time.time() - t0) * 1000, tool="site_goods",
+                   meta={"path": path})
+    return j
 
 
 def desc_stats(desc):

@@ -48,6 +48,23 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, HERE)
 import timing  # noqa: E402  耗时账本
+import agentlog  # noqa: E402  任务级结构化轨迹（ERP 调用/阶段事件）
+import tasklock  # noqa: E402  同一任务禁止双进程并发（state 读改写会互相覆盖）
+
+
+def _bind_task(st, extra=None):
+    """把当前进程的 task_id 绑定为该货源的稳定任务 id：同一商品所有阶段、
+    所有重试共用 task_id，重试以 attempt 计数区分；不同商品天然不同 id。"""
+    tid = "task_%s" % st["offer_id"]
+    agentlog.set_current_task(tid)
+    if extra:
+        st["task_id"] = tid
+
+
+def _attempt(st, stage):
+    st.setdefault("attempts", {})
+    st["attempts"][stage] = st["attempts"].get(stage, 0) + 1
+    return st["attempts"][stage]
 RUNDIR = os.path.join(ROOT, "erp_data", "_run", "pipeline")
 STAGES = ["collect", "claim", "detail", "edit_dry", "edit_save", "scan",
           "review_img", "apply", "guards", "publish", "wait", "verify4", "done"]
@@ -470,11 +487,30 @@ def do_next(st):
     stage = st["stage"]
     if stage == "done":
         print("[pipe] ✅ 全链路完成（在售验证归档）")
+        agentlog.event("task_done", stage=stage, status="succeeded",
+                       product_id=st.get("offer_id"), tool="publish_one")
         return 0
     if stage not in HANDLERS:
         print("[pipe] 未知阶段 %s" % stage)
         return 6
-    print("\n[pipe] === %s ===" % stage)
+    # 进程锁：两个执行者同时 next 同一任务 → 后者立即失败而不是静默覆盖 state
+    try:
+        lk = tasklock.acquire("pipeline_%s" % st["offer_id"])
+    except tasklock.LockedError as e:
+        print("[pipe] ⛔ %s" % e)
+        return 7
+    try:
+        return _do_next_locked(st, stage)
+    finally:
+        lk.release()
+
+
+def _do_next_locked(st, stage):
+    _bind_task(st)
+    attempt = _attempt(st, stage)
+    agentlog.event("stage_start", stage=stage, status="start", attempt=attempt,
+                   product_id=st["offer_id"], tool="publish_one")
+    print("\n[pipe] === %s (attempt %d) ===" % (stage, attempt))
     oid = st.get("offer_id") or ""
     prev_parent = os.environ.get("TT_PARENT")
     os.environ["TT_PARENT"] = "pipeline.%s" % stage      # 子进程挂到本阶段下
@@ -489,12 +525,22 @@ def do_next(st):
         else:
             os.environ["TT_PARENT"] = prev_parent
     if r == "hold":
+        agentlog.event("stage_hold", stage=stage, status="hold", attempt=attempt,
+                       product_id=oid, tool="publish_one")
         save(st)
         return 5
     if r is not True:
         print("[pipe] ✗ 阶段 %s 失败，状态保留（修完重跑 next）" % stage)
+        agentlog.event("stage_failed", stage=stage, status="failed", attempt=attempt,
+                       product_id=oid, tool="publish_one",
+                       error={"error_type": "unknown_error", "retryable": True,
+                              "human_intervention": False},
+                       meta={"note": "详情见 stdout 与 trace 上一事件；修完重跑 next"})
         save(st)
         return 6
+    agentlog.event("stage_ok", stage=stage, status="success", attempt=attempt,
+                   product_id=oid, tool="publish_one",
+                   duration_ms=(time.time() - t0) * 1000)
     idx = STAGES.index(stage)
     nxt = STAGES[idx + 1]
     # 检查点闸：edit_save 必须已 approve(edit)；apply 若 CP2 触发过必须已 approve(images)
@@ -537,6 +583,11 @@ def cmd_approve(a):
         st["approved"].append("images")
         st["stage"] = "apply"
     save(st)
+    # 人工授权与具体任务绑定：记入该 task_id 轨迹（CP1/CP2 审计线索）
+    _bind_task(st)
+    agentlog.event("human_approve", stage=st["stage"], status="success",
+                   product_id=st["offer_id"], tool="publish_one",
+                   meta={"which": a.which})
     print("[pipe] approved: %s → stage=%s（跑 next 继续）" % (a.which, st["stage"]))
     return 0
 

@@ -18,11 +18,11 @@
 |---|---|---|
 | 选品取证 | FastMoss 单品免 token 透传、官方机会中心判读、1688 三通道找货、四维评分与价格带校验 | `select_gate.py` / `opportunity_intake.py` / `opportunity_to_sourcing.py`；离线测试覆盖门槛与红线 |
 | 采集 → 认领 → 编辑 → 发布 | 全接口链路，状态机断点续跑 | pipeline 快照 **27 个 `ACTIVATE`**；`publish_one.py` 状态可续跑 |
-| 发布前硬闸 | 选品闸 `select_gate`、价格库存闸 `price_gate`、图片闸 `image_gate verify`、总闸 `prepublish_guard`、商品卡质量闸 `listing_quality_gate` | 各闸退出码 1 阻断；21 个测试文件、**234 用例通过 / 1 跳过，约 1 秒离线跑完** |
+| 发布前硬闸 | 选品闸 `select_gate`、价格库存闸 `price_gate`、图片闸 `image_gate verify`、总闸 `prepublish_guard`、商品卡质量闸 `listing_quality_gate` | 各闸退出码 1 阻断；离线测试套件 305 项通过 / 1 跳过，约 10 秒跑完（2026-11-27 实测，含故障场景/脱敏/仓库卫生扫描） |
 | 失败归因 | 发布 `fail` 原文 → 已验证规则（诊断 + 修复命令 + 证据）路由 | 规则表 **15 条**，黄金集 **23 案例回测 23/23 命中**；未路由失败转人工诊断后回填规则（数据飞轮） |
 | 定价模型 | 全成本口径（国内快递 + 货代 + 包材 + 按重跨境物流 + 佣金/手续费/退款预留/净利）反推采购价上限 | `pricing_calc.py --check/--limits`；阈值外置 `config/pricing.yaml` |
 | 图片闸门 | 三通道扫描 → 多模态整图判定 → description 重建 → 发布前硬闸；公网图 SHA-256/像素回读核验 | `test_image_gate.py` / `test_public_images.py` |
-| 可观测性 | 阶段耗时自动落账（墙钟 / 脚本实占 / agent 空转），批次间可比 | `timing.py` / `timing_report.py`，append-only JSONL |
+| 可观测性 | 阶段耗时自动落账（墙钟 / 脚本实占 / agent 空转），批次间可比；2026-11-27 起另有任务级轨迹 `agentlog.py`（task_id/event_id/attempt/error_type，写盘前统一脱敏） | `timing.py` / `timing_report.py` + `agentlog.py`，均 append-only JSONL |
 | 回流导入 | 罗盘商品级导出 xlsx → numIid→货源ID→ttl_id 闭环映射 → 按时点批量回填 backflow；缺失值留空、原值保护、dry-run 默认；映射只采纳 tiktok 平台记录，滤除混排的 shopee 草稿 | `backflow_import.py`（12 个离线用例）；`site_goods.py list` 翻页聚合全量快照；2026-11-25 MY 店映射池 65 条（MY57/TH8），首批 4 条 t7 曝光/点击/加购已真实写回 |
 | 契约漂移自检 | 跨 skill 依赖哈希、上游漂移、前端版本指纹、定价自洽、数据列契约 | `health_check.py --skip-net` 可离线跑 |
 

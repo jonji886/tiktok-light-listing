@@ -28,7 +28,9 @@ erp_upload.py — ERP 官方图片上传通道（getUploadPolicy + OSS 表单直
 import argparse, base64, hashlib, json, os, random, sys, time
 import urllib.request, urllib.error
 
-BASE = "https://erp.kuaidizs.cn"
+_DEFAULT_BASE = "https://erp.kuaidizs.cn"
+_env_base = (os.environ.get("ERP_BASE_URL") or "").strip()
+BASE = _env_base if _env_base and "example.com" not in _env_base and not _env_base.startswith("<") else _DEFAULT_BASE
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "erp_token.txt")
 _policy_cache = {}
 

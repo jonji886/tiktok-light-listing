@@ -1,18 +1,18 @@
-﻿店铺名,sellerId,站点,授权
-JingShanShop-PH,8686823118790558807,PH,有效
-JingShanShop-SG,8686823118790493271,SG,有效
-JingShanShop-MY,8686823118786233431,MY,有效
-JingShanShop-VN,8686823118786298967,VN,有效
-JingShanShop-TH,7494877320827733079,TH,有效
-JingShanShop,2812930163,,有效
-杭州余杭区径山镇草亭湾农家乐-jingshan_shop-MX,1936876317,MX,有效
-杭州余杭区径山镇草亭湾农家乐-jingshan_shop-BR,1936876299,BR,有效
-杭州余杭区径山镇草亭湾农家乐-jingshan_shop-TW,1936876285,TW,有效
-杭州余杭区径山镇草亭湾农家乐-jingshan_shop-PH,1936876280,PH,有效
-杭州余杭区径山镇草亭湾农家乐-jingshan_shop-VN,1936876273,VN,有效
-杭州余杭区径山镇草亭湾农家乐-jingshan_shop-TH,1936876267,TH,有效
-杭州余杭区径山镇草亭湾农家乐-jingshan_shop-MY,1936876263,MY,有效
-商户 - 杭州余杭区径山镇草亭湾农家乐,179168699243081,,有效
+店铺名,sellerId,站点,授权
+<SHOP_NAME>,<SELLER_PH>,PH,有效
+<SHOP_NAME>,<SELLER_SG>,SG,有效
+<SHOP_NAME>,<SELLER_MY>,MY,有效
+<SHOP_NAME>,<SELLER_VN>,VN,有效
+<SHOP_NAME>,<SELLER_TH>,TH,有效
+<SHOP_NAME>,<SELLER_DOM>,,有效
+<SHOP_NICK>-MX,<SELLER_MX>,MX,有效
+<SHOP_NICK>-BR,<SELLER_BR>,BR,有效
+<SHOP_NICK>-TW,<SELLER_TW>,TW,有效
+<SHOP_NICK>-PH,<SELLER_OTHER>,PH,有效
+<SHOP_NICK>-VN,<SELLER_OTHER>,VN,有效
+<SHOP_NICK>-TH,<SELLER_OTHER>,TH,有效
+<SHOP_NICK>-MY,<SELLER_OTHER>,MY,有效
+商户 - <MERCHANT_NAME>,<SELLER_OTHER>,,有效
 温州市龙湾永兴雅仕鞋店-season_goods_mart-MX,1927932037,MX,异常
 温州市龙湾永兴雅仕鞋店-season_goods_mart-BR,1927932022,BR,异常
 温州市龙湾永兴雅仕鞋店-season_goods_mart-TW,1927932012,TW,异常

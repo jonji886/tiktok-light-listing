@@ -23,10 +23,14 @@ TikTok 店铺 sellerId / 店铺名：从环境变量 `{TH,VN,MY}_SELLER_ID` / `{
   python3 erp_client.py logs --months 1                     # 发布记录
   python3 erp_client.py shops --platform tiktok             # TikTok店铺列表
 """
-import argparse, csv, json, os, sys, time
+import argparse, csv, json, os, random, sys, time
 import urllib.request, urllib.error
 
-BASE = "https://erp.kuaidizs.cn"
+_DEFAULT_BASE = "https://erp.kuaidizs.cn"
+# .env.example 承诺 ERP_BASE_URL 可配；此前代码硬编码未读 env（2026-11-27 口径修复）。
+# 占位/示例值（含 example.com 或 <）回落默认域名，防止 .env 未填时全线断链。
+_env_base = (os.environ.get("ERP_BASE_URL") or "").strip()
+BASE = _env_base if _env_base and "example.com" not in _env_base and not _env_base.startswith("<") else _DEFAULT_BASE
 HEADERS = {
     "Content-Type": "application/json;charset=UTF-8",
     "appType": "3",
@@ -35,6 +39,14 @@ HEADERS = {
 MIN_INTERVAL = 1.0
 _last_ts = 0.0
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "erp_token.txt")
+# 超时集中配置：urllib 的 timeout 是「整体读取超时」，连接阶段同受该上限约束，
+# 无法拆 connect/read（标准库限制，如实记录于 docs/security.md）。可用 env 覆盖。
+HTTP_TIMEOUT = float(os.environ.get("ERP_HTTP_TIMEOUT") or 30)
+# sourceSellerId：店铺标识，仓库不存真实值（2026-11-27 安全整改），取值走 .env
+SOURCE_SELLER_ID = (os.environ.get("ERP_SOURCE_SELLER_ID") or "").strip()
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import agentlog  # noqa: E402  任务级轨迹/分类/重试（失败静默，不影响主流程）
 
 # TikTok 站点配置。sellerId / 店铺名从环境变量读（.env，已 gitignore），
 # 仓库内只留占位默认值；本地运行前 `set -a; source .env; set +a`。
@@ -82,37 +94,128 @@ def _load_token(args):
     return tok
 
 
-def _post(path, body, args):
-    global _last_ts
-    now = time.time()
-    if now - _last_ts < MIN_INTERVAL:
-        time.sleep(MIN_INTERVAL - (now - _last_ts))
-    _last_ts = time.time()
-    data = json.dumps(body, ensure_ascii=False).encode("utf-8")
-    req = urllib.request.Request(BASE + path, data=data, method="POST")
-    for k, v in HEADERS.items():
-        req.add_header(k, v)
-    req.add_header("qnquerystring", _load_token(args))
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            raw = resp.read().decode("utf-8", errors="replace")
-    except urllib.error.HTTPError as e:
-        raw = e.read().decode("utf-8", errors="replace")
-    except Exception as e:
-        sys.exit(f"[erp] 网络错误 {path}: {e}")
-    try:
-        j = json.loads(raw)
-    except Exception:
-        sys.exit(f"[erp] 响应非JSON {path}: {raw[:200]}")
-    if not j.get("success"):
+def _post(path, body, args, is_write=False):
+    """ERP POST 统一入口（2026-11-27 工程化）：
+    - 每次调用落一条 agentlog 事件（task_id/stage/tool/attempt/duration/error_type）；
+    - **只读**请求（默认）对可恢复异常（429/707、超时、网络、5xx）做指数退避+抖动
+      有限重试（≤3 次、单次≤15s）；
+    - **写操作（is_write=True）永不自动重发**——HTTP 超时不代表服务端没执行，
+      超时/5xx 归类为「结果未知」，由调用方（publish_one.stage_claim 等）先回查再决定。
+    对外行为兼容：失败路径的报错文案与退出码与旧版一致（测试与上游脚本依赖）。
+    """
+    action = path.rsplit("/", 1)[-1]
+    # 写操作路径白名单（集中判定，覆盖 set_price/fix_sku/ttl_edit/image_gate --save 等复用方）：
+    # 这些接口超时/5xx = 结果未知，绝不自动重发（2026-11-24 盲目重试→重复认领 20 条的教训）
+    WRITE_PATHS = ("batchClaimMultiShop", "batchPublish", "batchOps",
+                   "/item/crossBorder/edit", "batchPluginCollectItem",
+                   "updatePlatformItem", "savePlatformItem", "/item/crossBorder/translate")
+    if any(w in path for w in WRITE_PATHS):
+        is_write = True
+    t_start = time.time()
+    max_attempts = 1 if is_write else 3   # 写=单次机会；读=有限退避重试
+    delay = 1.0
+
+    def _once():
+        global _last_ts
+        now = time.time()
+        if now - _last_ts < MIN_INTERVAL:
+            time.sleep(MIN_INTERVAL - (now - _last_ts))
+        _last_ts = time.time()
+        data = json.dumps(body, ensure_ascii=False).encode("utf-8")
+        req = urllib.request.Request(BASE + path, data=data, method="POST")
+        for k, v in HEADERS.items():
+            req.add_header(k, v)
+        tok = _load_token(args)
+        agentlog.set_secret(tok)  # JWT 原文登记后，任何日志/报错输出前统一替换
+        req.add_header("qnquerystring", tok)
+        try:
+            with urllib.request.urlopen(req, timeout=HTTP_TIMEOUT) as resp:
+                return resp.status, resp.read().decode("utf-8", errors="replace")
+        except urllib.error.HTTPError as e:
+            return e.code, e.read().decode("utf-8", errors="replace")
+
+    raw = ""
+    attempt = 0
+    while True:  # 网络层 → HTTP 层 → 业务层 三层都在本循环内决策重试
+        attempt += 1
+        try:
+            status, raw = _once()
+        except Exception as e:  # URLError / socket timeout
+            info = agentlog.classify(e, is_write=is_write)
+            if status_unknown_write(info, is_write):
+                agentlog.event(action, status="unknown", attempt=attempt,
+                               duration_ms=(time.time() - t_start) * 1000,
+                               error=dict(info, error_code=type(e).__name__),
+                               tool="erp_client",
+                               meta={"path": path, "note": "写操作结果未知：先回查业务状态再决定"})
+                sys.exit(f"[erp] 网络错误(结果未知，禁止盲重试) {path}: {e}")
+            if attempt < max_attempts and info.get("retryable"):
+                time.sleep(min(15.0, delay) * (0.5 + random.random()))
+                delay *= 2
+                continue
+            agentlog.event(action, status="failed", attempt=attempt,
+                           duration_ms=(time.time() - t_start) * 1000,
+                           error=dict(info, error_code=type(e).__name__), tool="erp_client",
+                           meta={"path": path, "err": str(e)[:300]})
+            sys.exit(f"[erp] 网络错误 {path}: {e}")
+        # HTTP 层：429/5xx 读可重试、写=结果未知；其余（含 4xx）落到报文解析
+        if status >= 500 or status == 429:
+            info = agentlog.classify("HTTP %s" % status, http_status=status, is_write=is_write)
+            if status_unknown_write(info, is_write):
+                agentlog.event(action, status="unknown", attempt=attempt,
+                               duration_ms=(time.time() - t_start) * 1000,
+                               error=dict(info, error_code="HTTP_%s" % status), tool="erp_client",
+                               meta={"path": path, "note": "写操作 HTTP %s：服务端状态未知，先回查" % status})
+                sys.exit(f"[erp] HTTP %s(结果未知，禁止盲重试) %s" % (status, path))
+            if attempt < max_attempts and info.get("retryable"):
+                time.sleep(min(15.0, delay) * (0.5 + random.random()))
+                delay *= 2
+                continue
+            agentlog.event(action, status="failed", attempt=attempt,
+                           duration_ms=(time.time() - t_start) * 1000,
+                           error=dict(info, error_code="HTTP_%s" % status), tool="erp_client",
+                           meta={"path": path})
+            sys.exit(f"[erp] HTTP %s %s: %s" % (status, path, raw[:120]))
+        try:
+            j = json.loads(raw)
+        except Exception:
+            agentlog.event(action, status="failed", attempt=attempt,
+                           duration_ms=(time.time() - t_start) * 1000,
+                           error={"error_code": "NON_JSON", "error_type": "data_format_error",
+                                  "human_intervention": True}, tool="erp_client",
+                           meta={"path": path})
+            sys.exit(f"[erp] 响应非JSON {path}: {raw[:200]}")
+        # 业务层
+        if j.get("success"):
+            agentlog.event(action, status="success", attempt=attempt,
+                           duration_ms=(time.time() - t_start) * 1000, tool="erp_client",
+                           meta={"path": path})
+            return j.get("data") or {}
         code = j.get("errorCode")
         msg = j.get("errorMessage", "")
+        # 读请求遇 ERP 限流(707)：等 10s 重试（旧版直接放弃 → 上游 batch 频繁假失败）
+        if code == 707 and not is_write and attempt < max_attempts:
+            agentlog.event(action, status="info", attempt=attempt, tool="erp_client",
+                           error={"error_type": "rate_limit_error"},
+                           meta={"path": path, "note": "707 限流，10s 后重试"})
+            time.sleep(10)
+            continue
+        info = agentlog.classify(code=code, message=str(msg), is_write=is_write)
+        agentlog.event(action, status="failed", attempt=attempt,
+                       duration_ms=(time.time() - t_start) * 1000,
+                       error=dict(info, error_code=code), tool="erp_client",
+                       meta={"path": path, "msg": str(msg)[:200]})
         if code == 703 or "token" in str(msg):
             sys.exit(f"[erp] token失效(703)：重新登录ERP并刷新 erp_token.txt")
         if code == 707:
             sys.exit(f"[erp] 限流(707)：{msg}，等10s再试")
         sys.exit(f"[erp] 接口错误 {path}: code={code} msg={msg}")
-    return j.get("data") or {}
+
+
+def status_unknown_write(info, is_write):
+    """写操作 + 结果不确定类错误（timeout/network/5xx）→ 上层必须回查而非重发。"""
+    return is_write and info.get("error_type") in (
+        "api_timeout", "network_error", "external_service_error")
 
 
 def _write_out(args, name, rows, default_dir="erp_data"):
@@ -290,7 +393,7 @@ def cmd_ttl_publish(args):
         sourceSellerId/targetSellerId/targetSellerNick/categoryIds/categoryNames}]}
     注意：
       - itemId 是 TikTok采集箱记录 id（ttl_id，即 getDetail 的 id），不是 itemCenterNumIid（2026-10-29 实测对比：ttl_id→受理，center ID→"未找到该平台采集记录"）
-      - sourceSellerId 必须填（实测=1323965），缺则后端报错
+      - sourceSellerId 必须填（本账号 ERP 源店铺 ID，取值 .env 的 ERP_SOURCE_SELLER_ID；`erp_client.py shops` 可查），缺则后端报错
       - categoryIds/categoryNames 是字符串（可为空），不是数组
       - 商品缺类目→"类目不能为空"；缺描述→"商品描述不能为空"（商品自身数据问题，需先在编辑弹窗/接口完善）
     """
@@ -329,7 +432,8 @@ def cmd_ttl_publish(args):
             "itemId": str(it.get("id","")),   # 采集箱记录id（ttl_id）——不是 itemCenterNumIid！
             "sourcePlatform": "kdzs_erp",
             "targetPlatform": "tiktok",
-            "sourceSellerId": str(it.get("sourceSellerId","") or "1323965"),
+            "sourceSellerId": str(it.get("sourceSellerId","") or SOURCE_SELLER_ID),
+            # 上两者都空 → fail-fast（见下），禁止把空值发给接口换一车 500
             "targetSellerId": str(it.get("toSellerId","")),
             "targetSellerNick": it.get("toSellerNick",""),
             # 官方前端(chunk77)传的是类目树；旧版传空串，2026-11-11 修正
@@ -338,6 +442,11 @@ def cmd_ttl_publish(args):
         })
     if not vos:
         sys.exit("[erp] 无可发布商品")
+    missing_src = [v for v in vos if not str(v.get("sourceSellerId", "")).strip(" <>")]
+    if len(missing_src) == len(vos) and not SOURCE_SELLER_ID:
+        sys.exit("[erp] ✗ sourceSellerId 全空且 .env 未配置 ERP_SOURCE_SELLER_ID——"
+                 "禁止带空值提交发布（接口只会报错，白烧一轮）。"
+                 "跑 `erp_client.py shops` 从采集箱列表取到真实值写入 .env。")
     publish_config = {
         "weight": args.weight, "weightSet": 1,
         "packageLength": args.dims[0], "packageWidth": args.dims[1],

@@ -146,7 +146,7 @@ print(dec(s[i-600:i+600]))
       "skuNameTruncateType":"END","skuValueEnabled":true,"skuValueLimit":50,
       "skuValueTruncateType":"END","skuTotalEnabled":false}},
  "distribItemVos":[{"itemId":"<ttl_id>","sourcePlatform":"kdzs_erp",
-   "targetPlatform":"tiktok","sourceSellerId":"1323965","targetSellerId":"<sellerId>",
+   "targetPlatform":"tiktok","sourceSellerId":"<ERP_SOURCE_SELLER_ID>","targetSellerId":"<sellerId>",
    "targetSellerNick":"<TH_SHOP_NICK>",
    "categoryIds":"600001,851848,852744","categoryNames":"家居用品,家居收纳,收纳包"}]}
 ```

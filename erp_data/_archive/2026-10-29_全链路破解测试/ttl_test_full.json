@@ -23,7 +23,7 @@
      "flag": false,
      "region": "PH",
      "regionName": "菲律宾",
-     "sellerId": "8686823118790558807",
+     "sellerId": "<SELLER_PH>",
      "skuList": []
     },
     {
@@ -31,7 +31,7 @@
      "flag": false,
      "region": "SG",
      "regionName": "新加坡",
-     "sellerId": "8686823118790493271",
+     "sellerId": "<SELLER_SG>",
      "skuList": []
     },
     {
@@ -39,7 +39,7 @@
      "flag": false,
      "region": "MY",
      "regionName": "马来西亚",
-     "sellerId": "8686823118786233431",
+     "sellerId": "<SELLER_MY>",
      "skuList": []
     },
     {
@@ -47,7 +47,7 @@
      "flag": false,
      "region": "VN",
      "regionName": "越南",
-     "sellerId": "8686823118786298967",
+     "sellerId": "<SELLER_VN>",
      "skuList": []
     }
    ],
@@ -499,7 +499,7 @@
  "toCategoryIdTree": "600001,851848,853128",
  "toCategoryNameTree": "家居用品,家居收纳,挂钩",
  "toPlatform": "tiktok",
- "toSellerId": "7494877320827733079",
- "toSellerNick": "JingShanShop-TH",
- "userId": "1323965"
+ "toSellerId": "<SELLER_TH>",
+ "toSellerNick": "<SHOP_NAME>",
+ "userId": "<ERP_SOURCE_SELLER_ID>"
 }

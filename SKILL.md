@@ -71,7 +71,7 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
 
 ## 动作分层
 
-- **AI自动**：FastMoss 单品数据（免token）、官方后台取需求信号、1688找货、四维评分、价格带校验（`pricing_calc.py`）、红线与供应链门槛自动剔除、**collect 前选品硬闸（`select_gate.py`，退出码 1 禁止采集）**、采集、认领、列表对账、价格计算、**批量公式改价**、**修 SKU 规格名/库存/类目/主图**、**两通道图片扫描与整图判定（多模态目视）**、**description 重建**、**图片闸门 `verify`**、保留图的擦字/翻译功能字/首图白底、发布提交、**四路验证**、记录统计
+- **AI自动**：FastMoss 单品数据（免token）、官方后台取需求信号、1688找货、四维评分、价格带校验（`pricing_calc.py`）、红线与供应链门槛自动剔除、**collect 前选品硬闸（`select_gate.py`，退出码 1 禁止采集）**、采集、认领、列表对账、价格计算、**批量公式改价**、**修 SKU 规格名/库存/类目/主图**、**三通道图片扫描（主图/详情长图/SKU 规格图）与整图判定（多模态目视）**、**description 重建**、**图片闸门 `verify`**、保留图的擦字/翻译功能字/首图白底、发布提交、**四路验证**、记录统计
 - **硬红线自动阻断**：品牌侵权/IP联名、液体化工、带电、食品保健医疗、宗教、易碎、活体、多规格价差超限、平台限售需认证、跨类目（复用shopee selection-rules + TikTok限售/类目约束）
 - **人工接管**：ERP登录/短信验证码、**1688 授权（凭证仅约 10 小时有效，批次前必查）**、**货代覆盖确认（ERP「货代管理」按城市查、筛 TIKTOK 标签，无接口）**、供应商 48h 发货的书面确认、**整图判定低置信度时转人工**、图片处理结果抽检（前10个人工过一眼）、候选清单最终确认（写操作前）
 
@@ -91,6 +91,11 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
   入口 `scripts/i18n.py`。加新品 = 加一行，不改代码；查不到返回 `None`，由调用方转人工或阻断。
   **禁止按 SKU 序号套模板**（2026-11-13 删除的旧实现会轮流贴「粉/蓝/灰/黑/白/绿」，与真实颜色无关）。
 - **拿不到数据就写"拿不到"，不要用旧快照或推测值补位**
+- **任务轨迹（2026-11-27 起）**：`publish_one`/`erp_client`/`site_goods` 的每次调用自动落
+  `erp_data/_run/trace/task_<offerId>.jsonl`（task_id/event_id/attempt/error_type，写盘前统一脱敏）。
+  排障先 `python3 scripts/agentlog.py trace --task-id task_<offerId>` 还原全过程；
+  聚合看 `agentlog.py stats --by error_type`。**写操作超时=结果未知（status:"unknown"），纪律不变：先回查再决定，禁止盲重发**（`erp_client._post` 已代码化：写单次机会，读≤3 次退避）。
+  同一任务并发执行会被 `tasklock` 拒绝（退出码 7）——恢复前先确认没有另一个进程在跑。
 - **发布前 `image_gate.py verify` 退出码必须为 0**（退出码 1 = 图片闸门拦截，禁止 `ttl-publish`；
   详见 Step 4.3 / 5.1）。脚本不会看图，整图判定由多模态模型回填 `review.json`，未判定即拒绝 apply
 
@@ -611,7 +616,7 @@ python3 scripts/erp_client.py ttl-detail --id <ttl_id>
 
 | 档 | 数量 | 处理方式 | 单款预算 |
 |---|---|---|---|
-| **Hero** | 10–20 款 | 现状全流程（两通道扫描 + 逐张多模态判定 + 擦字/翻译 + 首图白底 + 重建 description） | 45 分钟 |
+| **Hero** | 10–20 款 | 现状全流程（三通道扫描 + 逐张多模态判定 + 擦字/翻译 + 首图白底 + 重建 description） | 45 分钟 |
 | **长尾** | 100–130 款 | **只留 ≥1 张干净主图 + ≥500 字符/≥2 段的可复用当地语言模板 + 批量公式改价**；详情长图整段丢弃，**不做逐张判定** | **≤3 分钟** |
 
 **为什么长尾可以不做图片判定**：Step 4.3 的三条硬规则是「description 非空 / 主图 ≥1 / 无中文残留」，
@@ -866,14 +871,14 @@ python3 scripts/set_price.py --id <ttl_id> --rate 2.8 --add 39.26 --save   # 提
     "titleTruncateType":"END","skuNameEnabled":true,"skuNameLimit":20,"skuNameTruncateType":"END",
     "skuValueEnabled":true,"skuValueLimit":50,"skuValueTruncateType":"END","skuTotalEnabled":false}},
  "distribItemVos":[{"itemId":"<ttl_id>","sourcePlatform":"kdzs_erp",
-   "targetPlatform":"tiktok","sourceSellerId":"1323965","targetSellerId":"<sellerId>",
+   "targetPlatform":"tiktok","sourceSellerId":"<ERP_SOURCE_SELLER_ID>","targetSellerId":"<sellerId>",
    "targetSellerNick":"<MY_SHOP_NICK>",
    "categoryIds":"600001,851848,852744","categoryNames":"家居用品,家居收纳,收纳包"}]}
 ```
 
 **要点**：
 - `itemId` = **ttl_id**（TikTok 采集箱记录 id），**不是** itemCenterNumIid（用 center ID 会报"未找到该平台采集记录"）
-- `sourceSellerId` 必填（实测 1323965）；`targetSellerNick` 必须与 sellerId 对应（认领时不选店会默认 PH）
+- `sourceSellerId` 必填（本账号 ERP 源店铺 ID，取值 .env `ERP_SOURCE_SELLER_ID`）；`targetSellerNick` 必须与 sellerId 对应（认领时不选店会默认 PH）
 - `categoryIds` / `categoryNames` 是**逗号分隔字符串**（不是数组），**传真实类目树**（旧版传空串虽能过，但类目校验信息会丢）
 - `weight` / `packageLength|Width|Height` **按真实包裹填**——发布配置会自动把这三个值写到商品上，
   留默认 1kg / 10×10×10 等于给轻小件虚报体积重，直接影响头程
@@ -953,7 +958,7 @@ python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --weight 0.3 --dims 30x
 
 #### 5.4 商品编辑与发布的顺序（2026-11-11 实测后的推荐顺序）
 ```
-claim → getDetail 落盘 → image_gate scan（主图+description 两通道）→ 多模态逐张判定回填 review.json
+claim → getDetail 落盘 → image_gate scan（主图+description+SKU 规格图 三通道）→ 多模态逐张判定回填 review.json
       → image_gate apply 重建（cleaned_detail.json / report.json）→ apply --save 写回图与描述
       → fix_sku / prep_publish 补类目·重量·SKU → set_price 公式改价（batchOps，只动价格）
       → image_gate verify（用 cleaned_detail.json，退出码必须为 0）→ ttl-publish → 四路验证
@@ -1082,7 +1087,7 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
 - `references/selection-strategy.md`：选品模块核心（九章）——一件代发三条铁律、履约链路与城市判据、成本结构与采购价上限矩阵、数据源分层与可信度分级、红线与供应链门槛、四维评分、TH/VN差异、破零节奏与数据回流、输出格式。Step 0 前必读。
 - `references/linkfox-ip-detection-coverage.md`：睿观 IP 检测对 TH/VN 覆盖实测——**只有外观专利支持 TH**，商标/实用新型不支持，版权噪声大；brand_ip 红线仍靠人工。涉及 IP 检测前必读。
 - `references/tiktok-api.md`：TikTok接口契约（已实测+待补）
-- 图片闸门（两通道扫描 → 多模态整图判定 → description 重建 → 发布前硬闸）见上方 Step 4.3；
+- 图片闸门（三通道扫描 → 多模态整图判定 → description 重建 → 发布前硬闸）见上方 Step 4.3；
   执行脚本 `scripts/image_gate.py`、参数 `config/image_gate.yaml`
 - `config/image_gate.yaml`：B2B 词表（**仅文本残留兜底，不是判定规则**）与发布前硬闸阈值
   （`min_clean_main_images` / `max_cjk_chars_in_description` / `require_no_template_residue`）；
@@ -1219,7 +1224,7 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
   子命令：`classify --text`（单条）/ `scan`（glob 全部 tiktok_logs.csv 的 fail 行）/ `backtest`（回测，2026-11-25 实测 23/23 命中、304 条 fail 行 100% 路由）/ `apply --ids`（修复计划/受控执行）。
   `apply` 安全边界：仅对点名清单执行、单次 ≤10 货源、默认 dry-run 只出计划；`--execute` 只执行规则表带 `auto_exec` 的规则（当前仅 stock_overflow=fix_sku 收库存、silent_skip=先查 site_goods status 再 --force 重发），tier=manual 与无 auto_exec 的规则一律只出命令不执行；每条写命令先 dry 变体、失败即停；ttl_id/weight/dims 从 `erp_data/_run/pipeline/<offer>.json` 解析，缺参数降级为计划；journal 落盘 `erp_data/_run/failure_router_apply/`；**执行完 ≠ 修复成功，必须人工跑四路验证**。
   退出码：0=全部路由；1=存在未路由失败 → **Tier 2 转 LLM 读 pitfalls/replay 全量案例诊断，确诊后回填规则表与 golden set**（数据飞轮）；Tier 3（embedding 检索）仅在案例库规模超上下文时启用。
-- `tests/`：**离线测试套件（2026-11-13 新增，持续增长）**——`python3 tests/run.py` 一条命令跑完（220 项，约 5 秒，不联网、不需要 token；2026-11-25 实测）。
+- `tests/`：**离线测试套件（2026-11-13 新增，持续增长）**——`python3 tests/run.py` 一条命令跑完（305 项，约 10 秒，不联网、不需要 token；2026-11-27 实测；含故障场景/脱敏/任务锁/仓库卫生扫描）。
   覆盖 i18n 迁移等价性、图片三通道/过期判定/覆盖率硬闸、SKU 身份校验、公网图哈希匹配、已删子命令回归。
 - `scripts/selection_intake.py`：**选品取证自动化（2026-11-12 新增）**——`pool` 多关键词批量拉 FastMoss 并按出单率分档、
   `image` 取 1688 详情页字段（成本/最高 SKU 价/库存/起订量/重量/发货城市）并拼 contact sheet、

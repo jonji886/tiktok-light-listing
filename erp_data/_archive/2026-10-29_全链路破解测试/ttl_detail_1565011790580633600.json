@@ -23,7 +23,7 @@
  "toCategoryIdTree": "600024,859528,600127",
  "toCategoryNameTree": "厨房用品,厨房器具,厨房计时器",
  "toPlatform": "tiktok",
- "toSellerId": "7494877320827733079",
- "toSellerNick": "JingShanShop-TH",
- "userId": "1323965"
+ "toSellerId": "<SELLER_TH>",
+ "toSellerNick": "<SHOP_NAME>",
+ "userId": "<ERP_SOURCE_SELLER_ID>"
 }
