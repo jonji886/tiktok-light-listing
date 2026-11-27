@@ -11,6 +11,6 @@ echo "== 2/3 定价配置自洽 =="
 python3 scripts/pricing_calc.py --check
 
 echo "== 3/3 配置与数据契约漂移自检（离线） =="
-python3 scripts/health_check.py --skip-net
+python3 scripts/health_check.py --skip-net --ci
 
 echo "== CI 全绿 =="

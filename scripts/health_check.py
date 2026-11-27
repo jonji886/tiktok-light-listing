@@ -253,11 +253,15 @@ def check_runtime():
             add(group, cmd, level, "未找到 —— %s 会降级或不可用" % why)
 
 
+_CI = False  # --ci：干净检出（无凭证/运行产物）时，环境缺失类 FAIL 降为 WARN
+
+
 def check_token():
     group = "token"
     if not os.path.exists(TOKEN_FILE):
-        add(group, "erp_token.txt", "FAIL",
-            "缺失：先 python3 scripts/erp_token_grab.py --save --check")
+        add(group, "erp_token.txt", "WARN" if _CI else "FAIL",
+            "缺失：先 python3 scripts/erp_token_grab.py --save --check"
+            + ("（--ci：CI 无登录态，属预期）" if _CI else ""))
         return ""
     tok = load_token()
     if not tok:
@@ -302,12 +306,13 @@ def check_shop_config():
         if not sid or sid.startswith("<") or nick.startswith("<"):
             bad.append(region)
     if bad:
-        add(group, "店铺配置(sellerId)", "FAIL",
+        add(group, "店铺配置(sellerId)", "WARN" if _CI else "FAIL",
             "%s 未配置或仍是占位符 → claim/publish 必炸。修法：erp_client.py shops "
-            "取真实值写入 .env，set -a; source .env; set +a" % "/".join(bad))
+            "取真实值写入 .env，set -a; source .env; set +a" % "/".join(bad)
+            + ("（--ci：仓库按设计不存店铺值，属预期）" if _CI else ""))
     else:
-        add(group, "店铺配置(sellerId)", "PASS",
-            "TH/VN/MY sellerId 均已配置（MY=%s）" % shops["MY"]["sellerId"][-6:])
+        # 不回显 sellerId 片段（日志/CI 输出同样按脱敏纪律处理）
+        add(group, "店铺配置(sellerId)", "PASS", "TH/VN/MY sellerId 均已配置")
 
 
 def check_erp(token):
@@ -430,7 +435,9 @@ def check_config():
 def check_data():
     group = "data"
     if not os.path.exists(BACKFLOW):
-        add(group, "backflow.csv", "FAIL", "缺失 → python3 scripts/backflow.py sync")
+        add(group, "backflow.csv", "WARN" if _CI else "FAIL",
+            "缺失 → python3 scripts/backflow.py sync"
+            + ("（--ci：运行时产物不入库，属预期）" if _CI else ""))
     else:
         first = io.open(BACKFLOW, encoding="utf-8-sig").readline().strip()
         cols = [c.strip() for c in first.split(",")]
@@ -486,7 +493,13 @@ def main():
     ap = argparse.ArgumentParser(description="接口契约 smoke test（只读）")
     ap.add_argument("--skip-net", action="store_true", help="只跑本地检查，不发网络请求")
     ap.add_argument("--only", default="", help="逗号分隔：dep,runtime,token,aidge,erp,fastmoss,quota,frontend,config,data")
+    ap.add_argument("--ci", action="store_true",
+                    help="干净检出模式：登录态/店铺配置/运行时产物缺失降为 WARN"
+                         "（这些在 CI 里按设计不存在，仓库不入库）")
     args = ap.parse_args()
+
+    global _CI
+    _CI = args.ci
 
     only = {s.strip() for s in args.only.split(",") if s.strip()}
 
