@@ -34,10 +34,9 @@
 
 | | 内容 |
 |---|---|
-| ✅ **做** | 单一跨境 ERP 实例内，1688 货源 → TikTok Shop 东南亚站（TH/VN）的选品、采集、认领、图片本地化、定价、发布、发布记录回查 |
+| ✅ **做** | 单一跨境 ERP 实例内，1688 货源 → TikTok Shop 东南亚站（**MY 马来西亚为主攻站**；TH/VN 存量维护，不投新品）的选品、采集、认领、图片本地化、定价、发布、发布记录回查 |
 | ✅ **做** | 硬红线自动剔除（品牌/IP、液体、带电、食品保健、宗教、易碎、活体、多规格价差、限售认证、跨类目） |
-| ❌ **不做** | 其他 ERP、其他平台（Shopee/Lazada）、TikTok 自运营店（仅跨境店） |
-| ❌ **不做** | TH/VN 以外的站点（PH/SG/MY 预留但未实现） |
+| ❌ **不做** | 其他 ERP、其他平台（Shopee/Lazada）、TikTok 自运营店（仅跨境店）；PH/SG 等其余站点未实现 |
 | ❌ **不做** | 跨类目铺货——店铺类目是硬约束，跨类目发品会被下架甚至处罚 |
 | ❌ **不做** | 无人值守的全自动跑量。写操作必须人工点名清单 |
 
@@ -58,15 +57,17 @@
 └───────────────────────────┬──────────────────────────────────┘
                             │ CLI 调用（唯一契约）
 ┌───────────────────────────▼──────────────────────────────────┐
-│  scripts/erp_client.py（执行层，纯标准库，无三方依赖）          │
-│    collect · items · ttl-list · ttl-detail · ttl-claim        │
-│    ttl-del · ttl-publish · logs · shops · token               │
-│  scripts/set_price.py · fix_sku.py · prep_publish.py          │
-│    （批量公式改价 / 修 SKU 规格名与库存 / 发布前准备与校验）    │
-│  scripts/price_gate.py · image_gate.py · prepublish_guard.py   │
-│    （价格库存闸门 / 图片闸门 / 发布前总闸，三道互补）           │
-│  scripts/batch_prep.py · apply_listing_fix.py · site_goods.py  │
-│    （批量编排 / 一次性清单修复 / 平台侧在售商品客户端）         │
+│  业务规则层（纯本地、确定性、可离线回归，阈值取自 config）      │
+│    select_gate · price_gate · image_gate · prepublish_guard   │
+│    listing_quality_gate · route_gate · pricing_calc            │
+│    failure_router · precheck · publish_one · backflow        │
+└───────────────────────────┬──────────────────────────────────┘
+                            │ 仅通过适配层读写外部系统
+┌───────────────────────────▼──────────────────────────────────┐
+│  Provider 适配层（协议/鉴权/报文/落盘，不含业务判断）          │
+│    erp_client · site_goods · erp_token_grab · erp_upload      │
+│    kdzs_fastmoss · aibuy_rank_client · linkfox_oauth          │
+│    aidge_http（图片修复通道）                                  │
 └───────────────────────────┬──────────────────────────────────┘
                             │ HTTP（qnquerystring: <JWT> + appType:3）
 ┌───────────────────────────▼──────────────────────────────────┐
@@ -74,7 +75,11 @@
 └───────────────────────────────────────────────────────────────┘
 ```
 
-**分层意图**：判断（选什么、改哪张图、定多少钱）必须能被模型改写；执行（发什么请求、怎么重试、怎么落盘）必须是确定性的、可测的。两者只通过 CLI 参数契约耦合——所以换模型、换运行时、换 ERP 都只动一层。
+**两层解耦意图**：业务规则层只吃本地落盘的快照与配置，不感知是哪个 ERP、哪个站点；
+适配层负责把外部系统的报文翻成规则层认的字段。**换 ERP / 换平台，只重写适配层；闸门规则、
+定价模型、SKU 身份校验、失败路由这些可复用资产留在规则层。** 判断（选什么、改哪张图、定多少钱）
+必须能被模型改写；执行（发什么请求、怎么重试、怎么落盘）必须是确定性的、可测的。两者只通过
+CLI 参数契约耦合——所以换模型、换运行时、换 ERP 都只动一层。
 
 ---
 
@@ -92,7 +97,7 @@
 | **硬红线自动阻断** | 错了有罚金/下架风险，但判定规则确定 | 品牌侵权、IP 联名、液体化工、带电、食品保健医疗、宗教、易碎、活体、多规格价差、限售需认证、跨类目 |
 | **人工接管** | 错了钱直接没了，且规则无法穷举 | ERP 登录/短信验证码、候选清单最终确认、**整图判定低置信度时转人工**、图片处理结果抽检（前 10 个人工过一眼） |
 
-为什么红线要「自动阻断」而不是「提示确认」？因为**规则能穷举的风险，问人等于把责任推给人**——而人会疲劳、会连点确认。规则穷举不了的（比如「这张图的泰文有没有幻觉字」），才交给人。
+为什么红线要「自动阻断」而不是「提示确认」？因为**规则能穷举的风险，问人等于把责任推给人**——而人会疲劳、会连点确认。规则穷举不了的（比如「这张图的当地语言译文有没有幻觉字」），才交给人。
 
 ### 原则二：所有阈值外置到 YAML，代码只做执行
 
@@ -118,7 +123,7 @@ weights:              # 四维权重，合计 1.0
 Step 0  选品        → samples/selection_candidates.csv（人工确认清单）
 Step 1  采集        → erp_client.py collect --ids <offerId,...>
 Step 2  对账        → erp_client.py items --size 50
-Step 3  认领        → erp_client.py ttl-claim --ids <numIid> --region TH
+Step 3  认领        → erp_client.py ttl-claim --ids <numIid> --region MY
 Step 4  编辑        → ttl-detail → image_gate 图片闸门（两通道判定/重建/写回）→ 定价 → 修 SKU·重量
 Step 5  发布        → 三闸门全过（price_gate / image_gate verify / prepublish_guard）
                      → erp_client.py ttl-publish --ids <ttl_id,...>
@@ -148,13 +153,13 @@ ttl-detail 落盘
 看不见图里的字，不能当判定规则。
 
 **description 必须整段重建，不能删空**：剥掉所有 `<img>` / `usemap` / `styleType` / 中文文本节点，
-只回填保留的干净图和一段泰文/越南文纯文本。删空会直接触发平台的「商品描述不能为空」。
+只回填保留的干净图和一段当地语言纯文本（MY=马来语，存量站为泰语/越南语）。删空会直接触发平台的「商品描述不能为空」。
 `apply` 在没有当地语言文本时会中止，**不会替你编一段**。
 
 **AI 生成小语种文字的高发缺陷**（只作用于 L1/L2 的少量保留图；真实 case 实测，必须逐张校验）：
 
 - **幻觉字**：模型会在金属反光、玻璃、空白处注入伪文字甚至反向英文。原图没有的元素一律不能信。修正 prompt 必须写明「仅保留指定文字区域，其他区域不得出现任何文字」，必要时二次、三次修正。
-- **OCR 不可信**：内置 OCR 对泰文小字多次读出互相矛盾的结果。判定正确性的唯一办法是**裁剪单字符放大到原始 10 倍逐字目视**。
+- **OCR 不可信**：内置 OCR 对小语种小字多次读出互相矛盾的结果。判定正确性的唯一办法是**裁剪单字符放大到原始 10 倍逐字目视**。
 - **验收五条**：① 指定译文完整拼写正确 ② 无中文残留 ③ 无杂散伪字 ④ 无网址残留 ⑤ 首图白底。
 
 **发布前是三道闸门，不是一道**（2026-11-12 第二批实测补）。文字规则拦不住批量操作，
@@ -184,7 +189,7 @@ cd tiktok-light-listing
 
 # 1) 配置站点（不写死进仓库）
 cp .env.example .env
-#    填 ERP_BASE_URL / TH_SELLER_ID / VN_SELLER_ID / ERP_SOURCE_SELLER_ID
+#    填 ERP_BASE_URL / MY_SELLER_ID（主攻站）/ TH_SELLER_ID / VN_SELLER_ID（存量）/ ERP_SOURCE_SELLER_ID
 set -a; source .env; set +a
 
 # 2) 注入登录态：浏览器登录 ERP 后，控制台执行
@@ -210,7 +215,7 @@ python3 scripts/prepublish_guard.py --ids <ttl_id,...> --refresh
 
 ```bash
 python3 scripts/erp_client.py shops --platform tiktok
-python3 scripts/erp_client.py ttl-list --region TH --size 20
+python3 scripts/erp_client.py ttl-list --region MY --size 20
 ```
 
 ---
@@ -270,8 +275,8 @@ python3 scripts/image_gate.py apply --detail erp_data/ttl_detail_<id>.json \
 三道闸门一起跑（顺序无关，任一失败即停止发布）：
 
 ```bash
-python3 scripts/erp_client.py ttl-list --region TH        # 先落盘 tiktok_list.csv
-python3 scripts/price_gate.py --site TH
+python3 scripts/erp_client.py ttl-list --region MY        # 先落盘 tiktok_list.csv
+python3 scripts/price_gate.py --site MY
 python3 scripts/image_gate.py verify --detail erp_data/ttl_detail_<id>.json
 python3 scripts/prepublish_guard.py --ids <ttl_id,...> --refresh
 # 三道全过 → erp_client.py ttl-publish --ids <ttl_id,...>
@@ -282,8 +287,8 @@ python3 scripts/prepublish_guard.py --ids <ttl_id,...> --refresh
 ```bash
 python3 scripts/site_goods.py list --platform tiktok --limit 10
 python3 scripts/site_goods.py detail --num-iid <id>
-python3 scripts/site_goods.py update-desc --num-iid <id> --text-file desc_th.txt          # dry-run
-python3 scripts/site_goods.py update-desc --num-iid <id> --text-file desc_th.txt --save   # 写
+python3 scripts/site_goods.py update-desc --num-iid <id> --text-file desc_ms.txt          # dry-run
+python3 scripts/site_goods.py update-desc --num-iid <id> --text-file desc_ms.txt --save   # 写
 ```
 
 ---
@@ -388,8 +393,9 @@ markup        = 1 / (1 - 佣金 - 交易手续费 - 增长服务费 - 退款预�
 
 | 站点 | 货架场 shelf（当前启用） | 达人场 creator（停用） |
 |---|---|---|
-| TH | `1.62`（净利 12%，破零冲量） | `2.58` |
-| VN | `2.08`（净利 25%） | `2.63` |
+| **MY（主攻）** | `1.295`（免佣期，净利 12%）；免佣到期后切 `1.556` | `1.844`（免佣期）/ 到期后 `2.424` |
+| TH（存量） | `1.62`（净利 12%，破零冲量） | `2.58` |
+| VN（存量） | `1.515`（净利 12%，免交易费窗口内） | `2.326` |
 
 **不要手算**，用 `scripts/pricing_calc.py`：`--cost` 出售价与带内判定、`--limits` 反推采购价上限矩阵、`--check` 校验配置自洽（改费率/汇率后必跑）。算完先输出建议售价表给人确认，确认后才批量回填 `skus[].price`。
 
@@ -401,37 +407,46 @@ markup        = 1 / (1 - 佣金 - 交易手续费 - 增长服务费 - 退款预�
 tiktok-light-listing/
 ├── SKILL.md                          # Agent 技能定义：动作分层 + 六步执行规程
 ├── README.md
-├── .env.example                      # 环境变量模板
+├── .env.example                      # 环境变量模板（sellerId/店名/凭证走 .env，不入库）
+├── .github/workflows/ci.yml           # 离线 CI：tests 回归 + pricing 自检 + health_check --skip-net
 ├── config/
 │   ├── selection.yaml                # 选品规则（履约红线/四维权重/门槛/节奏/图片门槛）
 │   ├── pricing.yaml                  # 定价参数（费率/汇率/成本项/两档 markup/价格带）
-│   └── image_gate.yaml               # 图片闸门（B2B 词表兜底 + 硬闸阈值）
+│   ├── image_gate.yaml                # 图片闸门（B2B 词表兜底 + 硬闸阈值）
+│   ├── category_templates.yaml         # 类目模板（类目 ID/重量尺寸/描述占位）
+│   ├── failure_rules.json             # 失败规则（15 条）+ 黄金回测集
+│   ├── i18n/                         # 各站点规格/标题译名词条（th/vi/ms.csv）
+│   └── keywords/ · banned_platform_words.txt · word_pool.py …
 ├── references/
+│   ├── results-matrix.md              # 已验证闭环 / 未验证缺口 / 事故追溯 / 可复用资产
 │   ├── selection-strategy.md         # 选品方法论（九章）：履约链路、成本结构、数据源分层、红线与门槛、四维评分
 │   ├── erp-pitfalls.md               # 接口坑备忘：body 结构、错误码、逆向方法、浏览器边界
-│   └── tiktok-api.md                 # 接口契约（已实测 12 个 + 待补）
+│   ├── tiktok-api.md                  # 接口契约（已实测 + 待补）
+│   ├── replay-log.md                  # 批次实测与事故历史（归档回放，完整背景）
+│   └── linkfox-ip-detection-coverage.md
 ├── scripts/
-│   ├── erp_client.py                 # 主 CLI（采集/认领/编辑/发布/回查），纯标准库
-│   ├── set_price.py                  # 批量公式改价（batchOps opsType:2）
-│   ├── fix_sku.py                    # 修 SKU 规格名与库存（官方 edit body 结构）
-│   ├── prep_publish.py               # 发布前置：改价 + 补重量尺寸 + 回读验证
-│   ├── image_gate.py                 # 详情页图片闸门（scan / apply / verify），纯标准库
-│   ├── pricing_calc.py               # 定价与价格带校验（--cost / --limits / --check），纯标准库
-│   ├── kdzs_fastmoss.py              # 选品数据源（后端 FastMoss 榜：销量/达人/视频数），免登录只读
-│   ├── erp_token_grab.py             # 从本机 Chrome LevelDB 提取登录态 JWT（可选，依赖 cramjam）
-│   ├── price_gate.py                 # 价格/库存/类目闸门（读 tiktok_list.csv）
-│   ├── prepublish_guard.py           # 发布前总闸（全 reqInfo 递归扫汉字/属性/规格/描述质量）
-│   ├── batch_prep.py                 # 批量编排：破带重定价 + 库存收敛 + 复检（默认 dry-run）
-│   ├── apply_listing_fix.py          # 一次性清单修复（单件 + 400g 保守计费重定价）
-│   ├── site_goods.py                 # 平台侧在售商品客户端（list/detail/log/update-desc）
-│   └── erp_token.example.txt         # token 文件模板（真实 token 已被 .gitignore 排除）
-└── samples/
-    ├── selection_candidates.sample.csv
-    └── tiktok_list.sample.csv
+│   ├── 业务规则层（纯本地、确定性、可离线回归，阈值取自 config）：
+│   │   select_gate · price_gate · image_gate · prepublish_guard · listing_quality_gate
+│   │   route_gate · pricing_calc · failure_router · precheck · publish_one · prep_one
+│   │   ttl_edit · backflow · backflow_import · batch_review · image_fix · verify_batch · report_ready_check …
+│   ├── Provider 适配层（协议/鉴权/报文/落盘，不含业务判断）：
+│   │   erp_client · site_goods · erp_upload · erp_token_grab · kdzs_fastmoss
+│   │   aibuy_rank_client · linkfox_oauth · linkfox_sourcing · aidge_http
+│   │   opportunity_intake · selection_intake · opportunity_to_sourcing …
+│   ├── 共用工具：category_template · i18n · sku_dict · title_pool · evidence_local · timing …
+│   └── 历史一次性脚本（早期批次编排，复用前需按当前清单改）：
+│       apply_listing_fix · batch_prep · fix_sku · prep_publish · set_price
+├── tests/                            # 离线回归（run.py：不联网、不需 token；缺 PIL 自动跳过）
+├── samples/                          # 候选清单 / 采集清单样例（占位，非真实商品）
+└── aibuy_data/                      # 1688 候选缓存（运行时产物，部分入库基线）
 ```
 
 运行时产物 `erp_data/`（采集箱快照、发布日志、`image_gate/<id>/` 的下载图与 review.json、
 cleaned_detail.json、report.json）不入库。
+
+> 脚本完整清单以 `scripts/` 目录为准；上表按两层架构列入口与代表模块。三个 800+ 行历史文件
+> （`selection_intake` / `backflow` / `image_gate`）尚未拆分，历史一次性脚本也未物理归档，
+> 均属 P2 重构项，不影响现行流程。
 
 ---
 
@@ -441,15 +456,15 @@ cleaned_detail.json、report.json）不入库。
 
 - **依赖未公开内部接口**：无契约、无版本号、字段随时可能变。任何报错的第一处置是回退浏览器自动化，不是重试。
 - **登录态会过期**：`qnquerystring` 是浏览器会话 JWT，过期后所有命令返回 `703`。设计中「登录」永远是人工步骤，不做自动续期。
-- **不适合无值守生产**：图片本地化的验收标准是目视，模型生成的泰文/越南文有幻觉字风险。这是设计上的取舍，不是缺陷。
+- **不适合无值守生产**：图片本地化的验收标准是目视，模型生成的当地语言译文有幻觉字风险。这是设计上的取舍，不是缺陷。
 - **图片闸门看不见图里的字**：`image_gate.py` 的文本扫描只能兜底 HTML 文本节点与属性，
   艺术字 / 竖排字 / 印章字 / 图内中文必须靠多模态模型逐张目视回填 `review.json`；
   判定表留 `pending` 时脚本会拒绝执行，不会静默放行。
 - **类目自动匹配不可靠**：两次重认领后类目均为空，`CATEGORY_NOT_MATCH` 不会自愈，必须显式指定类目。
 - **发布成功率受店铺侧限制**：如「该地区没有设置开启的默认销售仓库」属于 TikTok 后台配置问题，脚本无法代解。
-- **`ttl-translate` 是骨架**：body 待确认，当前只打印 TODO（实际上认领时 ERP 已自动翻译标题，此命令优先级低）。
+- **`ttl-translate` 是骨架**：body 待确认，当前只打印 TODO（实际上认领时 ERP 已自动翻译标题，MY 自动翻译已 VERIFIED 可用但质量不可控，标题发布前须目视，此命令优先级低）。
 - **三道闸门不等于平台会收**：它们只覆盖本地快照里能看到的字段。TikTok 后台「描述优化」软提示的字符计数口径
-  （HTML 源码 / 纯文本 / 富文本节点、泰文连写）`UNKNOWN`，是否影响曝光也未证实；本仓库按纯文本 ≥500 字符保守实现，偏严。
+  （HTML 源码 / 纯文本 / 富文本节点、小语种连写）`UNKNOWN`，是否影响曝光也未证实；本仓库按纯文本 ≥500 字符保守实现，偏严。
 - **采集箱与站点商品是两套数据**：`erp_client.py` 管发布前草稿（`ttl_id`），`site_goods.py` 管平台侧在售商品
   （`numIid`）。发布成功不代表站点商品模块立刻可读，ERP 详情有数分钟缓存延迟，回读未更新时不要下结论。
 - **一次性脚本里的清单是示例**：`apply_listing_fix.py` / `batch_prep.py` 用法里的商品 ID 在仓库版已换成占位示例，
@@ -472,6 +487,15 @@ cleaned_detail.json、report.json）不入库。
 ---
 
 ## 更新记录
+
+**2026-11-25（MY 主攻阶段：流水线化 + 失败路由 + 可观测性）**
+
+- 站点策略：**主攻 MY（马来西亚）**，TH/VN 转存量维护（在售链接只做回流，不投新品）；配置与命令示例口径已统一到 MY。
+- 单品全链路状态机 `publish_one.py`（断点续跑、CP 人工确认）+ 批量预检 `precheck.py` + 批量发布/回查 `batch_run.py` / `verify_batch.py`，消灭 agent 在对话里手打链路命令与 JSON 转录。
+- 失败路由器 `failure_router.py`：发布 `fail` 原文 → 已验证规则（诊断 + 修复命令 + 证据），规则表 `config/failure_rules.json` + 黄金集 `tests/fixtures/failure_golden_set.json`（23/23 命中）；未路由失败转 Tier 2 人工诊断后回填规则，形成数据飞轮。
+- 可观测性：`timing.py` / `timing_report.py` 按阶段落账（墙钟 / 脚本实占 / agent 空转），批次间可比。
+- 选品：词池优先于机会卡片（卡片降级为方向池）；`title_pool.py` / `sku_dict.py` 从已 ACTIVATE 标题沉淀模板；`prefilter.py` 选品期左移预检。
+- 测试：220 项离线测试通过（1 跳过），约 5 秒，不联网。
 
 **2026-11-12c（第二批/第三批实测：三闸门体系 + 批量编排 + 站点商品模块）**
 

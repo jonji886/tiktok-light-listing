@@ -9,9 +9,7 @@ erp_client.py — 快递助手ERP跨境版 TikTok Shop 铺货接口客户端
   - 请求头 qnquerystring: <JWT> + appType:3
   - token 获取：浏览器登录态内 bu.js 导出 sessionStorage.qnquerystring
 
-TikTok 店铺 sellerId（实测 2026-10-27，有效授权）：
-  TH = 7494877320827733079  (JingShanShop-TH)
-  VN = 8686823118786298967  (JingShanShop-VN)
+TikTok 店铺 sellerId / 店铺名：从环境变量 `{TH,VN,MY}_SELLER_ID` / `{TH,VN,MY}_SHOP_NICK` 读取（见 `.env.example`），仓库不存真实值。
 
 用法：
   python3 erp_client.py token --check
@@ -19,7 +17,7 @@ TikTok 店铺 sellerId（实测 2026-10-27，有效授权）：
   python3 erp_client.py items [--page N] [--size N]        # 公共采集箱列表
   python3 erp_client.py ttl-list [--region TH] [--status 0]  # TikTok采集箱列表
   python3 erp_client.py ttl-detail --id 1564704833189261312  # 编辑详情
-  python3 erp_client.py ttl-claim --ids <numIid> --seller 7494877320827733079  # 认领(写)
+  python3 erp_client.py ttl-claim --ids <numIid> --seller <sellerId>  # 认领(写)
   python3 erp_client.py ttl-translate --id <id> --lang th  # 标题一键翻译
   python3 erp_client.py ttl-publish --ids <ttl采集箱id>      # 发布(写)
   python3 erp_client.py logs --months 1                     # 发布记录
@@ -38,12 +36,41 @@ MIN_INTERVAL = 1.0
 _last_ts = 0.0
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "erp_token.txt")
 
-# TikTok 站点配置（sellerId 实测 2026-10-27）
+# TikTok 站点配置。sellerId / 店铺名从环境变量读（.env，已 gitignore），
+# 仓库内只留占位默认值；本地运行前 `set -a; source .env; set +a`。
+def _shop(env_id, env_nick, placeholder_id, placeholder_nick, lang, currency):
+    return {
+        "sellerId": os.environ.get(env_id, placeholder_id),
+        "nick": os.environ.get(env_nick, placeholder_nick),
+        "lang": lang,
+        "currency": currency,
+    }
+
+
 TT_SHOPS = {
-    "TH": {"sellerId": "7494877320827733079", "nick": "JingShanShop-TH", "lang": "th", "currency": "THB"},
-    "VN": {"sellerId": "8686823118786298967", "nick": "JingShanShop-VN", "lang": "vi", "currency": "VND"},
-    "MY": {"sellerId": "8686823118786233431", "nick": "JingShanShop-MY", "lang": "ms", "currency": "MYR"},
+    "TH": _shop("TH_SELLER_ID", "TH_SHOP_NICK", "<TH_SELLER_ID>", "<TH_SHOP_NICK>", "th", "THB"),
+    "VN": _shop("VN_SELLER_ID", "VN_SHOP_NICK", "<VN_SELLER_ID>", "<VN_SHOP_NICK>", "vi", "VND"),
+    "MY": _shop("MY_SELLER_ID", "MY_SHOP_NICK", "<MY_SELLER_ID>", "<MY_SHOP_NICK>", "ms", "MYR"),
 }
+
+
+def require_shop(region):
+    """店铺配置 fail-fast（2026-11-26 事故：.env 缺 MY_SELLER_ID，20 品 claim
+    全部把占位符字面量发给接口，接口报 500 For input string，每个品还要烧 86s
+    走 wait_for 回查轮询，一波白烧 30min）。写操作前必须过这里：
+    sellerId 缺失或仍是 <占位符> → 立即退出，不进网络调用。
+    取值方法：python3 scripts/erp_client.py shops → erp_data/tiktok_shops.csv
+    """
+    shop = TT_SHOPS.get((region or "").upper())
+    if not shop:
+        sys.exit(f"[erp] 未知站点 {region}，支持: {list(TT_SHOPS.keys())}")
+    sid = str(shop.get("sellerId") or "")
+    if not sid or sid.startswith("<"):
+        env = {"TH": "TH_SELLER_ID", "VN": "VN_SELLER_ID", "MY": "MY_SELLER_ID"}[region.upper()]
+        sys.exit(f"[erp] ✗ {region} 店 sellerId 未配置（读到 {sid!r}）。"
+                 f"跑 `erp_client.py shops` 取真实值写入 .env 的 {env}，再 `set -a; source .env; set +a`。"
+                 "禁止带占位符进 claim/publish——接口只会回 500，且每品白烧 ~90s 回查。")
+    return shop
 
 
 def _load_token(args):
@@ -221,12 +248,10 @@ def cmd_ttl_claim(args):
     接口 POST /item/crossBorder/commonCollect/batchClaimMultiShop
     body 已破解（2026-10-29 CDP document_start 注入抓真实请求）：
       {"numIids":["<ERP内部ID>"],"targetShops":[{"targetPlatform":"tiktok",
-       "sellerId":"...","sellerNick":"JingShanShop-TH"}]}
+       "sellerId":"<sellerId>","sellerNick":"<shopNick>"}]}
     注意：numIids 是 ERP内部ID(numIid)，不是1688 offerId。
     """
-    shop = TT_SHOPS.get(args.region.upper())
-    if not shop:
-        sys.exit(f"[erp] 未知站点 {args.region}，支持: {list(TT_SHOPS.keys())}")
+    shop = require_shop(args.region)   # fail-fast：占位符sellerId直接拦（见 require_shop 注释）
     seller_id = args.seller or shop["sellerId"]
     # 从公共采集箱查 numIid（传入的可能是 offerId，映射到 ERP内部ID）
     ids = [i.strip() for i in args.ids.split(",") if i.strip()]
@@ -278,11 +303,22 @@ def cmd_ttl_publish(args):
     except Exception:
         sys.exit("[erp] --dims 格式应为 长x宽x高（cm），如 30x20x5")
     # 查列表拿 itemCenterNumIid / toSellerId / toSellerNick
-    body = {"pageNo":1,"pageSize":100}
-    d = _post("/item/crossBorder/platformCollect/queryListPage", body, args)
+    # 2026-11-26 p50b 修复：旧品会被新品挤出第一页（797008672909 在第2页，
+    # 单页匹配报"不在采集箱列表"假阴性）→ 翻页直到全部 id 命中或列表取尽
     id_map = {}
-    for it in d.get("list",[]):
-        id_map[str(it.get("id",""))] = it
+    need = set(ids)
+    for page in range(1, 11):
+        body = {"pageNo": page, "pageSize": 100}
+        d = _post("/item/crossBorder/platformCollect/queryListPage", body, args)
+        lst = d.get("list", [])
+        for it in lst:
+            k = str(it.get("id", ""))
+            if k in need:
+                id_map[k] = it
+        if need.issubset(id_map) or len(lst) < 100:
+            break
+    if not need.issubset(id_map):
+        print(f"[erp][提示] 仍未在列表找到: {sorted(need - set(id_map))}")
     vos = []
     for tid in ids:
         it = id_map.get(tid)

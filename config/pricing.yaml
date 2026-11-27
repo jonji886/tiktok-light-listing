@@ -56,8 +56,8 @@ defaults:
 
 # ── 泰国站 ──
 TH:
-  shop_nick: "JingShanShop-TH"
-  seller_id: "7494877320827733079"
+  shop_nick: "<TH_SHOP_NICK>"
+  seller_id: "<TH_SELLER_ID>"
   lang: "th"
   currency: "THB"
 
@@ -118,8 +118,8 @@ TH:
 
 # ── 越南站 ──
 VN:
-  shop_nick: "JingShanShop-VN"
-  seller_id: "8686823118786298967"
+  shop_nick: "<VN_SHOP_NICK>"
+  seller_id: "<VN_SELLER_ID>"
   lang: "vi"
   currency: "VND"
 
@@ -191,8 +191,8 @@ VN:
 
 # ── 马来西亚站（2026-11-18 新增；参数来源见各行注释）──
 MY:
-  shop_nick: "JingShanShop-MY"
-  seller_id: "8686823118786233431"
+  shop_nick: "<MY_SHOP_NICK>"
+  seller_id: "<MY_SELLER_ID>"
   lang: "ms"                     # ⚠ i18n/ms.csv 不存在，标题翻译能力 UNKNOWN（ERP 是否自动译马来语未实测）
   currency: "MYR"
 

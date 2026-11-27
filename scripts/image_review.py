@@ -37,21 +37,90 @@ import image_fix  # noqa: E402  复用 evidence_one/call_retry 与 Aidge 凭证�
 CJK = re.compile(r"[\u4e00-\u9fff]")
 
 
+def _local_evidence_batch(imgs, base):
+    """Aidge 不可用时的本地 Vision OCR 回退，返回 {img_id: ev}。
+
+    B3（2026-11-25 实损）：Aidge 欠费当天，probe 全线返回 error →
+    classify 全部落到 "review" → review.json 留 pending → apply 报错 →
+    agent 手工跑 evidence_local 回填，白花 202s 排查。现在内置回退。
+
+    局限（不掩饰）：noobj_wm（非文字水印）依赖 Aidge 目标检测，本地拿不到，
+    故一律置 False。回退判为 L3_keep 的图仍可能带非文字水印，evidence 里
+    显式标 evidence_source=local_vision_ocr 供人工复核。
+    """
+    import img_grade as G
+    paths = {}
+    for im in imgs:
+        lf = im.get("local_file") or ""
+        p = os.path.join(base, lf)
+        if lf and os.path.exists(p):
+            paths[im["id"]] = p
+            continue
+        dst = os.path.join(base, str(im.get("id") or "x") + ".jpg")
+        if G.dl(im["url"], dst):
+            paths[im["id"]] = dst
+    if not paths:
+        return {}
+    ocr_map = {}
+    try:
+        ocr_map = G.ocr_batch(list(paths.values()))
+    except Exception as e:
+        print("[review] 批量本地 OCR 异常（%s）→ 逐张回退" % str(e)[:50])
+    out = {}
+    for iid, fp in paths.items():
+        od = ocr_map.get(str(fp))
+        if od is None:
+            try:
+                od = G.ocr(fp)
+            except Exception:
+                od = {}
+        texts = [x["text"] for x in (od.get("items") or []) if x.get("conf", 0) >= 0.25]
+        out[iid] = {"rec_text": texts, "evidence_source": "local_vision_ocr",
+                    "noobj_wm": False, "noobj_char": None,
+                    "reason": "Aidge 不可用，本地 Vision OCR 真实识别（非文字水印不可检）"}
+    return out
+
+
 def classify(ev, keep_english):
     """探针证据 → (verdict, why)。verdict ∈ L3_keep / review / drop?  (review=待目视)"""
     if ev.get("error"):
         return "review", "探针失败: " + ev["error"][:60]
+    # B3：标注证据来源，让「本地 OCR 判的」和「Aidge 判的」在 note 里可区分
+    src = ev.get("evidence_source") or ""
+    tag = "（本地OCR，非文字水印未检）" if src == "local_vision_ocr" else ""
     texts = ev.get("rec_text") or []
     blob = " / ".join(texts)
     if not texts and not ev.get("noobj_char") and not ev.get("noobj_wm"):
-        return "L3_keep", "探针未见文字/水印"
+        return "L3_keep", "探针未见文字/水印" + tag
     if CJK.search(blob) or CJK.search(str(ev.get("noobj_char") or "")):
-        return "review", "含中文: " + blob[:80]
+        return "review", "含中文: " + blob[:80] + tag
     if ev.get("noobj_wm"):
         return "review", "水印/牛皮癣(非文字): " + blob[:60]
     if keep_english:
-        return "L3_keep", "纯英文/当地语装饰字: " + blob[:60]
-    return "review", "有文字(未开--keep-english): " + blob[:60]
+        return "L3_keep", "纯英文/当地语装饰字: " + blob[:60] + tag
+    return "review", "有文字(未开--keep-english): " + blob[:60] + tag
+
+
+def can_reuse(im):
+    """A（2026-11-26）：判断这张图能否跳过 Aidge probe、沿用已有判定。
+
+    只有同时满足才复用（保守，先保 678 硬闸不破）：
+      ① 已有 evidence.rec_text（C 段 auto_verdict 或 judge_cache 回填的本地 OCR 证据）
+      ② verdict 已确定（非 pending）：L0_drop 要删的图不需要 probe；L3_keep 要放行
+      ③ 不是「main 通道 + L3_keep」——这是 678 事故点，必须跑 Aidge probe 补检
+         非文字水印（Aidge 的 noobj_wm 是本地 OCR 检不到的独有能力）
+    sku/desc 通道维持宽松（与 image_gate.main_gate_violations 只强制 main 一致）：
+    有本地证据就放行，避免为详情图白花 probe 费。
+    """
+    ev = im.get("evidence") or {}
+    if "rec_text" not in ev:
+        return False
+    v = im.get("verdict")
+    if v not in ("L0_drop", "L3_keep"):
+        return False
+    if v == "L3_keep" and "main" in (im.get("channels") or []):
+        return False
+    return True
 
 
 def main():
@@ -62,6 +131,10 @@ def main():
     ap.add_argument("--only", default="", help="限定通道 main,sku,desc（默认全部）")
     ap.add_argument("--max-sheet", type=int, default=12, help="存疑图超过则分批")
     ap.add_argument("--workers", type=int, default=4, help="Aidge QPS=5，勿超 4")
+    ap.add_argument("--reuse-cache", dest="reuse_cache", action="store_true", default=True,
+                    help="已有合法证据的图跳过 Aidge probe（默认开；省 ¥0.02/张）")
+    ap.add_argument("--force-probe", dest="reuse_cache", action="store_false",
+                    help="强制所有图都跑 Aidge probe（回退旧行为）")
     a = ap.parse_args()
 
     p = os.path.abspath(a.review)
@@ -71,9 +144,12 @@ def main():
     d = json.load(open(p, encoding="utf-8"))
     imgs = d.get("images") or []
     only = {s.strip() for s in a.only.split(",")} if a.only else None
-    todo = [i for i in imgs if only is None
-            or any(c in only for c in (i.get("channels") or []))]
-    print("[review] probe %d/%d 张，成本≈¥%.2f" % (len(todo), len(imgs), len(todo) * 0.02))
+    in_scope = [i for i in imgs if only is None
+                or any(c in only for c in (i.get("channels") or []))]
+    reused = {i["id"] for i in in_scope if a.reuse_cache and can_reuse(i)}
+    todo = [i for i in in_scope if i["id"] not in reused]
+    print("[review] probe %d/%d 张，复用证据 %d 张，成本≈¥%.2f（原 ¥%.2f）"
+          % (len(todo), len(imgs), len(reused), len(todo) * 0.02, len(in_scope) * 0.02))
 
     def one(img):
         return img, image_fix.evidence_one(img["url"])
@@ -88,7 +164,32 @@ def main():
                 print("  ...%d/%d" % (n, len(todo)))
 
     review_ids = []
-    stats = {"L3_keep": 0, "review": 0}
+    stats = {"L3_keep": 0, "review": 0, "reused": len(reused)}
+
+    # A：复用图沿用 C 段判级（不重新 classify——C 段已按同口径判过，
+    # 重判反而可能因 classify 的 keep_english 规则改变结论）。只补来源标记。
+    for im in in_scope:
+        if im["id"] in reused:
+            ev = im.get("evidence") or {}
+            im["seen_text"] = " / ".join(ev.get("rec_text") or [])
+            im["auto_verdict"] = "reused"
+            im["auto_why"] = "复用 C 段判定（%s），跳过 Aidge probe" % (
+                ev.get("evidence_source") or "cache")
+            if im.get("verdict") == "L3_keep":
+                stats["L3_keep"] += 1
+
+    # B3：Aidge 探针失败 → 自动本地 Vision OCR 回退，不留 pending
+    failed = [im for im in todo if im["id"] in results and (results[im["id"]] or {}).get("error")]
+    if failed:
+        err0 = str((results[failed[0]["id"]] or {}).get("error"))[:70]
+        print("[review] Aidge 探针失败 %d/%d 张（示例: %s）" % (len(failed), len(todo), err0))
+        print("[review] → 自动切本地 Vision OCR 回退（evidence_source=local_vision_ocr）")
+        local = _local_evidence_batch(failed, os.path.dirname(p))
+        for im in failed:
+            if im["id"] in local:
+                results[im["id"]] = local[im["id"]]
+        print("[review] 本地回退成功 %d/%d 张" % (len(local), len(failed)))
+
     for im in imgs:
         ev = results.get(im["id"])
         if ev is None:

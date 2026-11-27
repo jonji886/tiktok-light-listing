@@ -168,11 +168,14 @@ class TestApply(_Tmp):
         self.assertNotIn(D1, v2["description"])
         attrs = [s["sales_attributes"][0] for s in v2["skus"]]
         self.assertEqual(attrs[0]["sku_img"]["uri"], "https://cdn/new/sku1.jpg")  # 换 URL
-        self.assertEqual(attrs[1]["sku_img"], {})                                # 被判 L0 → 置空
+        # B2（2026-11-25 671250031819 实损）：L0 删图不能置空——平台报 [12052522]
+        # 「变体缺主图」整品发布 fail。有干净主图时必须轮换补位。
+        self.assertEqual(attrs[1]["sku_img"]["uri"], "https://cdn/new/main1.jpg")  # 主图补位
         report = json.load(open(os.path.join(self.tmp, "report.json"), encoding="utf-8"))
-        self.assertEqual(report["sku_images_dropped"], 1)
+        self.assertEqual(report["sku_images_dropped"], 0)
         self.assertEqual(report["sku_images_remapped"], 1)
-        self.assertEqual(report["after"]["sku_images"], 1)
+        self.assertEqual(report["sku_images_filled_by_main"], 1)
+        self.assertEqual(report["after"]["sku_images"], 2)
 
     def test_apply_blocks_on_stale_review(self):
         d = helpers.detail_v2([M1], [], [S1])

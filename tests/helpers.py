@@ -34,8 +34,8 @@ def detail_v2(main_images=(), desc_imgs=(), sku_imgs=(), title="t"):
     }
     return {
         "id": "1570393952287219712",
-        "toSellerId": "7494877320827733079",
-        "toSellerNick": "JingShanShop-TH",
+        "toSellerId": "<SELLER_ID>",
+        "toSellerNick": "<SHOP_NICK>",
         "toCategoryId": 852744,
         "toCategoryIdTree": "600001,600584,852744",
         "toCategoryNameTree": "家居用品,家居收纳,收纳包",

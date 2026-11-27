@@ -9,6 +9,7 @@
 - 定价：pricing_calc.compute（官方公式），SKU 售价**按各自 source_price 分别算**，
   不用模板 weight 一刀切（模板档只用于申报 package_weight 兜底）。
 - SKU 精简：--keep-prefix 按 seller_sku 前缀点名（款型级裁剪，如椭圆款 00012250）；
+  --drop-sku 按 seller_sku 等值点名剔除（定点砍高价/破带规格，保留其余变体，避免整品放弃）；
   零库存剔除；规格名**原样保留**（ERP 自动翻译可用；禁止按序号套色名——11-13 教训）。
 - 主图：--mains-file 每行一个 URL（必须 cbu01.alicdn.com——kdzs/dashscope 域 TikTok 拉不到，
   713 实测；非 cbu01 直接拒绝）。不传则保留现状。
@@ -82,15 +83,37 @@ def build_body(d, args):
     sku_code = {}
     if getattr(args, "sku_code", ""):
         sku_code = json.load(open(args.sku_code, encoding="utf-8"))
+    # 按 skus 原始顺序逐条对齐（重复 seller_sku 的唯一解，见下方循环注释）
+    sku_map_seq = []
+    if getattr(args, "sku_map_seq", ""):
+        sku_map_seq = json.load(open(args.sku_map_seq, encoding="utf-8"))
+    sku_code_seq = []
+    if getattr(args, "sku_code_seq", ""):
+        sku_code_seq = json.load(open(args.sku_code_seq, encoding="utf-8"))
+    sku_img_seq = []
+    if getattr(args, "sku_img_seq", ""):
+        sku_img_seq = json.load(open(args.sku_img_seq, encoding="utf-8"))
     attr_names_map = {}
     if getattr(args, "attr_names", ""):
         attr_names_map = parse_kv(args.attr_names)
+    # --drop-sku：seller_sku 黑名单（等值），命中即剔除。重复 seller_sku 的变体会一并剔除。
+    drop_set = {x.strip() for x in (getattr(args, "drop_sku", "") or "").split(",") if x.strip()}
     cfg = pc.merged(pc.load_config(), args.site)
     cfg["site"] = args.site
+    # --markup：显式覆盖加价率（2026-11-25 新增）。用途单一——**低价采购品进带**：
+    # $2.2 下限对应采购价约 ¥3.6，低于此的货源按默认 1.62 会算出 $1.4-2.0 而出带。
+    # 这里提高加价率是**抬高毛利**（不是压净利，压净利场景由 select_gate PRICE_ABOVE_MARKET 拦）。
+    if getattr(args, "markup", None):
+        m = float(args.markup)
+        if m <= 1:
+            sys.exit("[ttl_edit] --markup 必须 > 1")
+        cfg["schemes"].setdefault(args.scheme, {})["markup"] = m
     kept = []
-    for s in v2["skus"]:
+    for idx, s in enumerate(v2["skus"]):
         ssid = str(s.get("seller_sku") or "")
         if args.keep_prefix and not ssid.startswith(tuple(args.keep_prefix.split("|"))):
+            continue
+        if drop_set and ssid in drop_set:
             continue
         src = None
         try:
@@ -129,13 +152,28 @@ def build_body(d, args):
             s["inventory"] = [{"quantity": int(args.stock)}]
         # --sku-map：重写规格值为消费者向文案（英文/当地语），按维度顺序对齐。
         # 只改 value_name 不改 name——name 由 --attr-names 统一改，两者分工明确。
-        if sku_map.get(ssid):
+        # 2026-11-25：新增 --sku-map-seq / --sku-code-seq —— 部分货源多个 SKU 共用同一
+        # seller_sku（如打包袋 6 个规格都叫 SHAJ-XBZ），按 ssid 索引的 dict 必然互相覆盖，
+        # 只能用「skus 原始顺序」逐条对齐。
+        if sku_map_seq and idx < len(sku_map_seq) and sku_map_seq[idx]:
+            for i, v in enumerate(sku_map_seq[idx]):
+                if i < len(s.get("sales_attributes") or []):
+                    s["sales_attributes"][i]["value_name"] = v
+        elif sku_map.get(ssid):
             vals = sku_map[ssid]
             for i, v in enumerate(vals):
                 if i < len(s.get("sales_attributes") or []):
                     s["sales_attributes"][i]["value_name"] = v
+        # --sku-img-seq：给每个变体补/换缩略图（首个维度的 sku_img）。
+        # 平台硬要求 [12052522] 变体缺少主图，删掉带中文的 SKU 图后必须回填干净图。
+        if sku_img_seq and idx < len(sku_img_seq) and sku_img_seq[idx]:
+            attrs = s.get("sales_attributes") or []
+            if attrs:
+                attrs[0]["sku_img"] = {"uri": sku_img_seq[idx]}
         # --sku-code：汉字货号换 ASCII 码（seller_sku 直接进发布 payload，含汉字必拒 [12052250]）
-        if sku_code.get(ssid):
+        if sku_code_seq and idx < len(sku_code_seq) and sku_code_seq[idx]:
+            s["seller_sku"] = sku_code_seq[idx]
+        elif sku_code.get(ssid):
             s["seller_sku"] = sku_code[ssid]
         kept.append(s)
     if not kept:
@@ -150,6 +188,28 @@ def build_body(d, args):
     m = copy.deepcopy(v2)
     m["skus"] = kept
     m["category_id"] = str(cid)
+
+    # --backfill-dim-images（2026-11-26 P1-5 固化）：双维度货源（颜色+规格）第二维
+    # 原生无 sku_img → image_gate B2 复检必死「变体缺规格图 [12052252]」，本批 4 品
+    # 全中、手工补图返工 ~15min。规则：空图维度借用**同 SKU 第一张有图的维度缩略图**
+    # （买家看到的规格组合图与颜色图一致，语义正确）；整 SKU 无图则轮询用 mains 池。
+    if getattr(args, "backfill_dim_images", False):
+        filled = 0
+        pool = [u.strip() for u in (open(args.mains_file).read().splitlines()
+                if getattr(args, "mains_file", "") else []) if u.strip()]
+        for si, s in enumerate(m["skus"]):
+            attrs = s.get("sales_attributes") or []
+            donor = next((u for u in (((a.get("sku_img") or {}) or {}).get("uri")
+                                      for a in attrs) if u), None)
+            for a in attrs:
+                img = a.get("sku_img") or {}
+                if isinstance(img, dict) and not (img.get("uri") or "").strip():
+                    uri = donor or (pool[si % len(pool)] if pool else None)
+                    if uri:
+                        a["sku_img"] = {**img, "uri": uri}
+                        filled += 1
+        if filled:
+            print("[ttl_edit] backfill 补齐 %d 个空维度缩略图" % filled)
 
     # --attr-names：规格属性名译文（ERP 认领不译 name——2026-11-24 本批 5 品全中，
     # 不改则 prepublish [12052250] 汉字拒；name 全 SKU 统一改，确定性规则）。
@@ -194,7 +254,12 @@ def build_body(d, args):
     # ── 主图（只接受 cbu01；不传保留现状） ──
     if args.mains_file:
         urls = [u.strip() for u in open(args.mains_file, encoding="utf-8") if u.strip()]
-        bad = [u for u in urls if any(h in u for h in BAD_MAIN_HOSTS) or OK_MAIN_HOST not in u]
+        # 实验室开关（2026-11-25）：TTL_LAB_ALLOW_ANY_MAIN_HOST=1 时放行任意主图域名，
+        # 仅用于验证「dashscope 签名链能否被 TikTok 拉取」。默认不设 → 行为与原先完全一致。
+        if os.environ.get("TTL_LAB_ALLOW_ANY_MAIN_HOST") == "1":
+            bad = []
+        else:
+            bad = [u for u in urls if any(h in u for h in BAD_MAIN_HOSTS) or OK_MAIN_HOST not in u]
         if bad:
             problems.append("主图域名违规（TikTok 拉不到，713 实测）: %s" % bad[:2])
             return None, None, problems
@@ -261,9 +326,13 @@ def main():
     ap.add_argument("--category-id", default="", help="覆盖模板类目")
     ap.add_argument("--site", default="MY", choices=["MY", "TH", "VN"])
     ap.add_argument("--scheme", default="shelf")
+    ap.add_argument("--markup", type=float, default=None,
+                    help="覆盖加价率（仅用于低价货源进价格带；必须 >1）")
     ap.add_argument("--pieces", type=int, default=1)
     ap.add_argument("--source-prices", default="", help="seller_sku=价 逗号分隔（缺省用 ERP source_price）")
     ap.add_argument("--keep-prefix", default="", help="seller_sku 前缀白名单，| 分隔（款型裁剪）")
+    ap.add_argument("--drop-sku", default="",
+                    help="seller_sku 黑名单，逗号分隔；命中即剔除（定点砍高价/破带规格，保留其余变体）")
     ap.add_argument("--drop-zero", action="store_true", help="剔除零库存 SKU")
     ap.add_argument("--stock", default="", help="统一收敛库存（SKU 上限纪律：单SKU≤300）")
     ap.add_argument("--weight-g", default="", help="申报重量档（g），缺省用模板")
@@ -279,6 +348,16 @@ def main():
                     help="JSON {原seller_sku: [维度值1,值2]}，重写 value_name 为英文/当地语（消费者向）")
     ap.add_argument("--sku-code", default="",
                     help="JSON {原货号: ASCII码}（linkfox_oauth apply 自动产出 erp_data/sku_code_map.json）")
+    ap.add_argument("--sku-map-seq", dest="sku_map_seq", default="",
+                    help="JSON 列表，按 skus 原始顺序给规格值（重复 seller_sku 时必用）")
+    ap.add_argument("--sku-code-seq", dest="sku_code_seq", default="",
+                    help="JSON 列表，按 skus 原始顺序给新货号（重复 seller_sku 时必用）")
+    ap.add_argument("--sku-img-seq", dest="sku_img_seq", default="",
+                    help="JSON 列表，按 skus 原始顺序给变体缩略图 URL（null=不改）")
+    ap.add_argument("--backfill-dim-images", dest="backfill_dim_images",
+                    action="store_true",
+                    help="双维度货源第二维无图时自动补（借同SKU首维图/mains轮询），"
+                         "防 image_gate [12052252] 必死坑")
     ap.add_argument("--save", action="store_true", help="真正提交（写操作）")
     args = ap.parse_args()
 

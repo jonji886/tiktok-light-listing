@@ -52,6 +52,7 @@ import hashlib
 import html
 import json
 import os
+import os
 import re
 import sys
 import urllib.error
@@ -227,7 +228,7 @@ def review_coverage(d, review):
     known = set(verdicts) | set(uri_map.values())
     return {
         "missing": [u for u in cur if u not in known],
-        "pending": [u for u in cur if verdicts.get(u) == "pending"],
+        "pending": [u for u in cur if verdicts.get(u) in ("pending", "unjudged")],
         "stale": [u for u in verdicts if u not in set(cur)],
         "known": known,
         "verdicts": verdicts,
@@ -459,6 +460,19 @@ def cmd_scan(args, cfg):
     }
     review_path = out_dir / "review.json"
     review_path.write_text(json.dumps(review, ensure_ascii=False, indent=2), encoding="utf-8")
+    # A 提效（2026-11-26）：scan 每次全量重建 review.json 会抹掉 C 段 auto_verdict 的判定；
+    # 从 judge_cache 按 content_sha256 回填，避免同一批图在 Phase3 被重复 OCR/probe。
+    # 只回填当前仍 pending 的图，不覆盖本轮新判；--no-merge-cache 可关闭。
+    if not getattr(args, "no_merge_cache", False):
+        try:
+            sys.path.insert(0, str(ROOT / "scripts"))
+            import judge_cache as JC
+            m = JC.merge_into_review(str(review_path), args.detail)
+            if m["merged"]:
+                print(f"[gate] 判定缓存回填 {m['merged']}/{m['total']} 张"
+                      f"（免重复 OCR；证据仍须过 apply 的 678 硬闸）")
+        except Exception as e:
+            print(f"[gate] ⚠ 判定缓存回填失败（忽略，不影响扫描）: {str(e)[:80]}")
     print(f"[gate] 详情 {Path(args.detail).name}：主图 {len(main_urls)} 张 / 描述图 {len(desc_urls)} 张"
           f" / SKU 图 {len(sku_urls)} 张 / 去重 {len(order)} 张")
     print(f"[gate] description 中文文本字符 {cjk_count} 个；模板残渣 {residue or '无'}")
@@ -479,7 +493,8 @@ def main_gate_violations(images, keep, uri_map):
       ② probe 识别到中文(rec_text 含 CJK) → 不得 L3_keep（英文装饰字放行，避免误伤 main_01）
       ③ 换链后最终 URL 不得落在 TikTok 拉不到的域（发布必「参数无效」）
     """
-    bad_hosts = ("dashscope", "kdzs-jxc-vpc")
+    # 实验室开关（2026-11-25）：仅验证「dashscope 签名链能否被 TikTok 拉取」，默认关闭。
+    bad_hosts = () if os.environ.get("TTL_LAB_ALLOW_ANY_MAIN_HOST") == "1" else ("dashscope", "kdzs-jxc-vpc")
     img_by_url = {x["url"]: x for x in images if x.get("url")}
     viol = []
     for u in keep:
@@ -604,7 +619,11 @@ def cmd_apply(args, cfg):
 
     # SKU 规格图：同一套判定。被判 L0 的置空（不留中文缩略图），其余按 uri_map 换 URL。
     # 不做这一步的话，32/35 个 SKU 的 1688 原图会原样上线（买家选规格第一眼可见）。
-    sku_dropped, sku_mapped = 0, 0
+    # B2（2026-11-25 671250031819 实损）：SKU 图被判 L0 删空后，平台报
+    # [12052522] 变体缺主图 → 发布 fail，整条链路（含 verify4 62.7s）重走一次。
+    # 故删空时必须用**干净主图轮换补位**，而不是留 {} 等平台拒。
+    sku_dropped, sku_mapped, sku_filled = 0, 0, 0
+    fill_pool = [x.get("uri") for x in new_main if isinstance(x, dict) and x.get("uri")]
     for s in (cv2.get("skus") or []):
         if not isinstance(s, dict):
             continue
@@ -616,8 +635,14 @@ def cmd_apply(args, cfg):
             if not isinstance(u, str) or not u.strip():
                 continue
             if u in drop:
-                a["sku_img"] = {}
-                sku_dropped += 1
+                if fill_pool:
+                    a["sku_img"] = {**img, "uri": fill_pool[sku_filled % len(fill_pool)]}
+                    sku_filled += 1
+                else:
+                    # 理论不可达：上方硬闸要求 new_main ≥1，fill_pool 必非空。
+                    # 保留兜底是为了万一配置改了 min_clean_main_images，仍不静默留中文缩略图。
+                    a["sku_img"] = {}
+                    sku_dropped += 1
             elif u in uri_map:
                 a["sku_img"] = {**img, "uri": uri_map[u]}
                 sku_mapped += 1
@@ -629,6 +654,22 @@ def cmd_apply(args, cfg):
         for _, code, msg in fails:
             print(f"[gate] ✗ {code}: {msg}")
         sys.exit("[gate] 重建结果未通过硬闸，不产文件、不写 ERP")
+
+    # B2 复检：重建后不允许出现「有 SKU 但 sku_img 为空」——平台必报
+    # [12052522]（2026-11-25 671250031819 实损）。本地先拦，省一次整链重走。
+    empty_sku = []
+    for s in (cv2.get("skus") or []):
+        if not isinstance(s, dict):
+            continue
+        for a in (s.get("sales_attributes") or []):
+            if not isinstance(a, dict):
+                continue
+            if not ((a.get("sku_img") or {}) or {}).get("uri"):
+                empty_sku.append(str(a.get("value_name") or a.get("name") or "?"))
+    if empty_sku:
+        sys.exit("[gate] 有 %d 个 SKU 属性缺规格图（平台会报 [12052522]）：%s\n"
+                 "  本脚本已尝试用干净主图补位仍失败 → 说明干净主图为 0，先把主图救回来"
+                 % (len(empty_sku), empty_sku[:5]))
 
     out_dir = Path(args.out) if args.out else Path(args.review).parent
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -653,6 +694,7 @@ def cmd_apply(args, cfg):
         "kept_images": len(keep),
         "sku_images_dropped": sku_dropped,
         "sku_images_remapped": sku_mapped,
+        "sku_images_filled_by_main": sku_filled,
         "review_stale_urls": len(cov["stale"]),
         "uri_map_applied": sum(1 for u in kept_urls + [x["uri"] for x in new_main] if u in uri_map),
         "pending_external_work": {
@@ -668,7 +710,7 @@ def cmd_apply(args, cfg):
     print(f"[gate] 重建完成：主图 {report['before']['main_images']}→{len(new_main)}，"
           f"描述图 {report['before']['desc_img_tags']}→{len(kept_tags)}，"
           f"SKU 图 {report['before']['sku_images']}→{report['after']['sku_images']}"
-          f"（删 {sku_dropped} / 换 {sku_mapped}），"
+          f"（删 {sku_dropped} / 换 {sku_mapped} / 主图补位 {sku_filled}），"
           f"中文文本 {report['before']['cjk_text_chars']}→{report['after']['cjk_text_chars']}")
     print(f"[gate] 整图删 {len(drop)} 张 / 保留 {len(keep)} 张 / 待外部处理 "
           f"{len(todo_inpaint) + len(todo_localize)} 张")
@@ -784,6 +826,8 @@ def main():
     s.add_argument("--detail", required=True, help="ttl-detail 落盘的 JSON")
     s.add_argument("--out", help="输出目录（默认 erp_data/image_gate/<item_id>/）")
     s.add_argument("--no-download", action="store_true", help="只出清单不下图（离线自检）")
+    s.add_argument("--no-merge-cache", action="store_true",
+                   help="不从 judge_cache 回填历史判定（默认回填，免重复判同一批图）")
     s.add_argument("--timeout", type=int, default=15)
     s.add_argument("--config")
 

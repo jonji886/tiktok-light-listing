@@ -1,6 +1,6 @@
 ---
 name: tiktok-light-listing
-description: "TikTok Shop 跨境店铺货（快递助手ERP跨境版，一件代发模式）：选品(免token拉FastMoss单品数据→官方商品机会中心信号先过opportunity_intake.py判读闸门/榜单取需求信号→1688找货→红线与供应链门槛→履约/内容力/实净利/站内竞争四维评分+价格带校验出清单)→1688链接采集→公共采集箱→认领到TikTok站点店铺(主攻MY，TH/VN暂缓)→二次编辑(批量公式改价/图片擦文字翻译/首图白底/修SKU规格名与库存)→发布→四路验证→记录统计→T+7/T+20数据回流。全链路接口化，仅人工接管登录与货代确认。已跑通真实闭环(2026-11-12 泰国店在售；2026-11-19 MY 首品经机会中心路线 20 分钟到在售)。仅适用于 erp.kuaidizs.cn + JingShanShop-MY/TH/VN 三个店铺(2026-11-19起主攻MY，TH/VN存量维护不投新品)，店铺主营类目为家居用品(选品仅限该类目)。不做其他ERP/其他平台。"
+description: "TikTok Shop 跨境店铺货（快递助手ERP跨境版，一件代发模式）：选品(免token拉FastMoss单品数据→官方商品机会中心信号先过opportunity_intake.py判读闸门/榜单取需求信号→1688找货→红线与供应链门槛→履约/内容力/实净利/站内竞争四维评分+价格带校验出清单)→1688链接采集→公共采集箱→认领到TikTok站点店铺(主攻MY，TH/VN暂缓)→二次编辑(批量公式改价/图片擦文字翻译/首图白底/修SKU规格名与库存)→发布→四路验证→记录统计→T+7/T+20数据回流。全链路接口化，仅人工接管登录与货代确认。已跑通真实闭环(2026-11-12 泰国店在售；2026-11-19 MY 首品经机会中心路线 20 分钟到在售)。仅适用于 erp.kuaidizs.cn + 本人名下 MY/TH/VN 三个店铺(2026-11-19起主攻MY，TH/VN存量维护不投新品)，店铺主营类目为家居用品(选品仅限该类目)。不做其他ERP/其他平台。"
 ---
 
 # TikTok Shop 跨境铺货（选品 → 1688采集 → 认领 → 编辑图片/翻译/定价 → 发布）
@@ -32,7 +32,7 @@ MY 站已知点状态（2026-11-19 首品闭环后更新）：
   代价（放弃 SKPP 资格）与三个重估触发条件已显式记录在 strategy §8.4 与 `selection.yaml → channel_tradeoff`，
   别再当成"没有成本的选择"。
 
-**本版已达成（2026-11-12 首单闭环，可作为标准剧本）**：真空压缩袋经全接口链路铺到 **JingShanShop-TH**，
+**本版已达成（2026-11-12 首单闭环，可作为标准剧本）**：真空压缩袋经全接口链路铺到 **TH 店**，
 TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 认领 → `set_price` 公式改价 → `fix_sku` 修规格名/库存
 → `ttl-publish` → **四路验证**（ERP 日志 / 采集箱状态 / 铺货配额 / 店铺后台在售数）。
 
@@ -66,7 +66,7 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
 
 ## 适用范围
 
-- **适用**：erp.kuaidizs.cn + **JingShanShop-MY(8686823118786233431，2026-11-19 起主攻)** + JingShanShop-TH(7494877320827733079，存量维护) + JingShanShop-VN(8686823118786298967，存量维护)
+- **适用**：erp.kuaidizs.cn + **MY 店（`<MY_SELLER_ID>`，2026-11-19 起主攻）** + TH 店（`<TH_SELLER_ID>`，存量维护）+ VN 店（`<VN_SELLER_ID>`，存量维护）；sellerId/店铺名走 `.env`，仓库不存真实值
 - **不适用**：其他ERP、TikTok自运营店、其他站点(PH/SG后续再加)、Shopee/Lazada
 
 ## 动作分层
@@ -75,13 +75,18 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
 - **硬红线自动阻断**：品牌侵权/IP联名、液体化工、带电、食品保健医疗、宗教、易碎、活体、多规格价差超限、平台限售需认证、跨类目（复用shopee selection-rules + TikTok限售/类目约束）
 - **人工接管**：ERP登录/短信验证码、**1688 授权（凭证仅约 10 小时有效，批次前必查）**、**货代覆盖确认（ERP「货代管理」按城市查、筛 TIKTOK 标签，无接口）**、供应商 48h 发货的书面确认、**整图判定低置信度时转人工**、图片处理结果抽检（前10个人工过一眼）、候选清单最终确认（写操作前）
 
+## 代码两层解耦（可移植性边界）
+
+- **业务规则层**（纯本地、确定性、可离线回归）：`select_gate` / `price_gate` / `image_gate` / `prepublish_guard` / `listing_quality_gate` / `route_gate` / `pricing_calc` / `failure_router` / `precheck` / `publish_one` / `backflow`。只吃本地快照与 `config/*.yaml` 阈值，不感知具体 ERP 或站点。
+- **Provider 适配层**（协议/鉴权/报文/落盘，不含业务判断）：`erp_client` / `site_goods` / `erp_token_grab` / `erp_upload` / `kdzs_fastmoss` / `aibuy_rank_client` / `linkfox_oauth` / `aidge_http`。外部系统换平台时只重写这一层；闸门规则、定价模型、SKU 身份校验、失败路由属可复用资产。
+
 ## 执行前约定
 
 - 登录态：`scripts/erp_token_grab.py --save` 自动取 JWT → `scripts/erp_token.txt`；接口头 `qnquerystring` + `appType:3`
 - 接口为未公开内部接口：**报错先读 `失败原因`/`errorMessage` 原文，按 `references/erp-pitfalls.md` 的码表定位**，
   不要用同一份数据重试；确认是接口不可用时再回退浏览器操作
 - 所有写操作(claim/edit/publish/del)仅对用户明确点名的清单执行；改价、修 SKU 一律先 `--dry-run`
-- **标题/描述/规格名译名只查表**：`config/i18n/<lang>.csv`（`VN→vi.csv`、`TH→th.csv`、`MY→ms.csv`——
+- **标题/描述/规格名译名只查表**：`config/i18n/<lang>.csv`（`MY→ms.csv`、`TH→th.csv`、`VN→vi.csv`——
   MY 自动翻译已 VERIFIED 可用但质量不可控（首品混入 "laris Amazon"），ms.csv 按需积累替换词条、发布前目视标题），
   入口 `scripts/i18n.py`。加新品 = 加一行，不改代码；查不到返回 `None`，由调用方转人工或阻断。
   **禁止按 SKU 序号套模板**（2026-11-13 删除的旧实现会轮流贴「粉/蓝/灰/黑/白/绿」，与真实颜色无关）。
@@ -131,32 +136,67 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
    **入池率 0**，不是差一个数量级——判据是 `backflow.py index-stats`，不是累计上架数。
    配额与后台在售数当前无脚本能力，如实标「未验证」。
 
-### VN20 新增硬规则（2026-11-13）
+### 现行硬规则速查（按主题；各批次原文、实测数字与事故追溯见 `references/replay-log.md`）
 
-1. **货代仓以已绑定行为准**：目录卡片写多仓不等于账号已绑该仓；`route_gate.py` 校验发货城市、已绑定仓、≤1 天到仓证据，缺证据禁止 collect。
-2. **公网图必须回读核验**：除首图外保留展示图；`verify_public_images.py` 逐张下载并比对 SHA-256/像素，并发上传错配的短链不得进 payload。
-3. **本地负载先审计**：`listing_payload_audit.py` 核站点、图片数、越南语文本、单件 SKU、库存/价格、源序号和重量；本地通过后，真实 ERP 详情上仍须重跑既有闸门。
-4. **旧数据不得复用**：排除多件套、液体胶水/免钉胶、无关杆件；按本批真实 SKU 重算成本与售价，旧 SKU 成本/客单价作废；杭州页面运费不等于货代仓运费。
-5. **写操作先查重再分批**：认领每批 ≤3，按 offerId 精确查重；回执为空必须回读；`success` 不等于平台在售。旧 `ttl-save` 继续禁用。
+> 以下条目是当前仍生效的动作规则。批次背景、样本数字、已修 bug 的排查过程不留在主文件，按批次索引查 replay-log。
 
-### MY 首品闭环新增硬规则（2026-11-19，全文见 replay-log 第五批）
+**履约与货代**
+- 48h 强拦截当前 `off`（`selection.yaml → seller_ships_48h_proof: off`，用户指示）：缺证据降级 WARN `48H_PROOF_SKIPPED` 不阻断。机验档能力已就绪，启用改 `machine_or_chat`（晚发必赔=Y 直通 / 揽收率≥0.95 放行+WARN / 皆无回退人工书面）；`pickup_24h_rate=0.0` 一律 UNKNOWN，不判 FAIL。重估触发：起量或出延迟发货/LDR 事故。
+- 货代仓以已绑定行为准：`route_gate.py` 校验发货城市、已绑定仓、≤1 天到仓证据，缺证据禁止 collect。
 
-1. **48h 强拦截当前关闭**（`selection.yaml → seller_ships_48h_proof: off`；2026-11-20 13:18 用户指示"暂不考虑 48h 阻断"）：
-   collect 不阻断，缺证据降级 WARN `48H_PROOF_SKIPPED` 仍可见。
-   **机验档能力已就绪待启用**（代码与 bailian 数据链路都在）：改 `machine_or_chat` 后——
-   候选来自 `--channel bailian` 且官方标签 `late_ship_compensate=Y` 直接过闸（免人工书面）；
-   揽收率≥0.95 无赔付=放行+WARN；两者皆无=回退人工书面要求。
-   ⚠ `pickup_24h_rate=0.0` 一律按 UNKNOWN（实测与无数据不可区分，勿判 FAIL 误杀新供应商）。
-   纯人工档 `platform_compensation_or_chat` 亦保留（2026-11-19 前旧行为）。
-   重估触发：起量、或出延迟发货/LDR 事故→改 machine_or_chat。
-2. **删详情图前先读图**：重量/尺寸红线数据常藏在「包装信息」中文图里（本品 95g/23×16×1cm 即从 desc_06 提取后才 L0_drop）——
-   多模态判定时让模型顺带抄参数表，别只填 verdict。
-3. **全大写 ≠ 品牌**：KATUN 实为马来语"棉布"（KBBI 词典）。品牌判定=known_brands 名单+词典核实；
-   启发式只认全大写词，title-case 品牌靠名单兜。
-4. **1688 授权过期不中断铺货批次**：collect/claim/publish 实测不受影响，仅详情页抓图受阻。
-5. **ERP 自动价破带是常态**：认领价（本品 RM8.62 < 带下限）必须走 `price_gate → batch_prep 公式改价 → 复检` 后再 publish，禁止手填。
-6. **backflow sync 前先确认 `erp_data/tiktok_list.csv`（顶层）是本批数据**：`--out` 落目录内会让 sync"新增 0"假象漏排期。
-7. **机会中心路线效率基准 ~20min/品**（抄卡片5+判读秒+检索1+抄录2+看图3+描述2+改价2+发布验证3）。
+**认领与写操作**
+- 写操作先查重再分批：认领每批 ≤3，按 offerId 精确查重；回执为空必须回读；`success` 只代表进队列，不等于平台在售。
+- 三个 ID 别混：`offer_id`（1688 货源 = 日志 itemId = 站点 outerId）、`itemCenterNumIid`（ERP 内部 ID，喂详情接口必 does not exist）、`numIid`（TikTok 商品 ID = 日志 platformItemId）。判在售唯一口径 `productStatus == ACTIVATE`；`INITIAL` 待审核不算上架。命令：`site_goods.py status --offer <1688ID>`。
+- 重发必须 `--force`（`filterAlreadyPublish` 静默跳过已提交 ttl_id）；`stage_publish` 先查是否已 ACTIVATE，已售跳过避免双链接竞争。
+- verify4 的 `logs_success` 只看最新一条（CSV 会留上一轮 fail 行，全文正则会误判）。
+- 公网图必须回读核验：`verify_public_images.py` 逐张下载比对 SHA-256/像素，错配短链不得进 payload。
+
+**图片与变体**
+- 删详情图前先读图：重量/尺寸红线数据常藏在「包装信息」图里，多模态判定顺带抄参数表，别只填 verdict。
+- 变体缺主图 `[12052522]`：变体图在 `skus[].sales_attributes[0].sku_img.uri`；删图前先算好每个变体的替代图，用 `ttl_edit --sku-img-seq` 一次补齐；apply 删空时主图轮换补位。
+- `mains.txt` 先出 contact sheet 目视剔除带中文的图，再写清单；首图含中文只软标不硬杀（可擦字救回）。
+- 主图凑不足 5 张：state 写 `allow_few_mains=true` + 原因，降级留痕，**禁止靠脏图凑数**；T+7 看曝光再补图换源。
+
+**SKU 与定价**
+- 重复 `seller_sku` 用 `--sku-map-seq` / `--sku-code-seq`（`prep_one.py` 自动产出，重复组 `-2/-3` 后缀），否则 dict 互相覆盖只剩 1 条。
+- SKU 翻译值 ≤40 字符，否则 `[12052251]` 重复（长值被截断后撞车）；词表一步到位写短值。
+- ERP 自动价破带是常态：走 `price_gate → batch_prep/ttl_edit 公式改价 → 复检` 后再 publish，禁止手填。低价品破**上限**用 `--markup` 压回；破**下限**才是提高 markup 进带，方向别混。
+- 品牌判定 = known_brands 名单 + 词典核实；全大写词 ≠ 品牌（KATUN=马来语"棉布"），title-case 品牌靠名单兜。
+- 1688 授权过期不中断 collect/claim/publish，仅详情页抓图受阻。
+- ⚠ 能力缺口：`ttl_edit` 只有 `--keep-prefix`（按货号前缀），**不能按 SKU ID 定点剔除高价破带规格**；遇到只能整品放弃。
+
+**证据降级与检查器诚实性**
+- Aidge 欠费（`Service suspended due to overdue payment`）：`evidence_local.py --review <review.json>` 走本地 macOS Vision OCR 真实识别回填 evidence（`evidence_source=local_vision_ocr`），不是伪造证据——本地 OCR 读到中文照样被 CJK 检查拦。顺序：`auto_verdict.py` 先跑（定 verdict），`evidence_local.py` 后跑（只给 L3_keep 主图补证据）。
+- 手工 `publish_one approve --which images` 前先确认 state 有 `review_file`，没有就补 `erp_data/image_gate/<ttl_id>/review.json`，否则 apply 报 `KeyError: 'review_file'`。
+- 两个静默失效已修：`health_check --only aidge` 同时探 ImageRecognition；`assemble_guard` 按映射后的值判 SKU 长度与维度内重复。
+
+**已固化编排工具（脚本细节见 References）**
+- 批量预检 `precheck.py`（`--target/--wave/--c-jobs`）；单品状态机 `publish_one.py`；批量发布/回查 `batch_run.py` / `verify_batch.py`；选品期左移预检 `prefilter.py`；前置校验 `assemble_guard.py`；六步合一 `auto_assemble.py`；SKU 短值词表 `sku_dict.py`；标题模板 `title_pool.py`；IP 形象词预警 `ip_risk.py`；阶段耗时账本 `timing.py` / `timing_report.py`。
+- **一条命令铺货 `batch_listing.py`（2026-11-26 P0 固化）**：waves(precheck×预算闸) → edit(模板+`config/i18n/ms_terms.csv` 词表+款型挑选+汉字货号码表+`--backfill-dim-images`) → 图片闸门(scan→image_review→apply→verify) → 三闸 → [--publish 才发布+四路验证+backflow]。默认止步闸门；`--card-mode attrs-warn`（默认）= 仅 ATTRS_LT5 放行、标题/主图硬伤仍阻断。**下次铺货默认走它，不要再人肉串波次。** 配套硬化（同日）：
+
+> **ATTRS_LT5 口径（2026-11-26 用户拍板）**：维持现状——不破解类目属性写入接口，driver 默认 `attrs-warn` 放行该项（证据：历史 47/47 BLOCK 但全部发布成功，属阈值与能力脱节而非本批数据缺陷）；TITLE_KEYWORD_LOW / 主图类硬伤仍阻断。若日后官方类目属性接口打通，再切 `strict`。
+  - `erp_client.require_shop()` + `health_check` 店铺配置自检：`*_SELLER_ID` 缺失/占位符 → claim/publish 启动即死（2026-11-26 事故：.env 空占位符让 20 品 claim 各白烧 90s 回查，一波 -35min）
+  - `publish_one.stage_claim` 错误分类：`code=500/For input string` 业务拒绝**跳过回查轮询**立即失败；只有网络/超时才回查
+  - `precheck.py` A 段增强：pool 带 `ship_city/qty_begin/price_low` 列时认领前就砍（A③发货地白名单外 / A④MOQ>1 / A⑤SKU最低价<¥2）；dld/图搜回包有这些字段就回填 pool CSV
+  - **`--b2-batch`（2026-11-26 6 品实测 opt_b2batch_6d）**：B0 由逐品状态机改整波一次 `collect×1 + claim×1 + ttl-list轮询合一 + 并行 detail`。基线逐品 `claim` 26.8s/品（其中 `wait_for.claim` 85.9s），批量路径 6 品 B0=34.1s（claim 调用 **0 次重复**，采集箱不再翻倍脏数据）。driver 用 `--b2-batch` 透传；A③ 同时修了「浙江省金华市」全称匹配（旧 `rstrip("市")` 只认纯城市名，会把带省份的全称全批误杀）。**坑**：认领成功后 state 必须停在 `detail`（不是 `claim`），否则 `publish_one next` 会重跑 `stage_claim` 导致每品重复认领——6d 前版本实测 6 品白烧 6 次 `ttl-claim×6s`。
+  - `batch_listing.py` 入口自动加载 `.env`（同 `health_check`）：driver 经 subprocess 调 precheck/erp_client，外层 shell 没 `source .env` 时 claim 全收占位符 sellerId → 500；现在一条命令自洽，不依赖操作者记得 source
+  - **图片判定 A/B/C 提效（2026-11-26，用户"按 A→B→C 顺序做"）**：第一性原理——判定本质是「这张图的字节有没有中文/水印」，是图片内容的属性，与在哪一步判无关；同一批图原本被判 2–3 遍（prefilter 首图 / C 段全册 / Phase3 probe）。**A 消重**：`judge_cache.py` 按 content_sha256 存判级+evidence，scan 重建 review 后自动回填；`image_review.can_reuse()` 跳过 L0_drop 与 sku/desc 的 L3_keep 的 Aidge probe（main+L3_keep 仍 probe，保 678 非文字水印硬闸）——49 图样本 probe 从 49→2 张（省 ¥0.94/品）。**B 三判合一**：`ocr_cache.json` 存原始 OCR items，prefilter 首图判过的结果 C 段按 sha 命中免跑 swift——5 图实测 OCR 命中率 5/5。**C 通道分级**：`auto_verdict --stop-after 5` 按 main>sku>desc 分批判、凑够 5 张唯一干净图即停，剩余标 `unjudged`；40 图样本只判 9 张达标，C2_ocr_verdict 26.5s→1.1s（-96%）。**红线（实测钉死）**：fast OCR 中文召回 **0/6**（全部漏判）→ 绝不可用 fast 替代 accurate，只减张数不减精度；关闭开关 `PRE_STOP_AFTER=0`（回退全册）、`image_review --force-probe`（全 probe）、`prefilter --no-ocr-cache`。端到端 `driver_abc_opt` 墙钟 2.0min（与优化前 1.9min 持平——单模块收益被样本量 3→4 品与 ERP 网络波动掩盖；样本量一致时 C2_ocr_verdict -96% 可复现）。**同批草稿 A/B 对照（2026-11-26，脚本 `erp_data/_run/opt_test/ab_compare.py`）**：固定同一份已认领草稿的 review+本地图，只切开关，A=全册OCR+force-probe、B=stop-after+缓存+复用，repeat=3 中位数——干净品 A 21.6s→B 13.1s（-39%，判 9/40 达标，probe 40→33 张）；脏品（49 图仅 3 干净）暴露 **stop-after 无闸时比全册判慢 45%**（分批冷启动摊 6 次），已加**预算闸 `--stop-max 20`（env `PRE_STOP_MAX`）**：判满 20 张不足 5 干净即放弃（返回 5 让 C⑦ 淘汰），修复后脏品 A 40.7s→B 25.6s（-37%）。**判定安全性核对**：B 判过的 9 张与 A 全册判定 9/9 一致、B 选出的干净图全部是 A 也认可的 → stop-after 只减张数不放宽标准。**环境限制**：Aidge 欠费暂停（`Service suspended due to overdue payment`），probe 全失败回退本地 OCR，故 A/B 对照里 probe 阶段两组合计仅 0.3-0.6s，"省 ¥0.94/品"是费用口径不是当前墙钟口径。
+  - `auto_verdict.py --sample 8 --need 5` 抽样早停（precheck C 段默认启用，`PRE_SAMPLE=0` 关）：前 8 张(main>sku>desc)干净<5 → 预杀，省 ~38s/品全册 OCR
+  - `ttl_edit --backfill-dim-images`：双维度货源第二维无 sku_img → image_gate [12052252] 必死坑，edit 时自动借同 SKU 首维图补齐（2026-11-26 本批 4 品实证）
+- **20261126_my10b 三项硬化（同日，见该 run 的 `timing_analysis.md`，VERIFIED）**：
+  - **D2 模板匹配大小写修复**（`batch_listing.edit_one`）：ERP 自动翻译后标题是马来语（`2026 Apron lengan…`），aliases 小写 `apron` 匹配不上 → 命中失败报「无类目」跳过（实证 750277293130 手工补 5min）。修复=匹配前标题/别名都 `.lower()`，另加第二层兜底：标题全落空时按 detail 中文类目路径（`toCategoryNameTree`）末级反查模板 `erp_category_name_tree`。`--claimed` 续跑路径 info 空，这层兜底是唯一活路。
+  - **D3 B⑦「SKU 可编辑性」预检前移到 precheck**：过闸品在 edit 二次死于「无合格 SKU」每品白烧一轮 B0（认领+detail ~60s）+ 人工回合。根因**不是可译性**——833710035247/971253800616 可译 10/10、有货、价在带，真凶是**重复 seller_sku 的 drop 等值砍**（driver 传 `--sku-code` 是 ssid 字典；pick_skus 选中某 ssid 的 2 款，drop 名单按等值把同 ssid 全部 5 款带走 → kept∩drop=∅ → 「无合格SKU」）。修复=新增 `scripts/ms_terms.py` 作词表（`load_terms`/`tr_value`）唯一出处（`precheck` 与 `batch_listing` 同源 import，杜绝口径漂移），内含 `check_sku_selectable`（复刻 pick_skus 选款 + ttl_edit drop/零库存三层链）；precheck B⑦ 认领前即砍。回归验证 6 品全对（2 死命中、4 活不误伤）。
+  - **D1 组 wave 路线约束**：68 候选→10 品，泛词词搜（dld/productSearch 新店）转化 2.6%、图搜种子路线（`alibaba1688/imageSearch` 喂历史在售品主图找同款）转化 **43%（16×）**，C⑦ 图脏杀 83%。下批组 wave **默认走图搜种子**，泛词候选设预算上限，别靠多轮 wave 凑数。**⚠ 20261126_my10c 修正口径**：种子路线转化**分品类**——围裙/罩衣帆布系种子 19→7、7→1、7→3（合计 33/52=63% 候选进过闸评估、11 过闸），但洗衣袋种子 26→0（该品类供给图普遍带营销字，C⑦ 全灭）。结论改为「图搜种子按品类验证，围裙系可默认；新品类先小波试 5 个再放量」。
+  - **D6 edit 前草稿漂移（20261126_my10c 发现，20261126_my10d 端到端验证通过）**：precheck 快照里 value_name 是 ERP 译好的马来语（Merah），线上草稿仍是中文（长袖熊红色）→ pick_skus 按旧快照算 vals/code，ttl_edit 读线上体报 PAYLOAD_CJK。修复=edit_one 计算选款前先 `ttl-detail` 重刷，以最新线上体为准。**my10d 实测：10 品 edit 阶段 PAYLOAD_CJK=0、"无类目"=0。**
+  - **D7 变体值去重后缀被截断（20261126_my10d 发现并当日闭环修复）**：692626145767/683279316695 首发 fail [12052251] 变体值重复——pick_skus 对同译文 key 加 " A" 后缀，但 `(t+" A")[:40]` 把后缀又截掉（两值本就被截到同一 40 字前缀）。修复=`(t[:38]+" A")[:40]` 给后缀留位。重发 41s 双 success。教训：**40 字截断 + 事后加后缀 = 必须预留后缀位**。
+  - **make_waves.py 组池脚本化（20261126_my10d）**：MCP 回包 JSON（mcp_write 落盘）→ 历史去重/MOQ/价格/红线过滤 → 按品类切 ≤7 品小波（`--kw-order` 控波序，高转化品类在前）。全灭波损失封顶 ~3min/品类（my10c laundry 26 品全灭烧 7min 的根治）；agent 组池 6 轮手搓收敛到 2 次脚本调用。**下次铺货组池默认走它，不再人肉拼 CSV。**
+  - **深页种子红利（20261126_my10d 意外发现）**：`alibaba1688/imageSearch` 用 `page:2`（避开浅页已铺同款）转化 14 品 10 过闸（**71%**，浅页 33%）。同日多轮铺货后浅页供给被消耗殆尽，**扩池优先翻深页而不是换种子图**。
+  - **P0-1 发布闭环脚本化（2026-11-26 改码，待 my10e 端到端验证）**：driver 新增 `--auto-publish`——闸门全过且过闸数==target 时自动发布→wait_for 轮询→logs 终态→**一次** site_goods list blob 匹配在售→backflow sync→落 `run_dir/publish_result.json`。前置不满足（过闸≠target）不盲发，仍止步报告。纪律：验证一律用批量 list blob，**禁止逐品 `site_goods status`**（my10d 实测逐品 ~2.5min vs 批量 5s）。
+  - **P0-2 make_waves 吃原始回包**：`--raw <linkfox_mcp_json...>` 直接解析 proxy_call 原始回包（imageSearch/dld 两形态，路径探测 data.products|list|items），免手搓 TSV。注意 imageSearch 无 levelName → 红线过滤退到 title 命中。MCP 回包流程改为：调完原样存盘 → `make_waves --raw` 一步出波。
+  - **P0-3 品类黑名单（含守卫）**：make_waves 读 word_pool_feedback.csv，累计 sent≥15 且过闸率<10% 的品类默认拒收（--allow-dead 放行）。**表可信守卫**：全表非'?'行 passed 恒 0 时黑名单整体停用（历史数据 kw 回填缺口，否则误杀 apron）。配套修复：driver 旧版把过闸全记在 kw='?'（sent 有、passed 无）——已在 Phase 1 从波文件回填 entry['kw']，**my10e 起 feedback 表的 kw 列才可信**。
+  - **P1 edit→gate 直通流水（同批改码，待验证）**：Phase 2/3 两 barrier 合并为 per-item edit→gate（全局仍 --jobs 3），timing 模块改名 driver.edit/driver.image_gate 按品记录 + 顶层 driver.edit_chain。
+- 别再尝试：品内并发 OCR（瓶颈是 swift 冷启动，更慢）；标题 B2B 词硬杀整册脏图（无区分度）；用宽高比/文件大小预测干净率（两组区间重叠）。
+- 改动脚本时保留既有埋点：`precheck.py` 的 A/B/C 段、`publish_one.py` 的 `pipeline.<stage>` 与 `sub.*`、`prefilter.py` / `auto_assemble.py` 整脚本一条。
 
 ## 这批数据的三个硬提示（2026-11-12 后台回执，别违反）
 
@@ -174,17 +214,31 @@ TikTok 后台确认为「在售」，฿129–199，3 SKU。链路 = 采集 → 
 
 | 环节 | 用什么 | 不再做什么 |
 |---|---|---|
+| **批量预检（新）** | `scripts/precheck.py --ids a,b,c --site MY`：四道前置闸（来源价≥¥2 / 主图指纹去重 / SKU 库存 / 体积重量）+ 全图集判级 + 自动生成 `mains.txt` + 建议类目，一条命令把一批候选筛到「可发状态」 | 逐个采集试错（2026-11-25 实测 5 个废品白跑 20 分钟） |
 | 单品全链路 | `scripts/publish_one.py start/next/approve/status`：collect→claim→detail→edit_dry(**CP1人工**)→edit_save→scan→image_review(**CP2仅存疑时**)→apply→guards→publish→wait→verify4，状态存 `erp_data/_run/pipeline/<offerId>.json` 可断点续跑 | 逐条手打 erp_client/ttl_edit/image_gate/prepublish_guard/site_goods |
 | MCP 取数落盘 | `scripts/mcp_write.py --kind search/sku`：agent 把 MCP 返回转成**瘦表 TSV**（一行一商品）交脚本落盘，read/apply 完全兼容 | 手抄完整 JSON（转录=漏字段/错位的高危点，且占取数环节~1/3时间） |
 | 图片判定 | `scripts/image_review.py --review <review.json>`：probe-first（Aidge OCR 并发取证→无文字水印自动 L3_keep→仅存疑图出小 sheet 目视一次） | 先拼全量 contact sheet 目视再 probe（实测目视不可靠，基本白跑） |
 | 发布等待 | `scripts/wait_for.py publish/claim --match <id>` 指数退避轮询 | 手打 sleep + logs 重查 |
+
+**发布结果判读纪律（2026-11-25 实测教训）**：`ttl-publish` 返回 `success=True` **只代表「任务已入队」**，
+不等于发出去了。马桶刷（offerId `975479953760`）实测：接口 success、`wait_for` 首次也报 success，
+但 `logs` 最终 `fail`（「主图上传失败：TikTok商店 上传图片失败: 参数无效」），采集箱状态始终为 0。
+
+→ **唯一口径 = `erp_client.py logs` 落盘 csv 里的 `status` 字段**（不是接口返回值、不是采集箱状态）。
+→ `publish_one.stage_wait` 已加 logs 二次复核：等 6s × 3 轮，读到 `fail` 立即返回失败并写 `publish_error`。
+→ 连带纪律：`updatePlatformItem`（在售换图）**nginx 504 不等于失败**，后端可能已执行，必须回读详情确认；
+  且 ERP 有 2–3 分钟缓存，立刻回读会看到旧值。
 | 机会中心抄录 | `scripts/opp_center.py parse/record/list`：DOM 快照解析卡片预览按钮 node_id（dom_cua_click 替代坐标盲试）+ 结构化写信号 CSV（去重/列序/转义交给脚本） | 坐标猜点、heredoc 手拼 CSV |
 | ttl_edit 试错 | 失败时自动打印：草稿实际 seller_sku 清单 / 未覆盖的汉字维度名 / 描述 CJK 命中词 | 用参数穷举搜索 |
 
 **机会中心接口重放路线已排除（2026-11-25 四重证据，别再尝试）**：①Keychain/Cookie 提取被 WorkBuddy 沙箱 SIGTERM；②browser-use skill 硬约束禁 CDP/命令行浏览器；③匿名 curl 页面壳 302；④TikTok 后台带签名头。且弹窗正文（参考价/类目）不进 DOM 可访问树——**弹窗内容仍必须"开弹窗→截图→多模态读"，抄卡是全链路唯一不可压缩的人工环节**。
 
-**由此推出的选品策略闸门（P3，优先级高于抄卡）**：机会卡片是**方向池不是货源池**（两批实测单卡命中≈1/6；2026-11-24 抄满 17 张卡仅产出 1 个过闸品，而 3 个围裙全部来自图搜同款/FastMoss 词池）。执行顺序改为：
-1. 先跑 `FastMoss 词池 + 已验证高通过率品类`（围裙/挂拍图类天然干净+轻小；见 replay-log 2026-11-24 条目）出候选；
+**由此推出的选品策略闸门（P3，优先级高于抄卡）**：机会卡片是**方向池不是货源池**（三批实测单卡命中≈1/6；2026-11-24 抄满 17 张卡仅产出 1 个过闸品；**2026-11-25 又抄 17 张卡，同样只出 1 个**，而同日 7 个围裙全部来自词池）。**机会卡自 2026-11-25 起降级为「需求信号池」，8–12 周回看一次即可，不再作为选品入口。** 执行顺序：
+1. 先跑 `FastMoss 词池 + 已验证高通过率品类` 出候选。**选词比选品更决定通过率**——同一品类换关键词，
+   首图干净率差 6 倍（2026-11-25 实测：「围裙 背带 帆布 可爱」47%，同批 4/4 一次过闸；
+   「围裙 防水 厨房 家用」只有 8%）。机理：前者筛出「成品服装型供应商」（挂拍白底），
+   后者筛出「内销批发型供应商」（图上印满规格参数）——**图脏是供应商类型的属性，不是图片的缺陷**。
+   词库分级与黑名单见 `config/word_pool.py`，用 `precheck.py` 时自动告警；
 2. 机会中心只抄**价格带内 × 高通过率品类**的卡片（`opp_center.py parse` 拿到骨架后先按 tabpanel 标题过一遍，不逐卡开弹窗）；
 3. 同款供应商不足时用 `alibaba1688/imageSearch` 图搜扩供（实测围裙 20 家同款，一发命中 3 个过闸品）。
 
@@ -230,14 +284,14 @@ python3 scripts/erp_token_grab.py --save --check    # 从 Chrome Session Storage
     返回 `day7UnitsSold` / `day28UnitsSold` / `videoCount` / `creatorCount` / `creatorOrderRate` / `floorPrice` / `isCrossBorder`。
   - **参数必须嵌在 `filter` 里**（`region`、`shopType:2`=跨境店、`priceRange:{min,max}`、`creatorCountRange:{max}`），
     分页用 `page`/`pagesize`，排序字段是 **snake_case**（`day7_units_sold`/`creator_count`/`day7_gmv`…），不是驼峰。
-  - CLI：`python3 scripts/kdzs_fastmoss.py --region TH --usd-min 3 --usd-max 8 --max-creator 100 --min-video 10 --top 40`
+  - CLI：`python3 scripts/kdzs_fastmoss.py --region MY --usd-min 2.2 --usd-max 8 --max-creator 100 --min-video 10 --top 40`
     / `--categories` 看类目树 / `--live-fx` 拉实时汇率。（2026-11-19 起 `--region` 默认 MY；TH/VN 存量期不再拉新池）
   - **多词批量池（推荐，2026-11-12 新增）**：`python3 scripts/selection_intake.py pool --region MY \
     --keywords-file erp_data/keywords_my.txt --usd-min 2.2 --usd-max 8 --max-creator 100 --min-video 10`
     ⚠ pool 词文件用**马来语品长词**（FastMoss 实测中文词命中 0；另建 `erp_data/keywords_my.txt`，
     不要把标题词根表 `config/keywords/my.txt` 直接喂给 pool——词根粒度太粗，拉不出发可拍的品）。
     → 逐词拉取、去重、按 `creatorOrderRate` 分 `ideal/shelf/mixed` 档并剔除纯达人驱动，落 `selection_pool.csv`。
-    实测 3 个泰语词 24+46+34 条去重到 91 条、入池 71 条；换成 18 词就是几百条，不用再人工抄榜单。
+    实测 3 个泰语词（TH 历史样本）24+46+34 条去重到 91 条、入池 71 条；MY 站用马来语词池，换成 18 词就是几百条，不用再人工抄榜单。
   - ⛔ **不需要**买 FastMoss 订阅：ERP 后端透传是 **TikTok 需求数据的唯一通道**（免 token）。
     **LinkFox 的 TikTok 数据直连（`fastmoss/productSearch` / `echotik/listProduct` / `echotik/batchProductDetail`）自 2026-11-20 起停用**：
     不再新增调用、不作为任何评分维度输入。理由：数据为第三方快照（`THIRD_PARTY_ONLY`），
@@ -304,9 +358,38 @@ python3 scripts/opportunity_to_sourcing.py --channel aibuy
   - 实测（2026-11-20 切换日）：`dld/productSearch` 与 `alibaba1688/imageSearch` 实调均通（20 条/次，errcode=200）；plan→read 端到端在真实 signals 上跑通（16 行候选，含 data_source/ship_city_raw/consign_price_cny 新列；未落盘的行如实标 SEARCH_FAIL(linkfox)+fallback 提示，不崩不猜）。
   - 实测（2026-11-20 第二品闭环，机会卡片路线第 2 单）：卡片「Ready Stock apron…」→ intake candidate → 词检索 rank4 `683331773332`（¥8.2-9.5/义乌帝诺/1件包邮 VERIFIED/48h揽收100%）→ select_gate 过 → 发布 success，
     平台侧在售 numIid=1738670773360624727。**新坑两条**：
-    ① **vpc 域换链图 404 极快**——main_01 擦字产物 1 小时内 404（main_04 同批存活），首品带 vpc 图发布成功属侥幸；
-      **发布主图唯一可靠域 = cbu01 原链**，擦字图永远不进发布序列。
-    ② **主图供给必须选品期预检**（hero_main_images 教训第 3 次验证）：本品只有 3 张干净 cbu01 主图，
+    ① **主图域名：三个域 × 两条通道全部实测完毕（2026-11-25 定论）**——
+      **只有 `cbu01.alicdn.com`（1688 CDN）能被 TikTok 拉取**，任何本地加工产物都进不了发布序列：
+
+      | 通道 | 图源域 | 结果 | 报错 |
+      |---|---|---|---|
+      | `ttl-publish` 发布 | cbu01 | ✅ | — |
+      | `ttl-publish` 发布 | kdzs-jxc-vpc（ERP OSS） | ❌ | 主图上传失败：参数无效 |
+      | `ttl-publish` 发布 | dashscope（Aidge 签名链） | ❌ | 同上，一字不差 |
+      | `updatePlatformItem` 在售换图 | cbu01 | ✅ 65s | 转存为 `tos-alisg-i-*.ibyteimg.com` |
+      | `updatePlatformItem` 在售换图 | kdzs-jxc-vpc | ❌ | nginx **504**（服务端拉不到） |
+      | `updatePlatformItem` 在售换图 | dashscope(https) | ❌ | 同样 **504** |
+
+      → **「下载→调 erp_upload 上传→换图」不成立**：`erp_upload.py` 唯一落点就是 kdzs-jxc-vpc。
+      → dashscope 虽然本机 https 200，TikTok 服务端仍拉不到（跨境 + 签名链 UA 限制）。
+      → 代码侧有两道白名单：`ttl_edit.py:43` `OK_MAIN_HOST="cbu01.alicdn.com"`、
+        `image_gate.py:482` `bad_hosts=("dashscope","kdzs-jxc-vpc")`。
+      → **订正旧结论**：vpc 域「1 小时 404」的锅不在 vpc 域本身（11-19 上传的 6 张 11-25 仍 200，
+        存活 6 天）；真凶是 Aidge 的 **dashscope 带签名短链**（Expires≈30 天）会到期。
+      → **已发布商品不受源站影响**：发布成功后主图已转存到 TikTok 自己的 CDN（`tos-alisg-i-*`），
+        1688 原图以后 404 也不影响在售商品。
+    ② **主图不必只用原 5 张 main_images：整册重组（2026-11-25 最大突破）**
+      - 现象：1688 主图常带营销字，但 **SKU 图 / 描述图往往干净**（SKU 图多为白底单品图）。
+        2026-11-25 实测 733714051312：原 5 张 main 只有 2 张干净，但整册 29/40 张干净。
+      - 做法：`image_gate.py scan`（本来就扫 main+desc+sku 三通道）→ 判级 → 从 `L3_keep` 池
+        按 **main > sku > desc** 优先级挑 5 张 → 写 `mains.txt` → `ttl_edit.py --mains-file`。
+      - `--mains-file` 接受任意 URL（每行一个），会把 `main_images` **整体替换**；
+        内置白名单只放行 cbu01（见 ①）。
+      - 纪律：**必须按 `content_sha256` 去重**——1688 同店复用素材，URL 不同但字节相同，
+        否则同一张图会占掉两个主图位（954592404608 实测 5 张里 2 张同图）。
+      - 战果：当日 11 个品里 **6 个靠它救活**（原主图干净数 1–4 张不等），占产出 55%。
+      - 已固化为 `scripts/precheck.py` 的 C 段（自动判全图集 + 生成 mains.txt）。
+    ③ **主图供给必须选品期预检**（hero_main_images 教训第 3 次验证）：本品只有 3 张干净 cbu01 主图，
       到发布闸才暴露，被迫 `prepublish_guard --allow-few-mains`（3 干净 > 5 带脏，显式降级留痕，T+7 曝光差即换源补图）。
       词/图检索候选标题带「跨境/亚马逊」的品，主图常直接印 **amazon logo**（914257511246 实测）——红线在图不在标题，intake 抓不到，必须目视。
   - **通道纪律（2026-11-20，三通道版）**：输出行带 `data_source`（bailian|linkfox|aibuy），**三源销量口径全不同**
@@ -376,7 +459,7 @@ python3 scripts/select_gate.py --init-template     # 生成 erp_data/selection_c
 ```
    **可选：先把抄录自动化，人只填判断**（`scripts/selection_intake.py`，2026-11-12 新增）
 ```bash
-python3 scripts/selection_intake.py image --from-csv <遨虾 search 结果.csv> --region VN
+python3 scripts/selection_intake.py image --from-csv <遨虾 search 结果.csv> --region MY
 python3 scripts/selection_intake.py seed --batch erp_data/selection_intake/prefill.json
 ```
    `image` 自动抄录成本/最高 SKU 价/库存/起订量/重量/发货城市，并拼 contact sheet 供多模态整品判定；
@@ -472,7 +555,7 @@ python3 scripts/erp_client.py items --size 50
 ```json
 {"numIids":["1565301310345342976"],
  "targetShops":[{"targetPlatform":"tiktok",
-   "sellerId":"7494877320827733079","sellerNick":"JingShanShop-TH"}]}
+   "sellerId":"<MY_SELLER_ID>","sellerNick":"<MY_SHOP_NICK>"}]}
 ```
 - **字段要点**：`numIids` 是 **ERP内部ID（numIid）数组**（不是1688 offerId，不是扁平 itemIds）；`targetShops` 是**嵌套对象数组**（targetPlatform/sellerId/sellerNick 三件套）。此前 24 组扁平字段（itemIds/targetSellerIds）全失败正是因为缺这两点。
 - 💡 **以后再遇到未收录接口，优先读前端 chunk 逆向**（拉 OSS 上的 `*.js`，用正则提取路径字面量与函数体），
@@ -480,23 +563,23 @@ python3 scripts/erp_client.py items --size 50
 
 **接口认领（已可用，替代浏览器路径）**：
 ```bash
-python3 scripts/erp_client.py ttl-claim --ids <货源ID或numIid逗号分隔> --region TH
+python3 scripts/erp_client.py ttl-claim --ids <货源ID或numIid逗号分隔> --region MY
 ```
 - 脚本自动：查询公共采集箱拿 numIid → 构造上述 body → 提交
-- 成功返回：`[{"operationId":"Y101_7494877320827733079_JingShanShop-TH","success":true}, ...]`（每商品一条）
-- 实测：单条/批量（4 个同发）均 success:true；认领后 ttl-list 立即可见，标题自动泰文化、类目自动匹配、带 IS_REQUIRED_FIELDS 异常（正常草稿态）
+- 成功返回：`[{"operationId":"Y101_<MY_SELLER_ID>_<MY_SHOP_NICK>","success":true}, ...]`（每商品一条）
+- 实测：单条/批量（4 个同发）均 success:true；认领后 ttl-list 立即可见，标题自动当地语言化、类目自动匹配、带 IS_REQUIRED_FIELDS 异常（正常草稿态）
 
 **浏览器认领（保留为备选路径，7+次验证稳定）**：
-公共采集箱勾选 → 批量认领 → 下拉选 Tiktok → 弹窗选店铺 JingShanShop-MY（当前主攻；TH/VN 存量）→ 确定 → 认领成功弹窗
+公共采集箱勾选 → 批量认领 → 下拉选 Tiktok → 弹窗选店铺 MY 店（当前主攻；TH/VN 存量）→ 确定 → 认领成功弹窗
 
-**认领陷阱**：认领弹窗默认选中 JingShanShop-PH，必须手动选目标店（当前 MY）；免责声明弹窗需先处理；已删除记录的货源重新认领可能不产生新记录（公共采集箱认领标记残留）。
+**认领陷阱**：认领弹窗默认选中未绑定的 PH 店，必须手动选目标店（当前 MY）；免责声明弹窗需先处理；已删除记录的货源重新认领可能不产生新记录（公共采集箱认领标记残留）。
 
 **接口删除（2026-10-29 破解，写操作）**：`POST /item/crossBorder/platformCollect/batchOps`，body=`{"idList":["<ttl_id>"],"platform":"tiktok","opsType":3}`（**opsType 枚举：1=类目 / 2=售价 / 3=删除 / 4=备注**，同一接口复用）。CLI：
 ```bash
 python3 scripts/erp_client.py ttl-del --ids <ttl_id逗号分隔>
 ```
 - 返回 `{"failCount":0,"successCount":1,"totalCount":1}`；实测删除后 ttl-list total 立即减 1（2026-10-29：Y105→19条、Y103→18条均验证）
-- **删除重认领是"修复手段"不是日常流程**：`ttl-del --ids <ttl_id>` → `ttl-claim --ids <货源ID> --region TH` 可恢复草稿态 itemModel，
+- **删除重认领是"修复手段"不是日常流程**：`ttl-del --ids <ttl_id>` → `ttl-claim --ids <货源ID> --region MY` 可恢复草稿态 itemModel，
   但**图片/类目/价格全部回到 1688 原始值**（只保留标题当地语言）。只在商品数据被错误 body 写坏时用（见 Step 4.5）。
 - 同一接口 `opsType:2` 是批量改价（官方唯一正确的改价入口），见 Step 4.4。
 
@@ -504,7 +587,7 @@ python3 scripts/erp_client.py ttl-del --ids <ttl_id逗号分隔>
 
 #### 4.1 拉取采集箱列表
 ```bash
-python3 scripts/erp_client.py ttl-list --region TH
+python3 scripts/erp_client.py ttl-list --region MY
 ```
 认领后ERP自动：标题翻译成当地语言、类目自动匹配、品牌默认无品牌。
 
@@ -656,7 +739,7 @@ python3 scripts/image_gate.py apply --detail erp_data/ttl_detail_<id>.json \\
 #### 4.4 定价
 **不要手算，用脚本**（参数唯一来源 `config/pricing.yaml`）：
 ```bash
-python3 scripts/pricing_calc.py --cost <采购价> --scheme shelf --pieces 1 --site TH
+python3 scripts/pricing_calc.py --cost <采购价> --scheme shelf --pieces 1 --site MY
 python3 scripts/pricing_calc.py --limits    # 反推采购价上限；改费率后必跑
 python3 scripts/pricing_calc.py --check     # 校验 markup 与费率是否吻合、有无"无解"组合
 ```
@@ -680,7 +763,7 @@ python3 scripts/pricing_calc.py --check     # 校验 markup 与费率是否吻�
 > 到期日按 `YYYY-MM-DD` 回填到 `pricing.yaml → VN.schemes.shelf.waiver_expires` 并置
 > `waiver_expires_confirmed: true`（当前为 `UNCONFIRMED`，`pricing_calc.py --check` 会持续 WARNING）；
 > 日期已过而豁免开关未关时，`pricing_calc.py` 退出码 1 直接阻断全部 VN 定价计算。
-> 同理 `commission_rate_verified: false` 期间，TH/VN 佣金率未经后台费率表核实，`--check` 会输出 WARNING。
+> 同理 `commission_rate_verified: false` 期间，MY/TH/VN 佣金率未经后台费率表核实，`--check` 会输出 WARNING。
 
 采购价上限（150g、shelf、`pricing_calc.py --limits` 实算，**不是手填**；2026-11-12 重算）：
 
@@ -751,7 +834,7 @@ python3 scripts/set_price.py --id <ttl_id> --rate 2.8 --add 39.26 --save   # 提
 ⚠️ **但发布不受影响**：✅ 2026-11-11 实测，`fix_sku.py` 保存后（异常仅剩 `MISSING_WEIGHT`）直接 `ttl-publish` **成功**。
 旧版 SKILL 由此得出的「保存即清空 → 发布必败」结论**已被推翻**，根因是 body 结构写错而非 ERP 设计。
 
-**恢复被写坏的商品**：`ttl-del --ids <ttl_id>` → `ttl-claim --ids <货源ID> --region TH`。
+**恢复被写坏的商品**：`ttl-del --ids <ttl_id>` → `ttl-claim --ids <货源ID> --region MY`。
 注意重认领会**丢设置**（图片回原图、类目回未匹配、价格回原始值），只有标题保留当地语言——别把它当日常手段。
 
 **图片上传通道（2026-11-19 破解，替代旧"外链捷径"）**：`getUploadPolicy` curl 可通——之前 500 的根因是 body 缺唯一必填参数
@@ -784,7 +867,7 @@ python3 scripts/set_price.py --id <ttl_id> --rate 2.8 --add 39.26 --save   # 提
     "skuValueEnabled":true,"skuValueLimit":50,"skuValueTruncateType":"END","skuTotalEnabled":false}},
  "distribItemVos":[{"itemId":"<ttl_id>","sourcePlatform":"kdzs_erp",
    "targetPlatform":"tiktok","sourceSellerId":"1323965","targetSellerId":"<sellerId>",
-   "targetSellerNick":"JingShanShop-TH",
+   "targetSellerNick":"<MY_SHOP_NICK>",
    "categoryIds":"600001,851848,852744","categoryNames":"家居用品,家居收纳,收纳包"}]}
 ```
 
@@ -821,8 +904,8 @@ python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --weight 0.3 --dims 30x
    标题 ≥40 字符且命中 ≥3 个当地热搜词根、主图 ≥5 张、属性 ≥5 项、≥1 条商品视频。
    `--all` 扫全部、`--summary` 落 `erp_data/card_quality.csv`、`--strict` 连主图角色证据缺失也阻断。
    **实测全量 34 款 全部阻断**（33 款标题词根不足、34 款属性 <5、26 款主图 <5、13 款无视频）——
-   这是「发出去没人点」的直接原因。热搜词表放 `config/keywords/{th,vn}.txt`，用
-   `--keywords-template --site VN` 生成骨架后**填真实后台热搜词**（骨架里的占位词不算数）；
+   这是「发出去没人点」的直接原因。热搜词表放 `config/keywords/{my,th,vn}.txt`，用
+   `--keywords-template --site MY` 生成骨架后**填真实后台热搜词**（骨架里的占位词不算数）；
    拉丁语系按词边界、泰语按子串匹配。退出码 1 = 禁止发布。
 1. `ttl-detail` 能读到 `reqInfo.tikTokItemModel.productCreateRequestV2`（读不到 = 数据被写坏）
 2. `description` 长度 > 0，且**无中文文本节点 / 无 B2B 字样 / 无 1688 模板残渣**（由第 0 项保证）；
@@ -855,8 +938,8 @@ python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --weight 0.3 --dims 30x
 | 信号 | 命令/入口 | 通过值 |
 |---|---|---|
 | ERP 发布日志 | `erp_client.py logs --months 1` | `status = success` |
-| 采集箱状态 | `erp_client.py ttl-list --region TH` | `状态 = 1` |
-| 铺货配额 | `erp_client.py quota --region TH` | `已用` +1（2026-11-12 已封装，只读） |
+| 采集箱状态 | `erp_client.py ttl-list --region MY` | `状态 = 1` |
+| 铺货配额 | `erp_client.py quota --region MY` | `已用` +1（2026-11-12 已封装，只读） |
 | **TikTok 后台在售数** | 商品管理页 `在售 N` | N +1（最权威） |
 
 `processing` 可能持续数分钟，**不要在 processing 阶段宣布成功**。
@@ -878,7 +961,7 @@ claim → getDetail 落盘 → image_gate scan（主图+description 两通道）
 - **改价放在 edit 之后**：`batchOps opsType:2` 是最小写操作，只碰价格，不会回写 itemModel；
   放最后做可以避免 edit 把价格覆盖回原值
 - **edit 正确结构保存后可以直接发布**（✅ 已实测），不需要再"删除重认领"
-- 若确实需要重建：`ttl-del --ids <ttl_id>` + `ttl-claim --ids <货源ID> --region TH`（会丢图片/类目/价格设置）
+- 若确实需要重建：`ttl-del --ids <ttl_id>` + `ttl-claim --ids <货源ID> --region MY`（会丢图片/类目/价格设置）
 
 **浏览器发布路径（保留备选，接口不可用时）**：采集箱勾选 → 批量发布 → "发布提示"点"继续全部发布" →
 "发布产品"弹窗把**重量/尺寸改成真实值**（默认 1kg / 10×10×10 会虚报体积重）→ 确定发布。
@@ -906,7 +989,22 @@ python3 scripts/backflow.py mark --ttl-id <id> --stage t2 --t2-exposure 120
 python3 scripts/backflow.py judge                # 按 cadence 阈值算 kill/培养/放大
 python3 scripts/backflow.py stats                # 判定分布 + 赢家/待下架清单
 ```
-数据本身仍要人工从 TikTok 商家后台抄（无接口），但**不用再记哪天该看哪一款**。
+
+**罗盘导出批量回填（2026-11-25 新增，P0-1）**：商家后台「罗盘 → 商品数据分析 → 详细信息」导出商品级 xlsx，
+脚本只读本地文件批量解析回填，不联网、不碰 cookie/签名。关联链：罗盘商品 ID(numIid) → 发布后快照 outerId(货源ID) → 本地 list 的 ttl_id。
+
+```bash
+# 商品有新增时先刷新平台商品快照（翻页聚合全量 tiktok，numIid→货源ID 映射来源）
+python3 scripts/site_goods.py list --platform tiktok --out erp_data/site_list_tiktok_full.json
+# 预览（默认 dry-run，不写盘）；--stage t2 只填曝光 / t7 曝光点击加购 / t20 订单GMV
+python3 scripts/backflow_import.py --file ~/Downloads/product_list.xlsx --stage t7 --region MY
+# 确认匹配无误后写回 backflow.csv（已有非空值默认保护，--overwrite 才覆盖）
+python3 scripts/backflow_import.py --file ~/Downloads/product_list.xlsx --stage t7 --region MY --apply
+```
+
+- 注意：「商品流量」页导出的是**渠道汇总表**（联盟/直播/视频/商品卡，无商品 ID），不能用于商品级回填；必须用「详细信息」页导出。
+- `-` / `--` / 空 = 缺失，留空不填；`0` / `RM0.00` = 真实零值。T+20 的退款率、延迟发货率罗盘商品表没有，保持留空，不估算。
+- 仍无官方 Open API 直连：离线复刻接口被设备指纹签名（msToken/X-Bogus/X-Gnarly）与风控卡住，短期不做；合规正路是申请官方 Open API 权限。
 
 **入池体检（2026-11-18 新增，P0：破零最关键，独立于 T+7 数据回流）**：
 不要等到 T+7 才发现没曝光。上架满 **48h** 就强制体检一次，两条证据都要记：
@@ -976,8 +1074,8 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
 
 ## References
 
-- `references/replay-log.md`：**四批复盘与三个真实 case 的完整原文（2026-11-12）**——第二批 10 品、第三批后台回执、
-  第四批站点商品模块、Case A/B/C 全过程、全链路接口化程度表。主文件只留「改变动作」的结论，追溯结论来源读这里。
+- `references/results-matrix.md`：**成果与边界矩阵（作品视图）**——已验证闭环 / 未验证缺口、量化指标、事故→规则→回归测试追溯案例、可复用资产与路线图。对外介绍或评审先读这份。
+- `references/replay-log.md`：**各批复盘与真实 case 完整原文**——第二批 10 品、第三批后台回执、第四批站点商品模块、Case A/B/C、MY 首品 / batch12 / batch13、流程优化与耗时账本。主文件只留「改变动作」的结论，追溯结论来源读这里。
 - `references/erp-pitfalls.md`：**接口逆向与踩坑实录（出问题先查这个）**——完整成功时序、前端 chunk 逆向方法、
   `edit` 正误 body 对照、`batchOps` 四类 opsType、发布错误码表、1688 采集/授权坑、token 抓取原理、浏览器通道边界、发布前自检清单；
   **第十章 = 2026-11-12 第二批 10 品复盘；第十三章 = 2026-11-13 VN20 路线、图片回读、单件 SKU 与写操作纪律**。
@@ -1006,7 +1104,7 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
 - `scripts/set_price.py`：**批量公式改价**（`batchOps opsType:2`），自带改前/改后完整性校验
 - `scripts/fix_sku.py`：**修 SKU 规格名/库存**（官方 `edit` 正确 body 实现，发布前置校验修复主力）
 - `scripts/batch_prep.py`：**批量预处理编排**（破带重定价 + 库存收敛 + 复检，默认 dry-run）。
-  `--site VN [--ids ...] --save`。只动破带商品、已在带内的一律不碰；售价为空/缺重量/类目未匹配的一律转人工不猜。
+  `--site MY [--ids ...] --save`。只动破带商品、已在带内的一律不碰；售价为空/缺重量/类目未匹配的一律转人工不猜。
   按每天 3 小时可投入，不批量化就铺不完 150 款
 - `scripts/select_gate.py`：**collect 前选品硬闸（2026-11-12 新增，纯本地只读）**——
   校验候选 CSV 的干净主图≥3、详情可重建、库存≥200、MOQ=1、快递≤1 天、48h 书面确认、**真包邮证据**、
@@ -1018,7 +1116,7 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
 - `scripts/listing_quality_gate.py`：**商品卡质量闸（2026-11-18 新增，P0，纯本地只读）**——读本地
   `ttl_detail_*.json`，校验标题 ≥40 字符且命中 ≥3 个当地热搜词根、主图 ≥5、属性 ≥5、≥1 条视频。
   `--all` / `--ids` / `--site` / `--strict` / `--json` / `--summary`（落 `erp_data/card_quality.csv`）；
-  `--keywords-template --site VN` 出热搜词表骨架（`config/keywords/{th,vn}.txt`，需填真实后台词）。
+  `--keywords-template --site MY` 出热搜词表骨架（`config/keywords/{my,th,vn}.txt`，需填真实后台词）。
   只保证「能被搜到、有人点」，与 `image_gate`（干净）/ `prepublish_guard`（能发布）互补，三者都要过。
 - `config/keywords/{my,th,vn}.txt`：当地热搜词根表——拉丁语系按词边界、泰语按子串匹配，<3 字符的词不参与（误命中）。
   `my.txt` 首版含 7 个官方 VERIFIED 词根（2026-11-19 商品机会→热门关键词 tab 实测）+ 种子词，逐周回后台扩充。
@@ -1060,7 +1158,7 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
   ⚠️ 第三批起新增描述检查，本批 10 个本地快照有 9 个纯文本 <500 字符、8 个不足 2 段，
   历史品跑 guard 会 FAIL 属预期
 - `scripts/listing_payload_audit.py`：**本地上架负载审计（2026-11-13 新增，纯本地只读）**——
-  核目标站点、公网图数量、越南语标题/描述、单件 SKU、库存/价格、源 SKU 序号、重量；尺寸缺失给提醒。
+  核目标站点、公网图数量、当地语言标题/描述、单件 SKU、库存/价格、源 SKU 序号、重量；尺寸缺失给提醒。
   本地通过不替代 ERP 真实详情闸门。
 - `scripts/site_goods.py`：**站点商品（平台侧在售）客户端（2026-11-12 新增）**——
   `list` / `detail` / `log` 只读；`update-desc` 默认 dry-run、`--save` 才写，自动删
@@ -1116,7 +1214,12 @@ python3 scripts/backflow.py traffic --ttl-id <id> \
   offerId 与落盘不符直接拒绝、重量不填**；顺带解析规格值里的尺寸文案（"长25宽18高14cm"→dims_parsed，
   seed 自动进 dims_cm 并在 reason 注明来源）、收集规格图（不混入主图组）。数据=用户本人账号 OAuth 官方回包（VERIFIED 级）。
   ⚠ sku 单次扣费 UNKNOWN，从消耗记录页逐笔核对；授权过期需重走 authorizeUrl（必带 accountName）。
-- `tests/`：**离线测试套件（2026-11-13 新增，持续增长）**——`python3 tests/run.py` 一条命令跑完（161 项，约 3 秒，不联网、不需要 token）。
+- `scripts/failure_router.py`：**失败路由器（2026-11-25 新增，Tier 1 确定性规则，纯本地不联网）**——把发布 `fail` 原因原文路由到已验证规则（诊断 + 修复命令 + 证据），一条报错含多个错误码时返回全部命中规则。
+  规则表 `config/failure_rules.json`（15 条，全部来自实测案例，不收推测规则）；golden set `tests/fixtures/failure_golden_set.json`（23 案例 = 日志 20 条去重原因 + 文档记录 3 条）。
+  子命令：`classify --text`（单条）/ `scan`（glob 全部 tiktok_logs.csv 的 fail 行）/ `backtest`（回测，2026-11-25 实测 23/23 命中、304 条 fail 行 100% 路由）/ `apply --ids`（修复计划/受控执行）。
+  `apply` 安全边界：仅对点名清单执行、单次 ≤10 货源、默认 dry-run 只出计划；`--execute` 只执行规则表带 `auto_exec` 的规则（当前仅 stock_overflow=fix_sku 收库存、silent_skip=先查 site_goods status 再 --force 重发），tier=manual 与无 auto_exec 的规则一律只出命令不执行；每条写命令先 dry 变体、失败即停；ttl_id/weight/dims 从 `erp_data/_run/pipeline/<offer>.json` 解析，缺参数降级为计划；journal 落盘 `erp_data/_run/failure_router_apply/`；**执行完 ≠ 修复成功，必须人工跑四路验证**。
+  退出码：0=全部路由；1=存在未路由失败 → **Tier 2 转 LLM 读 pitfalls/replay 全量案例诊断，确诊后回填规则表与 golden set**（数据飞轮）；Tier 3（embedding 检索）仅在案例库规模超上下文时启用。
+- `tests/`：**离线测试套件（2026-11-13 新增，持续增长）**——`python3 tests/run.py` 一条命令跑完（220 项，约 5 秒，不联网、不需要 token；2026-11-25 实测）。
   覆盖 i18n 迁移等价性、图片三通道/过期判定/覆盖率硬闸、SKU 身份校验、公网图哈希匹配、已删子命令回归。
 - `scripts/selection_intake.py`：**选品取证自动化（2026-11-12 新增）**——`pool` 多关键词批量拉 FastMoss 并按出单率分档、
   `image` 取 1688 详情页字段（成本/最高 SKU 价/库存/起订量/重量/发货城市）并拼 contact sheet、

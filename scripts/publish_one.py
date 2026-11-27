@@ -42,9 +42,12 @@ import os
 import re
 import subprocess
 import sys
+import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
+sys.path.insert(0, HERE)
+import timing  # noqa: E402  耗时账本
 RUNDIR = os.path.join(ROOT, "erp_data", "_run", "pipeline")
 STAGES = ["collect", "claim", "detail", "edit_dry", "edit_save", "scan",
           "review_img", "apply", "guards", "publish", "wait", "verify4", "done"]
@@ -69,13 +72,22 @@ def save(st):
 
 
 def run(cmd, timeout=240):
-    """跑 scripts/ 下 CLI，返回 (rc, 尾部输出)。"""
-    p = subprocess.run([sys.executable] + cmd, cwd=ROOT,
-                       capture_output=True, text=True, timeout=timeout)
-    tail = (p.stdout or "").strip().splitlines()[-8:]
-    if p.returncode != 0:
-        tail += ["STDERR: " + (p.stderr or "").strip().splitlines()[-3:]]
-    return p.returncode, "\n".join(tail)
+    """跑 scripts/ 下 CLI，返回 (rc, 尾部输出)。子进程耗时单独入账（sub.*）。"""
+    t0 = time.time()
+    try:
+        p = subprocess.run([sys.executable] + cmd, cwd=ROOT,
+                           capture_output=True, text=True, timeout=timeout)
+        rc = p.returncode
+        tail = (p.stdout or "").strip().splitlines()[-8:]
+        if rc != 0:
+            err = (p.stderr or "").strip().splitlines()[-3:]
+            tail += ["STDERR: " + " | ".join(err)]
+        return rc, "\n".join(tail)
+    finally:
+        name = os.path.basename(cmd[0]).replace(".py", "")
+        sub = cmd[1] if len(cmd) > 1 and not str(cmd[1]).startswith("-") else ""
+        timing.rec("sub.%s%s" % (name, ("." + sub) if sub else ""), t0, time.time(),
+                   {"cmd": " ".join(str(c) for c in cmd[1:4])[:120]})
 
 
 def out_path(st, name):
@@ -101,8 +113,16 @@ def stage_claim(st):
     print(out)
     if rc == 0 and "success" in out.lower():
         return True
+    # 错误分类（2026-11-26 事故）：接口对参数/配置非法回 code=500 / For input string
+    # 这类**确定性业务错误**——重试和回查都不可能成功，回查轮询每品白烧 ~90s。
+    # 仅网络/超时类错误才走回查确认（2026-11-24 盲目重试教训保留）。
+    low = out.lower()
+    if "for input string" in low or "code=500" in low or "未配置" in out:
+        print("[pipe] ✗ claim 业务拒绝（参数/店铺配置非法），**跳过回查轮询**立即失败："
+              "查 .env 的 *_SELLER_ID（erp_client.py shops 可取真实值），修完重跑 next")
+        return False
     # 超时/异常 → 纪律：先回查 items「已认领」，不盲目重试（2026-11-24 教训）
-    print("[pipe] claim 返回异常，回查采集箱确认是否实际成功…")
+    print("[pipe] claim 疑似超时/网络，回查采集箱确认是否实际成功…")
     rc2, out2 = run(["scripts/wait_for.py", "claim", "--offer-id", st["offer_id"],
                      "--region", st["site"], "--timeout", "60"])
     print(out2)
@@ -148,13 +168,17 @@ def edit_args(st, save=False):
                     ("attr_names", "--attr-names"), ("sku_map", "--sku-map"),
                     ("desc_file", "--desc-file"), ("mains_file", "--mains-file"),
                     ("title", "--title"), ("source_prices", "--source-prices"),
-                    ("template", "--template"), ("dims", "--dims")]:
+                    ("template", "--template"), ("dims", "--dims"),
+                    ("sku_code", "--sku-code"), ("sku_map_seq", "--sku-map-seq"),
+                    ("sku_code_seq", "--sku-code-seq"), ("sku_img_seq", "--sku-img-seq")]:
         if e.get(k):
             cmd += [flag, str(e[k])]
     if e.get("stock"):
         cmd += ["--stock", str(e["stock"])]
     if e.get("weight_g"):
         cmd += ["--weight-g", str(e["weight_g"])]
+    if e.get("markup"):
+        cmd += ["--markup", str(e["markup"])]
     if e.get("drop_zero", True):
         cmd += ["--drop-zero"]
     if save:
@@ -209,6 +233,30 @@ def stage_review_img(st):
 
 
 def stage_apply(st):
+    # B4（2026-11-25 实损）：review 里带 pending 就进 apply → image_gate 直接 sys.exit，
+    # agent 再去手工回填 evidence，白跑一轮。这里前置断言，报错时给可执行的下一步。
+    rv0 = st.get("review_file")
+    if rv0 and os.path.exists(rv0):
+        rj0 = json.load(open(rv0, encoding="utf-8"))
+        pend = [x.get("id") for x in (rj0.get("images") or [])
+                if (x.get("verdict") or "pending") == "pending"]
+        if pend:
+            print("[pipe] ✗ 仍有 %d 张未判定：%s" % (len(pend), pend[:6]))
+            print("[pipe]   下一步：python3 scripts/image_review.py --review %s"
+                  "（已内置 Aidge 失败自动本地回退）" % rv0)
+            return False
+    # review.json 的 localized_text 默认是空串，而 apply 要用它重建 description
+    # （空则报「重建后 description 为空」，2026-11-25 品1 踩过）。这里直接从 desc_file 回填。
+    rv = st.get("review_file")
+    if rv and os.path.exists(rv):
+        rj = json.load(open(rv, encoding="utf-8"))
+        if not (rj.get("localized_text") or "").strip():
+            df = (st.get("edit") or {}).get("desc_file")
+            if df and os.path.exists(os.path.join(ROOT, df)):
+                txt = open(os.path.join(ROOT, df), encoding="utf-8").read().strip()
+                rj["localized_text"] = txt
+                json.dump(rj, open(rv, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+                print("[pipe] review.json 缺 localized_text → 已从 %s 回填 %d 字符" % (df, len(txt)))
     rc, out = run(["scripts/image_gate.py", "apply", "--detail", st["detail_file"],
                    "--review", st["review_file"], "--save"], timeout=300)
     print(out)
@@ -216,54 +264,164 @@ def stage_apply(st):
 
 
 def stage_guards(st):
-    rc1, o1 = run(["scripts/prepublish_guard.py", "--refresh", "--ids", st["ttl_id"]])
-    print(o1)
-    rc2, o2 = run(["scripts/image_gate.py", "verify", "--detail", st["detail_file"],
-                   "--review", st["review_file"]])
-    print(o2)
-    if rc1 != 0 or rc2 != 0:
-        print("[pipe] ✗ 闸门未过（guard rc=%d verify rc=%d），按提示修复后重跑 next" % (rc1, rc2))
-        return False
-    return True
+    # apply 之后必须**重新拉一次 detail** 再验：verify 读的是 st["detail_file"]，
+    # 若还停在 apply 前的快照，会把已删图的 URL 当残留误报 DROPPED_IMAGE_LEAK
+    # （2026-11-25 品2 踩过）。ERP 详情有数分钟缓存，故失败后等一轮再试。
+    def reload_detail():
+        rc, out = run(["scripts/erp_client.py", "ttl-detail", "--id", st["ttl_id"],
+                       "--out", out_path(st, "detail.json")])
+        return rc == 0
+
+    last = ""
+    for attempt in (1, 2, 3):
+        reload_detail()
+        gcmd = ["scripts/prepublish_guard.py", "--refresh", "--ids", st["ttl_id"]]
+        # 干净 cbu01 图确实凑不满 5 张时的**显式降级**（须在 state 里留痕 allow_few_mains）
+        if st.get("allow_few_mains"):
+            gcmd.append("--allow-few-mains")
+        rc1, o1 = run(gcmd)
+        print(o1)
+        rc2, o2 = run(["scripts/image_gate.py", "verify", "--detail", st["detail_file"],
+                       "--review", st["review_file"]])
+        print(o2)
+        if rc1 == 0 and rc2 == 0:
+            return True
+        last = o1 + o2
+        if "DROPPED_IMAGE_LEAK" in last and attempt < 3:
+            print("[pipe] 疑似 ERP 详情缓存未刷（第 %d 次），等 90s 重试…" % attempt)
+            time.sleep(90)
+            continue
+        break
+    print("[pipe] ✗ 闸门未过（guard/verify 见上），按提示修复后重跑 next")
+    return False
 
 
 def stage_publish(st):
+    # 重发纪律（2026-11-25）：ttl-publish 默认 filterAlreadyPublish 会把「已提交过」的
+    # ttl_id 静默跳过（计数不动、logs 无新行）。所以：
+    #   ① 先查平台侧是否已 ACTIVATE —— 已在售就不要再发（避免双链接自我竞争）；
+    #   ② 未在售但曾有失败记录 → 带 --force 真正重提。
+    sj = out_path(st, "site_status_pre.json")
+    run(["scripts/site_goods.py", "status", "--offer", st["offer_id"], "--out", sj], timeout=120)
+    pre = {}
+    if os.path.exists(sj):
+        try:
+            pre = json.load(open(sj, encoding="utf-8"))
+        except Exception:
+            pre = {}
+    if pre.get("on_sale"):
+        print("[pipe] 平台侧已 ACTIVATE（tiktok_id=%s），跳过重发" % pre.get("tiktok_id"))
+        return True
     e = st.get("edit", {})
     cmd = ["scripts/erp_client.py", "ttl-publish", "--ids", st["ttl_id"]]
     if e.get("weight_g"):
         cmd += ["--weight", "%.3g" % (float(e["weight_g"]) / 1000)]
     if e.get("dims"):
         cmd += ["--dims", e["dims"]]
+    if pre.get("log_status") in ("fail", "success") and not pre.get("on_sale"):
+        # 曾提交过（成功但未激活 / 失败）→ 必须 --force 才不会被过滤器吞掉
+        cmd += ["--force"]
+        print("[pipe] 该货源曾提交（log_status=%s）→ 使用 --force 重提" % pre.get("log_status"))
     rc, out = run(cmd)
     print(out)
     return rc == 0
 
 
+def _log_status_of(offer_id):
+    """直接读 erp_client logs 落盘的 csv，取该货源最新一条的 status / error。
+
+    2026-11-25 教训（马桶刷）：ttl-publish 返回 success=True、wait_for 也报 success，
+    但 logs 里最终是 fail（「主图上传失败：参数无效」）。ERP 会先写「任务已接受」
+    再写真实结果，只看接口返回值或 wait 首次结果会误判。故 publish 后必须以 csv 为准复核。
+    """
+    import csv as _csv
+    tmp = "erp_data/_run/_logs_check"
+    # 注意：run() 内部已拼 sys.executable，cmd[0] 必须是脚本路径，不能再写 "python3"
+    rc, _ = run(["scripts/erp_client.py", "logs", "--months", "1", "--out", tmp])
+    if rc != 0:
+        return None, ""
+    f = os.path.join(tmp, "tiktok_logs.csv")
+    if not os.path.exists(f):
+        return None, ""
+    best, st, err = "", None, ""
+    with open(f, encoding="utf-8-sig") as fh:
+        for row in _csv.reader(fh):
+            if not row or str(row[0]) != str(offer_id):
+                continue
+            t = row[3] if len(row) > 3 else ""
+            if t >= best:
+                best = t
+                st = (row[1] or "").strip().lower()
+                err = row[5] if len(row) > 5 else ""
+    return st, err
+
+
 def stage_wait(st):
     rc, out = run(["scripts/wait_for.py", "publish", "--match", st["offer_id"],
-                   "--timeout", "240"], timeout=300)
+                   "--timeout", "420"], timeout=480)
     print(out)
-    return rc == 0
+    if rc != 0:
+        return False
+    # 二次复核：等真实结果落库，以 logs csv 为唯一口径
+    for _ in range(3):
+        time.sleep(6)
+        status, err = _log_status_of(st["offer_id"])
+        if status == "fail":
+            print("[pipe] ✗ logs 复核为 fail：%s" % (err or "(无 errorMessage)"))
+            st["publish_error"] = err
+            return False
+        if status == "success":
+            print("[pipe] ✔ logs 复核 success")
+            return True
+    print("[pipe] ⚠ logs 复核未取到终态，继续（verify4 会再判 productStatus）")
+    return True
 
 
 def stage_verify4(st):
+    """四路验证。platform_on_sale 只看 productStatus==ACTIVATE（2026-11-25 重写）。
+
+    正确判定链：logs(按 itemId 精确匹配, status 精确值) → platformItemId(TikTok 商品ID)
+    → queryPlatformItemDetail → productStatus。
+    踩过的坑：① 拿 itemCenterNumIid(1574...) 去查详情必报 does not exist；
+             ② 拿 itemAlias/子串在站点商品列表里搜 → 新发布商品还没进该库，永远搜不到；
+             ③ 发布 success 但状态仍是 INITIAL（待平台审核），需等待转 ACTIVATE。
+    """
     ok = {}
-    rc, out = run(["scripts/erp_client.py", "logs", "--months", "1",
-                   "--out", out_path(st, "logs.json")])
-    logs_txt = ""
-    for f in glob.glob(out_path(st, "logs.json") + "/*.csv") + \
-             glob.glob(out_path(st, "logs.json") + "*/*.csv"):
-        logs_txt += open(f, encoding="utf-8-sig", errors="ignore").read()
-    ok["logs_success"] = rc == 0 and st["offer_id"] in logs_txt and \
-        not re.search(r"%s[^\n]*(失败|fail)" % st["offer_id"], logs_txt, re.I)
-    rc, out = run(["scripts/site_goods.py", "list", "--platform", "tiktok",
-                   "--page-size", "100", "--limit", "300",
-                   "--out", out_path(st, "site_goods.json")], timeout=300)
-    txt = ""
-    if os.path.exists(out_path(st, "site_goods.json")):
-        txt = open(out_path(st, "site_goods.json"), encoding="utf-8", errors="ignore").read()
-    ok["platform_on_sale"] = st["offer_id"] in txt or bool(
-        st.get("edit", {}).get("title_hint") and st["edit"]["title_hint"] in txt)
+    sj = out_path(st, "site_status.json")
+    deadline = time.time() + int(os.environ.get("VERIFY_ON_SALE_TIMEOUT", "900"))
+    verdict = {}
+    while True:
+        rc, out = run(["scripts/site_goods.py", "status", "--offer", st["offer_id"],
+                       "--out", sj], timeout=120)
+        print(out)
+        verdict = {}
+        if os.path.exists(sj):
+            try:
+                verdict = json.load(open(sj, encoding="utf-8"))
+            except Exception:
+                verdict = {}
+        if verdict.get("on_sale"):
+            break
+        if verdict.get("log_status") == "fail":
+            break
+        if time.time() > deadline:
+            print("[pipe] ⚠ 等待 %ds 仍在 %s（未激活），停在此阶段稍后重跑 next 复查"
+                  % (int(os.environ.get("VERIFY_ON_SALE_TIMEOUT", "900")),
+                     verdict.get("product_status") or "无记录"))
+            break
+        time.sleep(30)
+
+    # logs 只看**最新一条**：CSV 里会同时留着上轮的 fail 记录，
+    # 用全文正则判「有无失败」会把重发成功的商品误判为失败（2026-11-25 品2 踩过）
+    ok["logs_success"] = verdict.get("log_status") == "success"
+    ok["platform_on_sale"] = bool(verdict.get("on_sale"))
+    st["verify"] = {"tiktok_id": verdict.get("tiktok_id"),
+                    "product_status": verdict.get("product_status"),
+                    "product_status_name": verdict.get("product_status_name"),
+                    "log_status": verdict.get("log_status"),
+                    "on_sale": bool(verdict.get("on_sale")),
+                    "error": verdict.get("error", "")}
+
     rc, out = run(["scripts/erp_client.py", "quota", "--region", st["site"]])
     print(out)
     print("[pipe] 四路验证: %s" % json.dumps(ok, ensure_ascii=False))
@@ -294,9 +452,9 @@ def cmd_start(a):
                  "确为新站点/换款请核对后 --force" % a.offer_id)
     st = {"offer_id": a.offer_id, "site": a.site, "stage": "collect",
           "approved": [], "edit": {}, "started": datetime.datetime.now().isoformat()}
-    for k in ("category_id", "keep_prefix", "attr_names", "sku_map", "desc_file",
-              "mains_file", "title", "source_prices", "template", "dims", "stock",
-              "weight_g", "title_hint"):
+    for k in ("category_id", "keep_prefix", "attr_names", "sku_map", "sku_map_seq",
+              "desc_file", "mains_file", "title", "source_prices", "template", "dims",
+              "stock", "weight_g", "title_hint", "sku_code", "sku_code_seq", "sku_img_seq", "markup"):
         v = getattr(a, k, None)
         if v is not None and v != "":
             st["edit"][k] = v
@@ -317,7 +475,19 @@ def do_next(st):
         print("[pipe] 未知阶段 %s" % stage)
         return 6
     print("\n[pipe] === %s ===" % stage)
-    r = HANDLERS[stage](st)
+    oid = st.get("offer_id") or ""
+    prev_parent = os.environ.get("TT_PARENT")
+    os.environ["TT_PARENT"] = "pipeline.%s" % stage      # 子进程挂到本阶段下
+    t0 = time.time()
+    try:
+        r = HANDLERS[stage](st)
+    finally:
+        timing.rec("pipeline.%s" % stage, t0, time.time(), {"offer_id": oid, "stage": stage},
+                   parent=prev_parent or "pipeline")
+        if prev_parent is None:
+            os.environ.pop("TT_PARENT", None)
+        else:
+            os.environ["TT_PARENT"] = prev_parent
     if r == "hold":
         save(st)
         return 5
@@ -333,14 +503,17 @@ def do_next(st):
         save(st)
         print("[pipe] CP1 未确认——approve --which edit 后再 next")
         return 5
+    # 2026-11-25 修：先前把清零放在 CP2 拦截之后，导致「自动判完」也永久卡在 CP2
+    if stage == "review_img" and r is True:
+        st["cp2_needed"] = False  # 全自动判完无需 CP2
     if nxt == "apply" and st.get("cp2_needed") and "images" not in st["approved"]:
         st["stage"] = "review_img"
         save(st)
         return 5
-    if stage == "review_img" and r is True:
-        st["cp2_needed"] = False  # 全自动判完无需 CP2
     if stage == "edit_save":
         nxt = "detail"  # save 后重读 detail 刷新异常标签
+    elif stage == "detail" and "edit_save" in st.get("done_stages", []):
+        nxt = "scan"  # 重读完成后不回 edit_dry（2026-11-25 修：原顺序会死循环）
     st.setdefault("done_stages", []).append(stage)
     st["stage"] = nxt
     save(st)
@@ -368,6 +541,27 @@ def cmd_approve(a):
     return 0
 
 
+def cmd_set(a):
+    """补/改 edit 参数（不重跑已过的阶段）。
+
+    存在意义：edit 参数里的 sku_map 必须等 detail 阶段跑完、prep_one 生成后才有，
+    但 start 时就要落参数 → 原来的顺序无解（2026-11-25 加）。
+    """
+    st = load(a.offer_id)
+    n = 0
+    for k in ("category_id", "keep_prefix", "attr_names", "sku_map", "sku_map_seq",
+              "desc_file", "mains_file", "title", "source_prices", "template", "dims",
+              "title_hint", "sku_code", "sku_code_seq", "sku_img_seq", "markup", "stock", "weight_g"):
+        v = getattr(a, k, None)
+        if v not in (None, ""):
+            st["edit"][k] = v
+            n += 1
+    save(st)
+    print("[pipe] set %d 个 edit 参数 → %s（stage=%s 不变）"
+          % (n, json.dumps(st["edit"], ensure_ascii=False), st["stage"]))
+    return 0
+
+
 def cmd_status(a):
     st = load(a.offer_id)
     print(json.dumps({k: st[k] for k in
@@ -384,8 +578,9 @@ def main():
     s.add_argument("--site", default="MY")
     s.add_argument("--force", action="store_true")
     s.add_argument("--no-edit-args", action="store_true")
-    for k in ("category-id", "keep-prefix", "attr-names", "sku-map", "desc-file",
-              "mains-file", "title", "source-prices", "template", "dims", "title-hint"):
+    for k in ("category-id", "keep-prefix", "attr-names", "sku-map", "sku-map-seq",
+              "desc-file", "mains-file", "title", "source-prices", "template", "dims",
+              "title-hint", "sku-code", "sku-code-seq", "sku-img-seq", "markup"):
         s.add_argument("--" + k, dest=k.replace("-", "_"), default="")
     s.add_argument("--stock", default="")
     s.add_argument("--weight-g", dest="weight_g", default="")
@@ -394,6 +589,13 @@ def main():
     p = sub.add_parser("approve"); p.add_argument("--offer-id", required=True)
     p.add_argument("--which", choices=["edit", "images"], required=True); p.set_defaults(fn=cmd_approve)
     q = sub.add_parser("status"); q.add_argument("--offer-id", required=True); q.set_defaults(fn=cmd_status)
+    t = sub.add_parser("set", help="补/改 edit 参数（sku_map 等 prep 产物）")
+    t.add_argument("--offer-id", required=True)
+    for k in ("category-id", "keep-prefix", "attr-names", "sku-map", "sku-map-seq",
+              "desc-file", "mains-file", "title", "source-prices", "template", "dims",
+              "title-hint", "sku-code", "sku-code-seq", "sku-img-seq", "markup", "stock", "weight-g"):
+        t.add_argument("--" + k, dest=k.replace("-", "_"), default="")
+    t.set_defaults(fn=cmd_set)
     a = ap.parse_args()
     sys.exit(a.fn(a))
 

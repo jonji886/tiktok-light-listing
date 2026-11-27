@@ -1,0 +1,195 @@
+{
+ "description": "历史失败案例 golden set：g01-g20 来自 erp_data 全量日志真实 fail 行（20 条去重原因），g21-g23 来自 SKILL.md 文档记录。backtest 判定：expect 全部包含于路由结果 = 命中。",
+ "cases": [
+  {
+   "id": "g01",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "TikTok 商品数据校验失败: 商品描述不能为空",
+   "expect": [
+    "empty_description"
+   ]
+  },
+  {
+   "id": "g02",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "TikTok店铺。此地区没有设置开启的默认销售仓库，请先在 TikTok Shop 后台创建仓库",
+   "expect": [
+    "no_default_warehouse"
+   ]
+  },
+  {
+   "id": "g03",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "主图上传失败: TikTok店 上传图片失败: 无效的参数",
+   "expect": [
+    "main_image_upload_failed"
+   ]
+  },
+  {
+   "id": "g04",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "主图上传失败：TikTok商店 上传图片失败: 参数无效",
+   "expect": [
+    "main_image_upload_failed"
+   ]
+  },
+  {
+   "id": "g05",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败: TikTok 商品前置校验未通过: [12052153] 产品可变选项立体打印自透气【50*70*30cm】内容词 (自)。修改变量选项和问题。;[12052055] The SKU inventory quantity for the warehouse '77012855970371284' must be between 0 and 999999, inclusive.",
+   "expect": [
+    "banned_word_sku",
+    "stock_overflow"
+   ]
+  },
+  {
+   "id": "g06",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败: TikTok 商品前置校验未通过: [12052250] 不允许使用汉字。修改产品属性的属性值名称: 悬挂.",
+   "expect": [
+    "cjk_attributes"
+   ]
+  },
+  {
+   "id": "g07",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败: 抖音 商品前置校验未通过: [12052250] 不允许使用汉字。请修改商品属性的属性值名称： 悬挂.",
+   "expect": [
+    "cjk_attributes"
+   ]
+  },
+  {
+   "id": "g08",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败: 抖音 商品前置校验未通过: [12052251] 在销售属性“Warna(Kotak simpanan tuala muka yang dipasang di dinding)”中发现重复的属性值。请删除或修改重复的值：“Warna(Kotak simpanan tuala muka yang dipasang di dinding)”",
+   "expect": [
+    "duplicate_attr_values"
+   ]
+  },
+  {
+   "id": "g09",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败: 抖音 商品前置校验未通过: [12052522] 变体缺少主图：“天鹅蓝 - 无日期”、“天鹅粉 - 无日期”",
+   "expect": [
+    "variant_missing_image"
+   ]
+  },
+  {
+   "id": "g10",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败: 抖音 商品前置校验未通过: [12052585] 您的存款金额不足。",
+   "expect": [
+    "deposit_insufficient"
+   ]
+  },
+  {
+   "id": "g11",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败: 抖音 商品前置校验未通过：[12052018] 必须填写包裹长度；[12052019] 必须填写包裹宽度；[12052020] 必须填写包裹高度；[12052585] 您的保证金余额不足。",
+   "expect": [
+    "package_dims_required",
+    "deposit_insufficient"
+   ]
+  },
+  {
+   "id": "g12",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败: 抖音 商品前置校验未通过：[12052153] 产品变体选项“3D打印自通风【50*70*30cm】”包含违禁词（เอง）。请修改该变体选项后重试；[12052055] 仓库‘7701285597035071284’的SKU库存数量必须在0至999999之间（含0和999999）。",
+   "expect": [
+    "banned_word_sku",
+    "stock_overflow"
+   ]
+  },
+  {
+   "id": "g13",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败: 抖音 商品前置校验未通过：[12052550] 每个SKU必须包含相同数量和类型的销售属性。例如，不能出现一个SKU仅有“颜色”属性，而另一个SKU同时具有“颜色”和“尺寸”属性的情况；[12052585] 您的保证金金额不足。",
+   "expect": [
+    "sku_attr_count_mismatch",
+    "deposit_insufficient"
+   ]
+  },
+  {
+   "id": "g14",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败：抖音 商品前置校验未通过: [12052018] 包裹长度是必需的; [12052019] 包裹宽度是必需的; [12052020] 包裹高度是必需的; [12052585] 您的存款金额不足。",
+   "expect": [
+    "package_dims_required",
+    "deposit_insufficient"
+   ]
+  },
+  {
+   "id": "g15",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败：抖音 商品前置校验未通过: [12052153] 产品变体选项自制透气3D打印【50*70*30cm】包含违禁词（自制）。修改变体选项后重试。[12052055] 仓库 '7701285597035071284' 的SKU库存数量必须介于0和999999（含）之间。",
+   "expect": [
+    "banned_word_sku",
+    "stock_overflow"
+   ]
+  },
+  {
+   "id": "g16",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败：抖音 商品前置校验未通过: [12052250] 不允许使用汉字。修改产品属性的属性值名称: 悬挂.",
+   "expect": [
+    "cjk_attributes"
+   ]
+  },
+  {
+   "id": "g17",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品前置校验失败：抖音 商品前置校验未通过: [12052250] 不允许使用汉字。修改产品属性的属性值名称： 悬挂.",
+   "expect": [
+    "cjk_attributes"
+   ]
+  },
+  {
+   "id": "g18",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 商品描述不能为空",
+   "expect": [
+    "empty_description"
+   ]
+  },
+  {
+   "id": "g19",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音 商品数据校验失败: 类目规则查询失败：TikTok商店 查询类目规则失败：需要先决条件。此操作要求在所请求的区域中存在相应类别。请选择该区域可用的类别并重试。",
+   "expect": [
+    "category_region_unavailable"
+   ]
+  },
+  {
+   "id": "g20",
+   "source": "erp_data/**/tiktok_logs.csv (2026-11-25 全量扫描)",
+   "error_text": "抖音店铺。此地区没有设置开启的默认销售仓库，请先在 抖音小店 后台创建仓库",
+   "expect": [
+    "no_default_warehouse"
+   ]
+  },
+  {
+   "id": "g21",
+   "source": "SKILL.md Step 5 发布要点（2026-10-29 batchPublish 破解记录）",
+   "error_text": "未找到该平台采集记录",
+   "expect": [
+    "collect_record_not_found"
+   ]
+  },
+  {
+   "id": "g22",
+   "source": "SKILL.md Step 5.2 错误码表；Case A/B 复盘（2026-10-29）",
+   "error_text": "TikTok店铺。tikTokItemModel不能为空",
+   "expect": [
+    "item_model_broken"
+   ]
+  },
+  {
+   "id": "g23",
+   "source": "SKILL.md MY batch12 硬规则 7（2026-11-25）",
+   "error_text": "重发时 filterAlreadyPublish 静默跳过已提交过的 ttl_id，计数不动、logs 无新行",
+   "expect": [
+    "silent_skip_already_publish"
+   ]
+  }
+ ]
+}

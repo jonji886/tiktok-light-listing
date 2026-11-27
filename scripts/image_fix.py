@@ -233,6 +233,7 @@ def fix_one(img, dst_lang, gate_dir, umap):
             img["fix_error"] = str(r)[:200]
             return None
         cur = d["ImageUrl"]
+        img["aidge_url"] = cur   # 实验室：留 Aidge 返回的 dashscope 签名原链（不转存 ERP OSS）
     if v == "L2_localize":
         body = {"ImageUrl": cur, "SourceLanguage": "auto", "TargetLanguage": dst_lang}
         st, r = call_retry("ImageTranslationPro", None, body)

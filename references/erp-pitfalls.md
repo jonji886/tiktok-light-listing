@@ -11,7 +11,7 @@
 
 ```
 公共采集箱(856997023844)
-  → ttl-claim 认领到 JingShanShop-TH          ✅ 标题自动泰文化、类目自动匹配
+  → ttl-claim 认领到 `<TH_SHOP_NICK>`        ✅ 标题自动泰文化、类目自动匹配
   → set_price.py --rate 2.8 --add 39.26       ✅ 32.05/47.81/57.05 → 129/173/199 THB，数据零丢失
   → ttl-publish --weight 0.3 --dims 30x20x5   ❌ 22:28:42 fail（两条平台校验）
   → fix_sku.py --stock 1000                   ✅ 规格名改纯尺寸泰文 + 库存收敛 1000
@@ -147,7 +147,7 @@ print(dec(s[i-600:i+600]))
       "skuValueTruncateType":"END","skuTotalEnabled":false}},
  "distribItemVos":[{"itemId":"<ttl_id>","sourcePlatform":"kdzs_erp",
    "targetPlatform":"tiktok","sourceSellerId":"1323965","targetSellerId":"<sellerId>",
-   "targetSellerNick":"JingShanShop-TH",
+   "targetSellerNick":"<TH_SHOP_NICK>",
    "categoryIds":"600001,851848,852744","categoryNames":"家居用品,家居收纳,收纳包"}]}
 ```
 
@@ -329,8 +329,8 @@ ERP 把 JWT 放在 `sessionStorage.qnquerystring`，接口鉴权头同名。
 ## 十一、TikTok 后台编辑回执：描述优化项（2026-11-12，一手截图）
 
 **来源 `VERIFIED`**：用户 13:41 提交的 `seller.tiktokshopglobalselling.com/product/edit/1738510677889025111`
-（Thailand / JingShanShop，状态「在售」）编辑页截图；原图存
-`/Users/jizhongjian/.workbuddy/clipboard-images/clipboard-2026-11-12T05-41-07-494Z-8987ec61.png`。
+（Thailand / `<TH_SHOP_NICK>`，状态「在售」）编辑页截图；原图存
+`<HOME>/.workbuddy/clipboard-images/clipboard-2026-11-12T05-41-07-494Z-8987ec61.png`（本机剪贴板图片目录）。
 弹窗标题「2 个问题可能需要优化」，两行原文：
 
 | 发品详情 | 建议（原文） |

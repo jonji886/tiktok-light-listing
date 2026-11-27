@@ -120,7 +120,7 @@
 
 ### Case C｜真空压缩袋（2026-11-11 ✅ 全链路成功，标准剧本）
 
-商品 `1738505558347981911`，JingShanShop-TH，**TikTok 后台确认在售**，฿129–199，3 SKU。
+商品 `<ttl_id-1>`，TH 店（`<TH_SHOP_NICK>`），**TikTok 后台确认在售**，฿129–199，3 SKU。
 
 | 环节 | 结果 | 关键点 |
 |---|---|---|
@@ -233,3 +233,121 @@ ttl_id 1573021951366418432 → TikTok MY 后台**在售** RM10.00 / 库存 9329�
 7. SKILL.md 工作流头部新增「⚡2026-11-25 流水线化改造」节 + 选品策略闸门（P3）：卡片=方向池非货源池（两批实测单卡命中≈1/6），执行顺序改 FastMoss 词池/高通过率品类优先→机会中心按价格带×品类先验筛着抄→图搜扩供兜底。
 
 **预期**：同规模任务（含选品 10 品目标）从 6.5h 压到 1.5–2h；不可压缩项=弹窗抄卡与 CP 人工确认。
+
+---
+
+## VN20 批次规则（2026-11-13，存量站历史批次；工具仍现行）
+
+1. **货代仓以已绑定行为准**：目录卡片写多仓不等于账号已绑该仓；`route_gate.py` 校验发货城市、已绑定仓、≤1 天到仓证据，缺证据禁止 collect。
+2. **公网图必须回读核验**：除首图外保留展示图；`verify_public_images.py` 逐张下载并比对 SHA-256/像素，并发上传错配的短链不得进 payload。
+3. **本地负载先审计**：`listing_payload_audit.py` 核站点、图片数、当地语言文本、单件 SKU、库存/价格、源序号和重量；本地通过后，真实 ERP 详情上仍须重跑既有闸门。
+4. **旧数据不得复用**：排除多件套、液体胶水/免钉胶、无关杆件；按本批真实 SKU 重算成本与售价，旧 SKU 成本/客单价作废；页面运费不等于货代仓运费。
+5. **写操作先查重再分批**：认领每批 ≤3，按 offerId 精确查重；回执为空必须回读；`success` 不等于平台在售。旧 `ttl-save` 继续禁用。
+
+## MY batch12 硬规则（2026-11-25，10 品全部 ACTIVATE 在售）
+
+1. **三个 ID 永远别混**——这是本轮最大的时间黑洞：
+   - `offer_id` = 1688 货源 ID，= 铺货日志的 `itemId`、站点商品的 `outerId`
+   - `itemCenterNumIid`（`1574...`）= ERP 内部商品中心 ID，**喂 `queryPlatformItemDetail` 必报 does not exist**
+   - `numIid`（`1738...`）= 真正的 TikTok 商品 ID，来源是铺货日志的 `platformItemId`
+   判「平台侧是否在售」只有一个可靠口径：**`productStatus == ACTIVATE`**。
+   `INITIAL` = 已创建、待平台审核（几分钟到几小时后自己转 ACTIVATE），**不能算上架**。
+   一条命令：`python3 scripts/site_goods.py status --offer <1688ID>`（0 在售 / 3 已建未激活 / 4 失败）。
+2. **`[12052522] 变体缺少主图`**：变体图在 `skus[].sales_attributes[0].sku_img.uri`。
+   `image_gate apply` 删掉带中文的 SKU 图后，若那几张正是某变体的唯一图 → 变体全变 0 图 → 平台拒发。
+   **删图前先算好每个变体的替代图**，用 `ttl_edit --sku-img-seq`（按 skus 顺序的 URL 列表）一次补齐。
+3. **`mains.txt` 必须先目视预筛**：直接把 1688 前 6 张主图塞进 mains，其中常夹整幅中文卖点图，
+   会在 apply 阶段被删 → 主图不足/变体缺图 → 返工重跑 scan/review。正确顺序是
+   **先出 contact sheet 目视剔除带中文的图 → 再写 mains.txt**，这样 review_img 常能全自动 `L3_keep` 零目视。
+4. **重复 `seller_sku` 会让 dict 互相覆盖**：同货号多规格时 `sku_map.json` 只剩 1 条。
+   用 `--sku-map-seq` / `--sku-code-seq`（`prep_one.py` 总会产出，重复组自动生成 `-2/-3` 后缀）。
+5. **主图只有 4 张时**：`prepublish_guard` 要求 ≥5。凑不出干净图时在 state 写 `allow_few_mains=true` + 原因，
+   `stage_guards` 会自动带 `--allow-few-mains` 降级留痕（**禁止靠脏图凑数**）；T+7 看曝光再补图换源。
+6. **`wait_for` 终态判定**：`erp_client._post` 返回的是 `data` 本体（已解包），不可再 `d.get("data")`；
+   判定用 `status` **精确值**（`processing/success/fail`），不对整行 JSON 子串匹配。
+7. **重发必须 `--force`**：`filterAlreadyPublish` 会静默跳过已提交过的 ttl_id（计数不动、logs 无新行）。
+   `stage_publish` 先查是否已 ACTIVATE（已售则跳过，避免双链接自我竞争），否则带 `--force`。
+8. **verify4 的 `logs_success` 只看最新一条**：CSV 里同时留着上一轮的 `fail` 行，全文正则会把重发成功的品误判为失败。
+
+## MY batch13 硬规则（2026-11-25 下午，7 品 ACTIVATE）
+
+1. **Aidge 欠费时主图证据闸的诚实降级**：Aidge 按量付费账户欠费（`Service suspended due to overdue payment`）时
+   `image_fix.py probe` 全线失败，`image_review.py` 把所有图判 pending，`image_gate apply` 因 L3_keep 主图缺
+   `evidence.rec_text` 拒绝提交。→ 用 `scripts/evidence_local.py --review <review.json>` 调本地 macOS Vision OCR
+   （`img_grade.py` 的 swift OCR，零成本）真实识别并回填 evidence，`evidence.evidence_source=local_vision_ocr` 留痕。
+   **不是伪造证据**：本地 OCR 识别到中文照样被 image_gate 的 CJK 检查拦；只是换真实识别来源。
+   顺序：`auto_verdict.py` 必须在 `evidence_local.py` 之前跑（前者定 verdict，后者只对 L3_keep 主图补证据）。
+2. **`prep_one.py` 的 `sku_code_seq` 漏写 bug（2026-11-25 已修复）**：旧版重复 seller_sku 时代码 print「已产
+   sku_code_seq.json」但实际没有 `json.dump`；现 dup 分支已真写文件，重复组自动产 `-2/-3` 后缀。
+3. **SKU 翻译值 ≤40 字符否则 [12052251] 重复**：翻译值 53–60 字符被平台截断到 50 字符后撞车。
+   → 翻译词表一步到位写短值，别等发布端拒了再返工。
+4. **`publish_one approve --which images` 会绕过 `review_file` 赋值**：手工回填 verdict 后直接 approve images
+   会把 stage 设成 apply，但 state 里 `review_file` 还没写，apply 报 `KeyError: 'review_file'`。
+   → 手工 approve 前先确认 state 有 `review_file`，没有就补 `erp_data/image_gate/<ttl_id>/review.json`。
+5. **低价品（¥2–3）默认 markup 会破带上界**：高于**上限**的品用 `--markup` 压回带内；注意与「低于下限的品
+   提高 markup 进带」方向相反，别混。
+6. **高价 SKU 无法定点剔除（当前能力缺口）**：`ttl_edit` 只有 `--keep-prefix`（按货号前缀），没有按 SKU ID 排除；
+   严重破带的高价规格只能整品放弃。
+
+## 2026-11-25 流程优化、耗时账本与 11 项提效（全部已落地并回归 220 通过/1 跳过）
+
+### 流程优化工具表
+
+实测账：178 搜索候选 → 57 送检 → 19 过闸 → 10 在售；三批 precheck 耗时 1360+1389+1752s=**75 分钟（占全程 62%）**，
+38 个淘汰品里 23 个「干净图不足」+8 个「体积超标」= 81% 的信号在写 ERP 前就有。
+
+| 工具 | 用途 | 实测 |
+|---|---|---|
+| `scripts/ocr_vision_batch.swift` + `img_grade.ocr_batch()` | **批量 OCR**：一个 swift 进程处理整批图，摊薄编译/框架冷启动 | 8 张 **10.75s vs 串行 54s（5x）**；判级结果与串行逐张比对**完全一致** |
+| `scripts/auto_verdict.py --batch-size N` | C 段判级默认走批量；`--no-batch` 回退旧串行 | `--jobs` 线程并发**无效**（60s，比串行还慢），别再试 |
+| `scripts/prefilter.py` | **图片判级左移 + IP 品牌前置**：collect 前用候选 image_url 本地 OCR，只硬杀品牌/IP 与 B2B 工厂行话 | 15 候选硬杀 2，软标 7 保留；**首图含中文只软标不硬杀** |
+| `scripts/assemble_guard.py` | 前置校验三件套：SKU 值>40 字符、中文残留、重复 seller_sku、markup 反解 | 反解给出可行区间；recommend 取**贴下限**而非区间中点（避免价格竞争力流失） |
+| `scripts/auto_assemble.py` | 一条命令替代 prep/描述/markup/args/set 六步手工 | 语义字段仍须人工给 `--title/--desc-fields` |
+| `health_check.py --only aidge` | 开工即探 Aidge 欠费：空参调用 ImageMatting 返回 `MissingImageUrl` = 正常（**不计费**）；`suspended/overdue` = FAIL | 欠费时提示走 `evidence_local.py` 降级 |
+
+关键教训：
+- **并发 OCR 是错的优化方向**——瓶颈是 swift 冷启动（5–9s/张）不是 IO 等待，8 线程 60s 反而慢于串行 54s。批量单进程才对。
+- **左移预筛必须高召回**：首图中文图可擦字救回，硬杀会错杀已验证能 ACTIVATE 的品。只杀不可逆红线（IP/B2B 工厂素材）。
+- **markup 反解取贴下限**：区间中点会把低价品顶到价格带中位，丧失竞争力；取 `lo × 1.02`。
+- **品牌词表同源**：`prefilter.BRAND_RE` 合并 `config/opportunity_intake.yaml known_brands`，别另建词表。
+
+### 耗时账本（可观测性）
+
+| 组件 | 作用 |
+|---|---|
+| `scripts/timing.py` | 账本核心：`span()` 上下文/装饰器、`rec()`、CLI `init/mark/report`。每条形如 `{run,module,parent,t0,t1,dur,meta}`，**append-only JSONL，并发安全** |
+| `scripts/timing_report.py` | 汇总三表：顶层模块占比、子模块 self、**按商品透视**。另算 `script_busy`（区间并集）与 `agent_gap`（墙钟 − 脚本实占）= agent 思考/转录/等人工 |
+| `TT_RUN` 环境变量 | 批次名，**子进程自动继承**（`TT_PARENT` 传递父子关系） |
+
+口径纪律：墙钟 ≠ 脚本实占 + agent 空转以外的任何东西；`script_busy` 用区间**并集**，嵌套不重复计、并发不虚增；
+批次产品数不同时看单次均值；`pipeline.X` 已含其所有 `sub.*`，汇总只用顶层。
+
+首批实测（p5t，5 品全部 ACTIVATE）：端到端 34.3 min；脚本实占 21.5 min (63%) / agent 空转 12.7 min (37%)；
+筛选段 42s/品；发布链路 2.2 min/品，其中 77% 是等平台。→ **脚本侧已不是瓶颈**，下一刀切编排（先全发再统一轮询 verify、筛选段品间并行 3 路）。
+
+### 11 项提效/防再犯
+
+**提效 6 项**
+| # | 组件 | 用法 / 效果 |
+|---|---|---|
+| A1 | `verify_batch.py` + `batch_run.py` | **先全发再统一验**：`batch_run.py --offers` 推到 `verify4` 就停，最后 `verify_batch.py` 并发查一次。`--workers 3`（别超 4） |
+| A2 | `prefilter.py` 输出 `prefilter_verdict` 列 + `precheck.py` 排序 | 首图判级信号**只排序不硬杀**：keep 优先、flag 排队尾，配合 `--target` 早停 |
+| A3 | `precheck.py --target N --wave M` | 序贯筛选：凑够 N 个过闸品就停，M 默认 N×2 |
+| A4 | `precheck.py --c-jobs 3` | C 段品间并行，3 路 1.51x、4 路 1.50x（Vision 占满 4 核，非线性）。不传则行为与改前一致 |
+| A5 | `sku_dict.py --offer-id X` | 自动生成 ≤40 字符 SKU 短值词表，喂 `auto_assemble --extra-dict`；分量词未覆盖才标「待确认」，不机翻 |
+| A6 | `title_pool.py --category ... --features ... --wrap ...` | 从已 ACTIVATE 标题沉淀「品类+特征+场景」模板，词根全部来自真实标题，不编造新词 |
+
+**防再犯 5 项**
+| # | 组件 | 修了什么 |
+|---|---|---|
+| B1 | `ip_risk.py` + precheck B 段接入 | 标题/SKU 命中形象词 → 自动拼 `ip_risk_sheet.png` 强制人工看 SKU 图。词表宽进 |
+| B2 | `image_gate.py` apply 主图补位 | SKU 图被判 L0 删空后用干净主图轮换补位，report 增 `sku_images_filled_by_main` |
+| B3 | `image_review.py` classify 自动降级 | Aidge 欠费时走 `evidence_source=local_vision_ocr` 本地证据判定，`--keep-english` 下不留 pending |
+| B4 | `publish_one.py` stage_apply 前置断言 | apply 前硬断 `pending == 0` |
+| B5 | `assemble_guard.py` problems 一次性收集 | check_detail 收集全部问题一次输出 |
+
+**实测推翻、别再尝试的 3 条**：标题 B2B 词硬杀整册脏图（无区分度）；图片宽高比/文件大小预测干净率（两组区间重叠）；品内并发 OCR（更慢）。
+
+**两个「静默失效」（检查器本身骗人，优先级高于任何提速）**：
+- `health_check --only aidge` 只探 ImageMatting 空参 → 现同时探 ImageRecognition（非法 URL，不下载不计费）。
+- `assemble_guard` 原按 detail 原文判 SKU 值长度 → 现按**映射后**的值判长度与维度内重复（跨维度重复合法，如统一尺码）。

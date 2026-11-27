@@ -33,52 +33,60 @@ OK_MARK = ("成功", "success")
 
 
 def logs_rows(months=1):
-    """拉发布记录，返回 [(raw_line, status_word)]。复用 queryLogs 接口。"""
+    """拉发布记录，返回原始 dict 行（含 status / itemId / platformItemId）。
+
+    ⚠️ 2026-11-25 修：erp_client._post 返回的是 **data 本体**（已解包），
+    原代码又做了一次 d.get("data") → 永远拿到空列表 → 发布永远判不到终态。
+    """
     import datetime
     end = datetime.datetime.now()
     start = end - datetime.timedelta(days=31 * months)
-    rows = []
-    body = {"toPlatformList": ["tiktok"], "fromPlatformList": ["1688"],
+    body = {"pageNo": 1, "pageSize": 200,
+            "toPlatformList": ["tiktok"], "fromPlatformList": ["1688"],
             "startTime": start.strftime("%Y-%m-%d 00:00:00"),
             "endTime": end.strftime("%Y-%m-%d %H:%M:%S")}
     d = _post("/item/distribute/queryLogs", body, None)
-    data = d.get("data") or {}
-    lst = data.get("list") or data.get("rows") or []
-    for it in lst:
-        rows.append(json.dumps(it, ensure_ascii=False))
-    return rows
+    if not isinstance(d, dict):
+        return []
+    return d.get("list") or d.get("rows") or []
 
 
 def check_publish(matches, verbose=False):
-    """返回 (done_map, pending) done_map: match -> 'success'|'fail'"""
+    """返回 (done_map, pending)。done_map: match -> 'success'|'fail'
+
+    判定用 status **精确值**（processing/success/fail），不再对整条 JSON 做子串匹配
+    ——标题或 errorMessage 里出现 success/fail 会造成误判（2026-11-25 修）。
+    """
     rows = logs_rows()
-    done = {}
+    done, ids = {}, {}
     for m in matches:
-        hit = None
-        for line in rows:
-            if m in line:
-                low = line
-                if any(k in low for k in FAIL_MARK):
-                    hit = "fail"
-                    break
-                if any(k in low for k in OK_MARK):
-                    hit = "success"
-                    break
-                hit = "processing"
-        if hit and hit != "processing":
-            done[m] = hit
-        elif verbose and hit:
-            print("  %s 日志在但未见终态词" % m)
-    return done, [m for m in matches if m not in done]
+        hits = [r for r in rows
+                if str(r.get("itemId")) == str(m) or str(m) == str(r.get("platformItemId"))]
+        if not hits:
+            continue
+        latest = max(hits, key=lambda x: str(x.get("uptTime") or x.get("createTime") or ""))
+        st = str(latest.get("status") or "").lower()
+        ext = latest.get("extInfo") or {}
+        pid = latest.get("platformItemId") or ext.get("TIKTOK_PRODUCT_ID")
+        if st in ("success", "fail"):
+            done[m] = st
+            ids[m] = pid
+            if verbose:
+                print("  %s -> %s (tiktok_id=%s, %s)" % (m, st, pid,
+                      latest.get("errorMessage") or ""))
+        elif verbose:
+            print("  %s 仍 %s" % (m, st or "未知"))
+    return done, [m for m in matches if m not in done], ids
 
 
 def check_claim(offer_id, region):
     d = _post("/item/crossBorder/platformCollect/queryListPage",
               {"pageNo": 1, "pageSize": 50, "toRegion": region}, None)
-    data = d.get("data") or {}
-    for it in (data.get("list") or []):
-        blob = json.dumps(it, ensure_ascii=False)
-        if offer_id in blob:
+    lst = d.get("list") if isinstance(d, dict) else None   # 同样是 data 本体，勿再 .get("data")
+    for it in (lst or []):
+        if str(it.get("itemId")) == str(offer_id) or \
+                str(it.get("fromItemId")) == str(offer_id) or \
+                offer_id in json.dumps(it, ensure_ascii=False):
             return it.get("id") or it.get("ttlId")
     return None
 
@@ -129,9 +137,9 @@ def main():
 
 
 def _pub_once(matches, timeout):
-    done, pending = check_publish(matches)
+    done, pending, ids = check_publish(matches)
     for m, st in done.items():
-        print("  %s -> %s" % (m, st))
+        print("  %s -> %s (tiktok_id=%s)" % (m, st, ids.get(m)))
     if not pending:
         return (done, [m for m, s in done.items() if s != "success"]), None
     return None, None

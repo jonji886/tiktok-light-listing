@@ -185,6 +185,24 @@ class TestTtlEditNewParams(unittest.TestCase):
             self._detail(), self._args(category_id="700665", title="中文标题防尘罩"))
         self.assertTrue(any("TITLE_CJK" in p for p in probs), probs)
 
+    def test_drop_sku_removes_named_variant(self):
+        # --drop-sku 定点剔除指名变体，保留其余；不需要整品放弃（batch13 教训 #6）。
+        import ttl_edit
+        _, m, _ = ttl_edit.build_body(
+            self._detail(),
+            self._args(category_id="700665", drop_sku="fc005-2"))
+        self.assertIsNotNone(m)
+        kept = [s["seller_sku"] for s in m["skus"]]
+        self.assertEqual(kept, ["立体罩90*30*50"])
+
+    def test_drop_sku_keeps_all_when_no_match(self):
+        import ttl_edit
+        _, m, _ = ttl_edit.build_body(
+            self._detail(),
+            self._args(category_id="700665", drop_sku="not-exist"))
+        self.assertIsNotNone(m)
+        self.assertEqual(len(m["skus"]), 2)
+
 
 class TestBatchReview(unittest.TestCase):
     def test_fill_and_inherit(self):

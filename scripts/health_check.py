@@ -74,6 +74,62 @@ def add(group, name, status, detail):
     RESULTS.append((group, name, status, detail))
 
 
+def check_aidge():
+    """Aidge 账户健康探测（P1：开工即暴露欠费，不再第 40 分钟才发现）。
+
+    用空参数调用 ImageMatting：网关回 MissingImageUrl（参数错误）= 鉴权通过且账户正常，
+    不产生任何计费。若返回 Service suspended / overdue payment / InsufficientBalance
+    则为欠费或额度耗尽 → FAIL，提示充值或走本地 Vision OCR 降级。
+    """
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "aidge_http", os.path.join(os.path.dirname(__file__), "aidge_http.py"))
+    try:
+        mod = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(mod)
+        st, r = mod.call("ImageMatting")   # 空参数：只探网关，不计费
+    except SystemExit as e:
+        add("aidge", "Aidge 凭证", "WARN", "未加载 .env（先 source .env）；" + str(e)[:50])
+        return
+    except Exception as e:
+        add("aidge", "Aidge 账户", "WARN", "探测失败: %s" % str(e)[:60])
+        return
+    msg = json.dumps(r, ensure_ascii=False) if not isinstance(r, str) else r
+    low = msg.lower()
+    if any(k in low for k in ("suspended", "overdue", "arrears", "insufficient", "欠费", "arrearage")):
+        add("aidge", "Aidge 账户", "FAIL",
+            "欠费/额度耗尽：" + (msg[:70]) + " → 充值，或走本地 Vision OCR 降级（scripts/evidence_local.py）")
+    elif st in (400, 403) and ("mandatory" in low or "invalidparameter" in low or "missing" in low):
+        add("aidge", "Aidge 账户", "PASS", "鉴权通过、账户正常（空参数探测 HTTP %s，不计费）" % st)
+    elif st == 401 or "unauthorized" in low or "signature" in low:
+        add("aidge", "Aidge 凭证", "FAIL", "鉴权失败 HTTP %s: %s" % (st, msg[:60]))
+    else:
+        add("aidge", "Aidge 账户", "WARN", "未知响应 HTTP %s: %s" % (st, msg[:70]))
+
+    # ② 真实计费接口探测（2026-11-25 补：只测 ImageMatting 会「假绿」）
+    # 实测教训：ImageMatting 空参返回 400 MissingImageUrl → 报 PASS，但当天 ImageRecognition
+    # 实际返回 Service suspended（欠费），image_review 全线 pending，白跑 5 张图 + 一次人工介入。
+    # 这里用**不存在的图 URL** 调 ImageRecognition：不下载图片、不产生有效计费，
+    # 但足以区分「欠费 suspend」与「账户正常（回图片下载/img 参数类错误）」。
+    try:
+        st2, r2 = mod.call("ImageRecognition", {
+            "ImageUrl": "https://example.invalid/healthcheck.png",
+            "ReturnCharacter": "1"})
+        m2 = json.dumps(r2, ensure_ascii=False) if not isinstance(r2, str) else r2
+        l2 = m2.lower()
+        if any(k in l2 for k in ("suspended", "overdue", "insufficient", "arrearage")):
+            add("aidge", "Aidge OCR(计费接口)", "FAIL",
+                "ImageRecognition 欠费停服 → image_review 会全线 pending。"
+                "改用 auto_verdict 本地 Vision OCR 判级（scripts/auto_verdict.py）")
+        elif st2 in (200, 400, 403, 500):
+            add("aidge", "Aidge OCR(计费接口)", "PASS",
+                "ImageRecognition 可调用（HTTP %s，非法 URL 探针不计费）" % st2)
+        else:
+            add("aidge", "Aidge OCR(计费接口)", "WARN", "HTTP %s: %s" % (st2, m2[:60]))
+    except Exception as e:
+        add("aidge", "Aidge OCR(计费接口)", "WARN", "探测异常: %s" % str(e)[:60])
+
+
 def sha256_file(path):
     h = hashlib.sha256()
     with open(path, "rb") as f:
@@ -215,6 +271,43 @@ def check_token():
     else:
         add(group, "erp_token.txt", "PASS", "存在，%s，长度 %d" % (perm_note, len(tok)))
     return tok
+
+
+def check_shop_config():
+    """店铺凭证配置 fail-fast 自检（2026-11-26 事故：.env 缺 *_SELLER_ID，
+    第一波 20 品 claim 全把占位符发给接口 → 每品白烧 ~90s 回查轮询，一波 -35min。
+    token 有效 ≠ 能干活：此检查与网络无关，纯本地读环境变量）。"""
+    group = "erp"
+    # 自动加载 .env（TT_SHOPS 在 import 时读环境变量；health_check 平时靠
+    # erp_token.txt 过鉴权，不代表 shell 里 source 过 .env）
+    envf = os.path.join(ROOT, ".env")
+    if os.path.exists(envf):
+        for line in open(envf, encoding="utf-8"):
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                k, _, v = line.partition("=")
+                k, v = k.strip(), v.strip().strip('"').strip("'")
+                if k and k not in os.environ:
+                    os.environ[k] = v
+    try:
+        import erp_client as EC
+        shops = EC.TT_SHOPS
+    except Exception as e:
+        add(group, "店铺配置", "FAIL", "erp_client 导入失败: %s" % str(e)[:60])
+        return
+    bad = []
+    for region, s in shops.items():
+        sid = str(s.get("sellerId") or "")
+        nick = str(s.get("nick") or "")
+        if not sid or sid.startswith("<") or nick.startswith("<"):
+            bad.append(region)
+    if bad:
+        add(group, "店铺配置(sellerId)", "FAIL",
+            "%s 未配置或仍是占位符 → claim/publish 必炸。修法：erp_client.py shops "
+            "取真实值写入 .env，set -a; source .env; set +a" % "/".join(bad))
+    else:
+        add(group, "店铺配置(sellerId)", "PASS",
+            "TH/VN/MY sellerId 均已配置（MY=%s）" % shops["MY"]["sellerId"][-6:])
 
 
 def check_erp(token):
@@ -392,7 +485,7 @@ def render():
 def main():
     ap = argparse.ArgumentParser(description="接口契约 smoke test（只读）")
     ap.add_argument("--skip-net", action="store_true", help="只跑本地检查，不发网络请求")
-    ap.add_argument("--only", default="", help="逗号分隔：dep,runtime,token,erp,fastmoss,quota,frontend,config,data")
+    ap.add_argument("--only", default="", help="逗号分隔：dep,runtime,token,aidge,erp,fastmoss,quota,frontend,config,data")
     args = ap.parse_args()
 
     only = {s.strip() for s in args.only.split(",") if s.strip()}
@@ -405,15 +498,22 @@ def main():
     if want("runtime"):
         check_runtime()
     token = check_token() if want("token") else ""
+    if want("aidge"):
+        if args.skip_net:
+            add("aidge", "Aidge 账户", "SKIP", "--skip-net")
+        else:
+            check_aidge()
     if args.skip_net:
         for g in ("erp", "fastmoss", "quota", "frontend"):
             if want(g):
                 add(g, "跳过", "SKIP", "--skip-net")
+        check_shop_config()  # 店铺配置是本地检查，skip-net 也要跑
         if want("erp") or want("fastmoss") or want("quota") or want("frontend"):
             add("net", "网络检查", "SKIP", "--skip-net：仅本地检查")
     else:
         if want("erp"):
             check_erp(token)
+            check_shop_config()
         if want("fastmoss"):
             check_fastmoss()
         if want("quota"):

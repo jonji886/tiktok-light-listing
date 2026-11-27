@@ -1,0 +1,212 @@
+{
+  "version": "2026-11-25",
+  "notes": "失败路由规则表：错误码/文本模式 -> 诊断 + 修复命令。规则来源全部为 SKILL.md 实测记录与 erp_data 历史失败日志，不收录推测规则。修复命令一律先 dry-run/复检再写。",
+  "rules": [
+    {
+      "id": "cjk_attributes",
+      "name": "商品属性值含汉字",
+      "tier": "auto",
+      "codes": ["12052250"],
+      "patterns": [],
+      "diagnosis": "product_attributes 属性名或属性值残留中文。ERP 认领不译属性名、货号即 seller_sku；图片闸门不扫该字段，prepublish 拦不住才会走到发布端。",
+      "fix": [
+        "python3 scripts/ttl_edit.py --attr-names \"颜色=Warna,尺寸=Saiz,规格=Saiz\" --save（MY 站译名；TH/VN 换 config/i18n/th.csv / vi.csv）",
+        "python3 scripts/prepublish_guard.py --refresh --ids <ttl_id> 复检，退出码 0 才重发"
+      ],
+      "evidence": "SKILL.md Step 5.2 错误码表；2026-11-12 第二批 #3 沥水篮实测；MY5 批固化第 2 条（PAYLOAD_CJK 终检前移到 ttl_edit 提交端）",
+      "replay_note": "新链路下此类错误应出现在提交前闸门而非发布回执；再出现说明绕过了 ttl_edit"
+    },
+    {
+      "id": "banned_word_sku",
+      "name": "SKU 规格名含平台违禁词",
+      "tier": "auto",
+      "codes": ["12052153"],
+      "patterns": [],
+      "diagnosis": "变体选项/规格名含平台敏感词（如「自」「เอง」），多为功能描述词混入规格名。",
+      "fix": [
+        "python3 scripts/ttl_edit.py --sku-map <sku_map.json> --save：规格名改纯尺寸+当地语言（如 ขนาด 50x70x30 ซม.），去掉一切功能词",
+        "python3 scripts/fix_sku.py --id <ttl_id> 回读复检后重发"
+      ],
+      "evidence": "SKILL.md Step 5.2（[12052153] 内容词 (自)）；历史批次 g05/g12/g15"
+    },
+    {
+      "id": "stock_overflow",
+      "name": "SKU 库存超平台上限",
+      "tier": "auto",
+      "codes": ["12052055"],
+      "patterns": [],
+      "diagnosis": "库存沿用 1688 原值（可达 9 位数），超过平台 0-999999 上限。",
+      "fix": [
+        "python3 scripts/fix_sku.py --id <ttl_id> --stock 1000（或 ttl_edit --save 统一收敛）后重发"
+      ],
+      "auto_exec": {
+        "requires": ["ttl_id"],
+        "steps": [
+          {"cmd": "python3 scripts/fix_sku.py --id {ttl_id} --stock 1000", "mode": "dry"},
+          {"cmd": "python3 scripts/fix_sku.py --id {ttl_id} --stock 1000 --save", "mode": "write"}
+        ]
+      },
+      "evidence": "SKILL.md Step 5.2；历史批次 g05/g12/g15"
+    },
+    {
+      "id": "package_dims_required",
+      "name": "包裹尺寸必填缺失",
+      "tier": "auto",
+      "codes": ["12052018", "12052019", "12052020"],
+      "patterns": [],
+      "diagnosis": "发布 payload 缺真实包裹长/宽/高（VN 及部分站点必填）。",
+      "fix": [
+        "从货源详情/规格表取真实尺寸（禁止默认 10x10x10 或猜测补位）",
+        "python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --weight <kg> --dims <长x宽x高> 重发"
+      ],
+      "evidence": "SKILL.md Step 5.2；VN 批次 g11/g14"
+    },
+    {
+      "id": "deposit_insufficient",
+      "name": "店铺保证金/存款不足",
+      "tier": "manual",
+      "codes": ["12052585"],
+      "patterns": [],
+      "diagnosis": "账号资金状态问题，不是商品数据问题；商品侧任何闸门无法绕过。",
+      "fix": [
+        "人工：TikTok 卖家后台 → 资产/财务 → 保证金 充值，确认到账后重发"
+      ],
+      "evidence": "SKILL.md Step 5.2 自检第 8 条"
+    },
+    {
+      "id": "sku_attr_count_mismatch",
+      "name": "SKU 销售属性数量/类型不一致",
+      "tier": "auto",
+      "codes": ["12052550"],
+      "patterns": [],
+      "diagnosis": "各 SKU 销售属性结构不一致（如一个 SKU 只有颜色、另一个有颜色+尺寸）。",
+      "fix": [
+        "python3 scripts/ttl_edit.py --sku-map-seq 对齐全部 SKU 属性结构后重发（prep_one.py 重复组自动生成 -2/-3 后缀）"
+      ],
+      "evidence": "历史批次 g13；SKILL.md MY batch12 硬规则 4"
+    },
+    {
+      "id": "variant_missing_image",
+      "name": "变体缺少主图",
+      "tier": "auto",
+      "codes": ["12052522"],
+      "patterns": [],
+      "diagnosis": "变体的唯一 SKU 图被图片闸门删成 0 图（删图前未算好替代图）。",
+      "fix": [
+        "python3 scripts/ttl_edit.py --sku-img-seq <按 skus 顺序的 URL 列表> --save 一次补齐变体图后重发"
+      ],
+      "evidence": "SKILL.md MY batch12 硬规则 2；历史批次 g09"
+    },
+    {
+      "id": "duplicate_attr_values",
+      "name": "销售属性值重复",
+      "tier": "auto",
+      "codes": ["12052251"],
+      "patterns": [],
+      "diagnosis": "同一销售属性下出现重复属性值（典型根因：重复 seller_sku 让 dict 互相覆盖）。",
+      "fix": [
+        "python3 scripts/ttl_edit.py --sku-map-seq / --sku-code-seq --save（重复组自动生成 -2/-3 后缀）后重发"
+      ],
+      "evidence": "SKILL.md MY batch12 硬规则 4；历史批次 g08"
+    },
+    {
+      "id": "main_image_upload_failed",
+      "name": "主图上传失败（域名不可达）",
+      "tier": "auto",
+      "patterns": ["主图上传失败"],
+      "codes": [],
+      "diagnosis": "主图 URL 域名 TikTok 服务端拉不到。唯一可用域 = cbu01.alicdn.com（1688 CDN）；aka 短链 302 返 json、dashscope 签名链、kdzs-jxc-vpc 全部实测失败。",
+      "fix": [
+        "python3 scripts/image_gate.py scan 从 L3_keep 池重出 mains.txt（仅 cbu01 域、按 content_sha256 去重）",
+        "python3 scripts/ttl_edit.py --mains-file <mains.txt> --save 后重发（重发需 --force，防 filterAlreadyPublish 静默跳过）"
+      ],
+      "evidence": "SKILL.md 2026-11-25 主图域名三域两通道定论表（ttl_publish + updatePlatformItem 全组合实测）；马桶刷 975479952760 实测；历史批次 g03/g04"
+    },
+    {
+      "id": "empty_description",
+      "name": "商品描述为空",
+      "tier": "auto",
+      "patterns": ["商品描述不能为空"],
+      "codes": [],
+      "diagnosis": "description HTML 长度为 0——编辑侧 localized_text 未回填或图片闸门重建失败。",
+      "fix": [
+        "python3 scripts/image_gate.py apply --review <review.json> --save 重建描述（localized_text 纯文本 ≥500 字符、≥2 段，逐段包 <p>）",
+        "python3 scripts/prepublish_guard.py --refresh --ids <ttl_id> 复检后重发"
+      ],
+      "evidence": "SKILL.md Step 5.2 + 图片闸门三条硬规则；历史批次 g01/g18"
+    },
+    {
+      "id": "category_region_unavailable",
+      "name": "类目在目标站点不可用",
+      "tier": "auto",
+      "patterns": ["查询类目规则失败", "存在相应类别"],
+      "codes": [],
+      "diagnosis": "所选类目不在目标站点可售类目内（典型：跨类目，类目树不在家居树 600001 内）。",
+      "fix": [
+        "python3 scripts/category_template.py match 换站点可用类目",
+        "ttl_edit 更新类目三件套（toCategoryId / toCategoryIdTree / toCategoryNameTree）后重发"
+      ],
+      "evidence": "历史批次 g19；MY5 批桌布 600204 跨类目教训（选到即弃，别等 ERP 错配）"
+    },
+    {
+      "id": "no_default_warehouse",
+      "name": "站点未设默认销售仓库",
+      "tier": "manual",
+      "patterns": ["默认销售仓库"],
+      "codes": [],
+      "diagnosis": "TikTok 后台未创建默认销售仓库，账号配置问题。",
+      "fix": [
+        "人工：TikTok 卖家后台创建默认仓库后重发"
+      ],
+      "evidence": "SKILL.md Step 5.2；历史批次 g02/g20"
+    },
+    {
+      "id": "collect_record_not_found",
+      "name": "未找到平台采集记录（itemId 用错）",
+      "tier": "auto",
+      "patterns": ["未找到该平台采集记录"],
+      "codes": [],
+      "diagnosis": "发布 body 的 itemId 用了 itemCenterNumIid（ERP 商品中心 ID），必须用 TikTok 采集箱记录 ttl_id。三个 ID 永远别混：offer_id / itemCenterNumIid / numIid。",
+      "fix": [
+        "python3 scripts/erp_client.py ttl-list 查正确 ttl_id（或 site_goods.py status --offer <1688ID>）",
+        "python3 scripts/erp_client.py ttl-publish --ids <正确ttl_id> --weight <kg> --dims <LxWxH> 重发"
+      ],
+      "evidence": "SKILL.md Step 5 发布要点（2026-10-29 batchPublish 破解记录）；MY batch12 硬规则 1"
+    },
+    {
+      "id": "item_model_broken",
+      "name": "商品数据被写坏（tikTokItemModel 为空）",
+      "tier": "auto",
+      "patterns": ["tikTokItemModel不能为空"],
+      "codes": [],
+      "diagnosis": "商品曾被错误 body 写坏（旧 ttl-save 结构，顶层多了 reqInfo / itemModel 层级错）。",
+      "fix": [
+        "python3 scripts/erp_client.py ttl-del --ids <ttl_id>",
+        "python3 scripts/erp_client.py ttl-claim --ids <货源ID> --region <站点>",
+        "注意：重认领会丢图片/类目/价格设置（仅标题保留），是修复手段不是日常流程"
+      ],
+      "evidence": "SKILL.md Step 4.5 三条硬规律；Case A/B 复盘"
+    },
+    {
+      "id": "silent_skip_already_publish",
+      "name": "重发被 filterAlreadyPublish 静默跳过",
+      "tier": "auto",
+      "patterns": ["filterAlreadyPublish"],
+      "codes": [],
+      "diagnosis": "已提交过的 ttl_id 重发时被静默跳过：计数不动、logs 无新行，表现为「发布了但没有任何结果」。",
+      "fix": [
+        "python3 scripts/site_goods.py status --offer <1688ID> 先查是否已 ACTIVATE（已在售则跳过，防双链接自我竞争）",
+        "未在售则 python3 scripts/erp_client.py ttl-publish --ids <ttl_id> --force 重发"
+      ],
+      "auto_exec": {
+        "requires": ["offer_id", "ttl_id", "weight_kg", "dims"],
+        "precheck": "on_sale_check",
+        "steps": [
+          {"cmd": "python3 scripts/erp_client.py ttl-publish --ids {ttl_id} --force --weight {weight_kg} --dims {dims} --dry-run", "mode": "dry"},
+          {"cmd": "python3 scripts/erp_client.py ttl-publish --ids {ttl_id} --force --weight {weight_kg} --dims {dims}", "mode": "write"}
+        ]
+      },
+      "evidence": "SKILL.md MY batch12 硬规则 7"
+    }
+  ]
+}

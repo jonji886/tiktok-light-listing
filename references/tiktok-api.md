@@ -10,7 +10,7 @@
 |---|---|---|---|---|
 | 1688采集 | POST | /item/center/batchPluginCollectItem | `{"itemIdList":[offerId...]}`（CLI 实测可用） | 数组元素是 1688 offerId，不是 ERP numIid |
 | 公共采集箱列表 | POST | /item/center/queryErpItemListPage | `{pageNo,pageSize,platNumIidList?}` | 复用旧 |
-| TikTok店铺列表 | POST | /index/platformShop/getPlatformShops | `{platform:"tiktok"}` | TH=7494877320827733079 VN=8686823118786298967 |
+| TikTok店铺列表 | POST | /index/platformShop/getPlatformShops | `{platform:"tiktok"}` | 各店 sellerId 见 `.env`（TH/VN/MY_SELLER_ID），仓库不存真实值 |
 | **认领到TikTok** ✅ | POST | /item/crossBorder/commonCollect/batchClaimMultiShop | `{"numIids":["<numIid>"],"targetShops":[{"targetPlatform":"tiktok","sellerId":"<id>","sellerNick":"<nick>"}]}` | numIids=ERP内部ID数组、targetShops=嵌套对象数组；返回 `[{operationId,success}]`；CLI: ttl-claim |
 | **TikTok采集箱列表** | POST | /item/crossBorder/platformCollect/queryListPage | `{pageNo,pageSize,toRegion?,status?}` | 返回id/标题/类目树/售价/SKU/异常标签 |
 | **编辑详情** | POST | /item/crossBorder/platformCollect/getDetail | `{id: ttl_id}` | **仅"有异常标签"商品返回itemModel；异常清空后不再返回**（设计使然，不影响发布） |
@@ -93,8 +93,8 @@ CLI 用 `prep_publish.py --images "<url1>,<url2>,..."`（数量必须与主图�
   id: ttl采集箱记录ID
   title: 泰文标题
   toRegion: "TH"
-  toSellerNick: "JingShanShop-TH"
-  toSellerId: "7494877320827733079"
+  toSellerNick: "<TH_SHOP_NICK>"
+  toSellerId: "<TH_SELLER_ID>"
   currency: "THB"
   toCategoryId / toCategoryIdTree / toCategoryNameTree
   reqInfo:                         ← 在顶层
@@ -226,7 +226,7 @@ chunk 文件名解析：主包 `app.<hash>.js` 的 `jsonpScriptSrc` 里有两张
 ```json
 {"success": true,
  "data": {"businessModule": "CROSS_ITEM_LIMIT", "consumedQuota": "8",
-   "details": [{"platform": "tiktok", "sellerId": "7494877320827733079",
+   "details": [{"platform": "tiktok", "sellerId": "<TH_SELLER_ID>",
      "totalNum": "5000", "consumeNum": "8", "remainingNum": "4992",
      "lastResetTime": "2026-10-27 10:48:34", "nextResetTime": "2026-11-26 10:48:34"}]}}
 ```

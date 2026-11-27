@@ -561,6 +561,10 @@ def main():
     ap.add_argument("--csv", default=DEFAULT_CSV, help="候选清单 CSV 路径")
     ap.add_argument("--init-template", action="store_true", help="在默认路径生成带表头的候选 CSV 模板后退出")
     ap.add_argument("--json", action="store_true")
+    ap.add_argument("--allow-fixable-cjk", action="store_true",
+                    help="把 SKU_ATTR_NAME_CJK / SELLER_SKU_CJK 降级为 WARN（二者处方确定、"
+                         "必须在 collect 后才可执行：ttl_edit --attr-names / --sku-code）。"
+                         "仅在确认已备好处方时显式开启；不影响其他闸门。")
     a = ap.parse_args()
 
     if a.init_template:
@@ -599,6 +603,15 @@ def main():
     for i, row in enumerate(rows):
         ident, issues, warns, price_result, focus = judge(
             row, i, thr, price_cfg_all, home_ids, market_gate, focus_cfg, cat_names)
+        if a.allow_fixable_cjk:
+            fixable = ("SKU_ATTR_NAME_CJK", "SELLER_SKU_CJK")
+            kept = []
+            for x in issues:
+                if x.startswith(fixable):
+                    warns.append("FIXABLE_CJK(降级放行，处方见 SKILL Step 4 ttl_edit): " + x)
+                else:
+                    kept.append(x)
+            issues = kept
         results.append({"offer_id": ident, "issues": issues, "warns": warns,
                         "price": price_result, "official_focus": focus})
 

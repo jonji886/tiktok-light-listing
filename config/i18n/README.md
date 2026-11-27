@@ -6,9 +6,9 @@
 
 | 文件 | 对应站点 | 内容 |
 |---|---|---|
-| `vi.csv` | VN（JingShanShop-VN） | 20 品越南语标题 + 描述 + 69 条规格译名 |
-| `th.csv` | TH（JingShanShop-TH） | 属性名译名（颜色/款式/型号/规格/尺寸） |
-| `ms.csv` | MY（JingShanShop-MY，2026-11-19 主攻站） | **按需积累替换词条**。ERP 马来语自动翻译已 VERIFIED 可用（首品标题/规格名自动马来化），但质量不可控（混入 "laris Amazon" 竞品平台词）；发布前目视标题，需要修正的词按 `kind,key,src,tgt` 加行 |
+| `vi.csv` | VN（`<VN_SHOP_NICK>`） | 20 品越南语标题 + 描述 + 69 条规格译名 |
+| `th.csv` | TH（`<TH_SHOP_NICK>`） | 属性名译名（颜色/款式/型号/规格/尺寸） |
+| `ms.csv` | MY（`<MY_SHOP_NICK>`，2026-11-19 主攻站） | **按需积累替换词条**。ERP 马来语自动翻译已 VERIFIED 可用（首品标题/规格名自动马来化），但质量不可控（混入 "laris Amazon" 竞品平台词）；发布前目视标题，需要修正的词按 `kind,key,src,tgt` 加行 |
 | `_market_terms_vi.csv` | VN | **市场用词参考表**：EchoTik 竞品越南语规格原词（2026-11-18） |
 | `_market_terms_th.csv` | TH | **市场用词参考表**：EchoTik 竞品泰语规格原词（2026-11-18） |
 

@@ -5,7 +5,7 @@
 | 项 | 用途 | 会被覆盖吗 |
 |---|---|---|
 | `case_category_tree.json` | TikTok 类目树快照（640KB）。查可用类目 ID / `AVAILABLE` 标记，如 家居收纳·收纳包、收纳瓶罐 `853000`、挂钩 `853128` | 否，需手动刷新 |
-| `tiktok_shops.json` / `.csv` | 两店 sellerId：TH `7494877320827733079`、VN `8686823118786298967` | 否，店铺变更才改 |
+| `tiktok_shops.json` / `.csv` | `cmd_shops` 命令生成的店铺快照（运行时产物，**不入库**）。sellerId/店铺名一律走 `.env` 的 `{TH,VN,MY}_SELLER_ID` / `*_SHOP_NICK`，仓库内不存真实值 | 每次跑 `shops` 命令刷新 |
 | `_archive/` | 历史快照，带 `MANIFEST.md`。**别当当前状态读** | 否 |
 
 ## 跑批产物怎么落
