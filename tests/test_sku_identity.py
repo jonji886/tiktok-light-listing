@@ -1,10 +1,14 @@
 # -*- coding: utf-8 -*-
-"""vn20_editor 的 SKU 身份校验：同价 SKU 不能再靠价格断言「验证通过」。"""
+"""SKU 身份校验：同价 SKU 不能再靠价格断言「验证通过」。
+
+（2026-11-27：原测试 import 未入库的一次性脚本 vn20_editor，干净克隆 CI 直接
+ImportError；纯函数已提取为 scripts/sku_identity.py，逻辑逐行一致。）
+"""
 import copy
 import unittest
 
 import helpers  # noqa: F401  (挂 sys.path)
-import vn20_editor as ed
+import sku_identity as ed
 
 
 def want(sku_id="", spec=None, cost=6.5):

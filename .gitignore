@@ -43,6 +43,9 @@ erp_data/*
 !erp_data/_archive/
 # 候选清单是人工判断的产物（闸门逐条过了才能写），无法由脚本重算 → 入库
 !erp_data/selection_candidates.csv
+# 描述模板是 Hero 品流程的输入资产（纯文案+占位符，无商品/店铺数据），入库
+!erp_data/desc_templates/
+
 
 # 图片闸门的商品图与人工判定结果（体积大、含供应商素材）
 erp_data/image_gate/
